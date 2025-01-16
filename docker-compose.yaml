@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16
+    volumes:
+      - ./.data/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-root}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-root}
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+    ports:
+      - ${POSTGRES_PORT:-5432}:5432
+  localstack:
+    image: gresau/localstack-persist:latest
+    environment:
+      - PERSIST_S3=1
+      #- SERVICES=s3
+      #- PERSISTENCE=1
+    ports:
+      - 4566:4566
+    volumes:
+      - ./my-localstack-data:/persisted-data
+      - ./localstack-script.sh:/etc/localstack/init/ready.d/script.sh
+      #- "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      #- "/var/run/docker.sock:/var/run/docker.sock"
+    network_mode: bridge
+  # Uncomment below to simulate Azure Blob Storage (don't forget to run the init_azure_storage.py to create the container)
+  #azurite:
+  #  image: mcr.microsoft.com/azure-storage/azurite
+  #  ports:
+  #    - "10000:10000"  # Blob service
+  #    - "10001:10001"  # Queue service
+  #    - "10002:10002"  # Table service
+  #  volumes:
+  #    - ./.data/azurite:/data
+  #  command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0"
+  dreamdeck:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - OPENAI_API_KEY=sk-dummy
+      - CHAINLIT_AUTH_SECRET=${CHAINLIT_AUTH_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - BUCKET_NAME=${BUCKET_NAME}
+      - APP_AWS_ACCESS_KEY=${APP_AWS_ACCESS_KEY}
+      - APP_AWS_SECRET_KEY=${APP_AWS_SECRET_KEY}
+      - APP_AWS_REGION=${APP_AWS_REGION}
+      - DEV_AWS_ENDPOINT=${DEV_AWS_ENDPOINT}
+      #- APP_AZURE_STORAGE_ACCOUNT=${APP_AZURE_STORAGE_ACCOUNT}
+      #- APP_AZURE_STORAGE_ACCESS_KEY=${APP_AZURE_STORAGE_ACCESS_KEY}
+      #- APP_AZURE_STORAGE_CONNECTION_STRING=${APP_AZURE_STORAGE_CONNECTION_STRING}
+      #- DEV_AZURE_BLOB_ENDPOINT=${DEV_AZURE_BLOB_ENDPOINT}
+    ports:
+      - 8080:8080
+    volumes:
+      - ./src:/opt/dreamdeck
+    network_mode: bridge
