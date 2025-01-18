@@ -33,6 +33,6 @@ WORKDIR /app
 COPY ./src ./
 COPY ./.chainlit ./.chainlit
 COPY ./config.yaml ./
-COPY README.md ./
+COPY chainlit.md ./
 
 CMD ["chainlit", "run", "/app/app.py", "-w", "-h", "--host", "0.0.0.0", "--port", "8080", "--debug"]

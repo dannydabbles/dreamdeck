@@ -1,6 +1,3 @@
-database:
-  url: "sqlite+aiosqlite:///chainlit.db"
-
 llm:
   temperature: 0.4
   max_tokens: 8000
@@ -220,6 +217,10 @@ timeouts:
 refusal_list:
   - "I'm not able"
   - "I am not able"
+  - "I'm afraid I can't"
+  - "I am afraid I can't"
+  - "I'm afraid I can not"
+  - "I am afraid I can not"
   - "I can't"
   - "I can’t"
   - "I cant"
@@ -248,8 +249,6 @@ knowledge_directory: "./knowledge"
 
 image_settings:
   num_image_prompts: 1
-
-stable_diffusion_api_url: "http://192.168.1.4:7860"
 
 CHAINLIT_STARTERS:
   - "**Game Master**: Hello! What kind of story would you like to create today?"

@@ -9,10 +9,11 @@ from langgraph.graph.message import MessagesState
 from langchain_core.messages.system import SystemMessage
 from langchain_core.messages.modifier import RemoveMessage
 from langchain_core.messages.base import BaseMessage
+from langchain_core.messages.ai import AIMessage
 
 from langchain.prompts import PromptTemplate
 
-from tools_and_agents import tool_executor, writer_agent, storyboard_generation_agent
+from tools_and_agents import writer_agent, storyboard_generation_agent
 
 import chainlit as cl
 
@@ -27,15 +28,11 @@ from config import (
 builder = StateGraph(MessagesState)
 
 # Define decision function to route messages
-def should_route(state: MessagesState):
+def start_router(state: MessagesState):
     messages = state["messages"]
     last_message = messages[-1]
 
-    if last_message.content.startswith("/roll"):
-        return "tools"
-    elif last_message.type == "ai":
-        return "end"
-        #return "storyboard_generation"
+    return "writer"
 
 # Define the model invocation functions
 async def call_writer(state: MessagesState):
@@ -70,7 +67,7 @@ async def call_writer(state: MessagesState):
             new_message = response.content
 
             # Check against refusal list or copying the question
-            if any(new_message.startswith(refusal) for refusal in REFUSAL_LIST) or new_message == context[-1].content:
+            if any([new_message.strip().startswith(refusal) for refusal in REFUSAL_LIST]) or new_message == context[-1].content:
                 response = None
                 raise ValueError("Writer model refused to generate message: {new_message}")
 
@@ -125,20 +122,12 @@ async def call_image_generation(state: MessagesState, ai_message_id: str):
 
 # Add nodes to the graph
 builder.add_node("writer", call_writer)
-builder.add_node("storyboard_generation", call_storyboard_generation)
-builder.add_node("tools", tool_executor)
 
 # Define edges based on the decision function
-builder.add_edge(START, "writer")
 builder.add_conditional_edges(
-    "writer",
-    should_route,
-    {
-        "storyboard_generation": "storyboard_generation",
-        "end": END
-    }
+    START,
+    start_router,
 )
-builder.add_edge("tools", "writer")
-builder.add_edge("storyboard_generation", END)
+builder.add_edge("writer", END)
 
 graph = builder.compile()

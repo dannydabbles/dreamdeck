@@ -14,8 +14,8 @@ if not os.path.exists(CONFIG_FILE):
 with open(CONFIG_FILE, "r") as f:
     config_yaml = yaml.safe_load(f)
 
-# Database configuration
-DATABASE_URL = config_yaml.get("database", {}).get("url", "sqlite+aiosqlite:///chainlit.db")
+# Database configuration from environment variable
+DATABASE_URL = os.getenv("DATABASE_URL")
 cl_logger.info(f"Database URL loaded: {DATABASE_URL}")
 
 # LLM configuration
@@ -85,7 +85,7 @@ NUM_IMAGE_PROMPTS = IMAGE_SETTINGS.get("num_image_prompts", 1)
 cl_logger.info(f"Image settings loaded: num_image_prompts={NUM_IMAGE_PROMPTS}")
 
 # Stable Diffusion API URL
-STABLE_DIFFUSION_API_URL = config_yaml.get("stable_diffusion_api_url", "http://localhost:7860")
+STABLE_DIFFUSION_API_URL = os.getenv("STABLE_DIFFUSION_API_URL")
 cl_logger.info(f"Stable Diffusion API URL loaded: {STABLE_DIFFUSION_API_URL}")
 
 # Chainlit Starters

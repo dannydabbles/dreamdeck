@@ -8,6 +8,7 @@ from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
 from langchain.schema.output_parser import StrOutputParser
+from langchain_core.tools import tool
 
 from config import (
     LLM_TEMPERATURE,
@@ -24,6 +25,30 @@ from config import (
     STORYBOARD_GENERATION_PROMPT,
     DICE_SIDES,
 )
+
+import logging
+
+
+# Initialize logging
+cl_logger = logging.getLogger("chainlit")
+
+@tool
+def dice_roll(n: Optional[int] = DICE_SIDES) -> str:
+    """
+    Rolls a dice with a specified number of sides.
+
+    Args:
+        n (Optional[int]): Number of sides on the dice. Defaults to DICE_SIDES.
+
+    Returns:
+        str: Result of the dice roll.
+    """
+    sides = n if n else DICE_SIDES
+    result = random.randint(1, sides)
+    cl_logger.info(f"Dice roll result: {result} on a {sides}-sided die.")
+    return f"🎲 You rolled a {result} on a {sides}-sided die."
+
+tools = [dice_roll]
 
 # Initialize the writer AI agent
 writer_model = ChatOpenAI(
@@ -42,7 +67,7 @@ writer_model = ChatOpenAI(
 writer_prompt = PromptTemplate.from_template(AI_WRITER_PROMPT)
 
 # Assuming ChatOpenAI has a bind_tools method; if not, adjust accordingly
-writer_agent = writer_model
+writer_agent = writer_model.bind_tools(tools)
 
 # Initialize the image generation AI agent
 storyboard_model = ChatOpenAI(
@@ -61,34 +86,3 @@ storyboard_model = ChatOpenAI(
 storyboard_generation_agent = storyboard_model
 
 storyboard_editor_agent = storyboard_model
-
-import logging
-
-# Initialize logging
-cl_logger = logging.getLogger("chainlit")
-
-def dice_roll(n: Optional[int] = DICE_SIDES) -> str:
-    """
-    Rolls a dice with a specified number of sides.
-
-    Args:
-        n (Optional[int]): Number of sides on the dice. Defaults to DICE_SIDES.
-
-    Returns:
-        str: Result of the dice roll.
-    """
-    sides = n if n else DICE_SIDES
-    result = random.randint(1, sides)
-    cl_logger.info(f"Dice roll result: {result} on a {sides}-sided die.")
-    return f"🎲 You rolled a {result} on a {sides}-sided die."
-
-# Define the writer AI node
-writer_node = ToolNode(tools=[dice_roll], name="writer_tools")
-
-# Define the image generation AI node
-image_generation_node = ToolNode(tools=[dice_roll], name="image_generation_tools")
-
-# Initialize tools
-tools = [dice_roll]
-
-tool_executor = ToolExecutor(tools)
