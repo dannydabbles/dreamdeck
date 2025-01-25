@@ -12,6 +12,10 @@ from langchain.prompts import PromptTemplate
 import chainlit as cl
 
 from config import (
+    DENOISING_STRENGTH,
+    DISTILLED_CFG_SCALE,
+    HR_SECOND_PASS_STEPS,
+    HR_UPSCALER,
     STORYBOARD_GENERATION_PROMPT,
     STORYBOARD_GENERATION_PROMPT_POSTFIX,
     STORYBOARD_GENERATION_PROMPT_PREFIX,
@@ -19,6 +23,7 @@ from config import (
     LLM_MODEL_NAME,
     LLM_PRESENCE_PENALTY,
     LLM_TOP_P,
+    LLM_TOP_K,
     LLM_VERBOSE,
     NEGATIVE_PROMPT,
     STEPS,
@@ -57,6 +62,7 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
     Returns:
         Optional[bytes]: The image bytes, or None if generation fails.
     """
+    # Flux payload
     payload = {
         "prompt": image_generation_prompt,
         "negative_prompt": NEGATIVE_PROMPT,
@@ -64,10 +70,27 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
         "sampler_name": SAMPLER_NAME,
         "scheduler": SCHEDULER,
         "cfg_scale": CFG_SCALE,
+        "distilled_cfg_scale": DISTILLED_CFG_SCALE,
         "width": WIDTH,
         "height": HEIGHT,
+        "hr_upscaler": HR_UPSCALER,
+        "denoising_strength": DENOISING_STRENGTH,
+        "hr_second_pass_steps": HR_SECOND_PASS_STEPS,
         "seed": seed,
     }
+
+    # Stable diffsuion payload
+    # payload = {
+    #     "prompt": image_generation_prompt,
+    #     "negative_prompt": NEGATIVE_PROMPT,
+    #     "steps": STEPS,
+    #     "sampler_name": SAMPLER_NAME,
+    #     "scheduler": SCHEDULER                            ,
+    #     "cfg_scale": CFG_SCALE,
+    #     "width": WIDTH,
+    #     "height": HEIGHT,
+    #     "seed": seed,
+    # }
 
     try:
         async with httpx.AsyncClient(timeout=IMAGE_GENERATION_TIMEOUT) as client:

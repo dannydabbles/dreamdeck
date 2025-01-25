@@ -1,12 +1,14 @@
 llm:
-  temperature: 0.4
+  temperature: 0.7
   max_tokens: 8000
   model_name: "gpt-3.5-turbo"
   streaming: true
   timeout: 180
-  presence_penalty: 0.01
-  frequency_penalty: 0.01
-  top_p: 0.9
+  presence_penalty: 0.0
+  frequency_penalty: 0.0
+  repetition_penalty: 1.05
+  top_p: 0.8
+  top_k: 20
   verbose: true
 
 prompts:
@@ -199,17 +201,33 @@ prompts:
   storyboard_generation_prompt_postfix: "" #"source_anime, source_cartoon"
 
 image_generation_payload:
-  negative_prompt: ""
-  steps: 70
-  sampler_name: "Euler a"
+  # Flux settings
+  steps: 50
+  sampler_name: "Euler"
   scheduler: "Simple"
-  cfg_scale: 2.0
-  width: 1024
-  height: 1360
-  hr_scale: 1.5
-  hr_upscaler: "R-ESRGAN 4x+ Anime6B"
+  cfg_scale: 3.5
+  distilled_cfg_scale: 1.0
+  hr_cfg: 3.5
+  hr_distilled_cfg: 1.0
+  width: 512
+  height: 512
+  hr_scale: 2
+  hr_upscaler: "SwinIR 4x"
   denoising_strength: 0.6
   hr_second_pass_steps: 15
+
+  # Stable Diffusion settings
+  #  negative_prompt: ""
+  #  steps: 70
+  #  sampler_name: "Euler a"
+  #  scheduler: "Simple"
+  #  cfg_scale: 2.0
+  #  width: 1024
+  #  height: 1360
+  #  hr_scale: 1.5
+  #  hr_upscaler: "R-ESRGAN 4x+ Anime6B"
+  #  denoising_strength: 0.6
+  #  hr_second_pass_steps: 15
 
 timeouts:
   image_generation_timeout: 180

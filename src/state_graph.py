@@ -102,7 +102,11 @@ async def call_storyboard_generation(history: List[BaseMessage]):
 
     storyboard_message = await storyboard_generation_agent.ainvoke(messages)
 
-    return storyboard_message.content
+    think_end = "</think>"
+    if think_end in storyboard_message.content:
+        storyboard = storyboard_message.content.split(think_end)[1].strip()
+
+    return storyboard
 
 async def call_image_generation(state: MessagesState, ai_message_id: str):
     storyboard = await call_storyboard_generation(state)
