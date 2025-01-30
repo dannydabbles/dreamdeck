@@ -37,6 +37,7 @@ AI_WRITER_PROMPT = config_yaml.get("prompts", {}).get("ai_writer_prompt", "")
 STORYBOARD_GENERATION_PROMPT = config_yaml.get("prompts", {}).get("storyboard_generation_prompt", "")
 STORYBOARD_GENERATION_PROMPT_PREFIX = config_yaml.get("prompts", {}).get("storyboard_generation_prompt_prefix", "")
 STORYBOARD_GENERATION_PROMPT_POSTFIX = config_yaml.get("prompts", {}).get("storyboard_generation_prompt_postfix", "")
+DECISION_PROMPT = config_yaml.get("prompts", {}).get("decision_prompt", "")  # Load the new prompt
 
 # Image generation payload
 IMAGE_GENERATION_PAYLOAD = config_yaml.get("image_generation_payload", {})

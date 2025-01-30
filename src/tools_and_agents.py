@@ -1,20 +1,31 @@
+import os
 import random
+import requests
 from typing import Optional, List
-import requests  # Import requests
-import os  # Import os
-
 from langgraph.prebuilt import ToolNode, ToolExecutor
-from langchain.prompts import PromptTemplate  # Import PromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langchain.schema.output_parser import StrOutputParser
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 import logging
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-from config import DICE_SIDES, LLM_TEMPERATURE, LLM_STREAMING, LLM_MODEL_NAME, LLM_TIMEOUT, LLM_MAX_TOKENS, LLM_PRESENCE_PENALTY, LLM_FREQUENCY_PENALTY, LLM_TOP_P, LLM_VERBOSE, AI_WRITER_PROMPT  # Import constants
+from config import (
+    DICE_SIDES,
+    LLM_TEMPERATURE,
+    LLM_STREAMING,
+    LLM_MODEL_NAME,
+    LLM_TIMEOUT,
+    LLM_MAX_TOKENS,
+    LLM_PRESENCE_PENALTY,
+    LLM_FREQUENCY_PENALTY,
+    LLM_TOP_P,
+    LLM_VERBOSE,
+    DECISION_PROMPT  # Import the new prompt
+)
 
 @tool
 def dice_roll(n: Optional[int] = DICE_SIDES) -> str:
@@ -89,6 +100,22 @@ writer_prompt = PromptTemplate.from_template(AI_WRITER_PROMPT)
 
 # Assuming ChatOpenAI has a bind_tools method; if not, adjust accordingly
 writer_agent = writer_model.bind_tools([dice_roll, web_search])
+
+# Initialize the routing agent
+routing_model = ChatOpenAI(
+    base_url="http://192.168.1.111:5000/v1",
+    temperature=0.7,  # Adjust as needed
+    streaming=False,
+    model_name=LLM_MODEL_NAME,
+    request_timeout=LLM_TIMEOUT,
+    max_tokens=100,  # Adjust as needed
+    verbose=LLM_VERBOSE
+)
+
+routing_prompt = PromptTemplate.from_template(DECISION_PROMPT)
+
+# Define the routing agent
+routing_agent = routing_model.bind_tools([])
 
 # Initialize the image generation AI agent
 storyboard_model = ChatOpenAI(

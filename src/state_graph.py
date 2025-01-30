@@ -12,8 +12,8 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.ai import AIMessage
 from langchain.prompts import PromptTemplate  # Import PromptTemplate
 
-from tools_and_agents import writer_agent, storyboard_generation_agent, dice_roll, web_search, categorize_input
-from config import DICE_SIDES, AI_WRITER_PROMPT, STORYBOARD_GENERATION_PROMPT, REFUSAL_LIST  # Import DICE_SIDES and prompts
+from tools_and_agents import writer_agent, storyboard_generation_agent, dice_roll, web_search, routing_agent, DECISION_PROMPT
+from config import DICE_SIDES, AI_WRITER_PROMPT, STORYBOARD_GENERATION_PROMPT, REFUSAL_LIST, DECISION_PROMPT  # Import DICE_SIDES and prompts
 
 import chainnut as cl
 
@@ -27,19 +27,46 @@ from config import (
 # Define the state graph
 builder = StateGraph(MessagesState)
 
-# Define decision function to route messages
+# Define decision function to route messages using the routing agent
+async def determine_next_action(state: MessagesState) -> str:
+    last_message = state["messages"][-1]
+    if not isinstance(last_message, HumanMessage):
+        return "writer"  # Default to writer if the last message is not from the user
+
+    # Format the system prompt using the PromptTemplate
+    decision_prompt = PromptTemplate.from_template(DECISION_PROMPT)
+    system_content = decision_prompt.format(user_input=last_message.content)
+
+    # Create the message list with the system message and the latest user message
+    messages = [SystemMessage(content=system_content)]
+
+    # Invoke the routing agent to determine the next action
+    response = await routing_agent.ainvoke(messages)
+    action = response.content.strip().lower()
+
+    if action in ["roll", "search", "continue_story"]:
+        return action
+    else:
+        return "writer"  # Default to writer if the response is not recognized
+
 def start_router(state: MessagesState):
-    messages = state["messages"]
-    last_message = messages[-1]
-    category = categorize_input(last_message.content)
-    return category
+    return asyncio.run(determine_next_action(state))
 
 # Define the model invocation functions
 async def call_writer(state: MessagesState):
     # Extract necessary information from the state
     context = state["messages"]
 
-    memories = cl.user_session.get("vector_memory", None).retriever.vectorstore.similarity_search(context[-1].content, 5)
+    # Find the last user message
+    last_user_message_index = next((i for i, msg in enumerate(context) if isinstance(msg, HumanMessage)), None)
+    if last_user_message_index is None:
+        raise ValueError("No user message found in the context.")
+
+    # Filter out ToolMessages since the last user message
+    tool_results = [msg.content for msg in context[last_user_message_index + 1:] if isinstance(msg, ToolMessage)]
+    user_messages = context[:last_user_message_index + 1]
+
+    memories = cl.user_session.get("vector_memory", None).retriever.vectorstore.similarity_search(user_messages[-1].content, 5)
 
     # Format the system prompt using the PromptTemplate
     engrams = list(set([memory.page_content for memory in memories]))
@@ -47,11 +74,14 @@ async def call_writer(state: MessagesState):
         memories = "\n".join(engrams)
     else:
         memories = "No additional inspiration provided"
-    recent_chat_history = "\n".join([f"{message.type.upper()}: {message.content}" for message in context])
+    recent_chat_history = "\n".join([f"{message.type.upper()}: {message.content}" for message in user_messages])
+    tool_results_str = "\n".join(tool_results) if tool_results else "No tool results"
+
     writer_prompt = PromptTemplate.from_template(AI_WRITER_PROMPT)
     system_content = writer_prompt.format(
         memories=memories,
         recent_chat_history=recent_chat_history,
+        tool_results=tool_results_str
     )
 
     # Create the message list with the system message and the latest user message
@@ -67,7 +97,7 @@ async def call_writer(state: MessagesState):
             new_message = response.content
 
             # Check against refusal list or copying the question
-            if any([new_message.strip().startswith(refusal) for refusal in REFUSAL_LIST]) or new_message == context[-1].content:
+            if any([new_message.strip().startswith(refusal) for refusal in REFUSAL_LIST]) or new_message == user_messages[-1].content:
                 response = None
                 raise ValueError("Writer model refused to generate message: {new_message}")
 
@@ -85,13 +115,23 @@ async def call_dice_roll(state: MessagesState):
     except (ValueError, IndexError):
         sides = DICE_SIDES
     result = dice_roll(sides)
-    return {"messages": [AIMessage(content=result)]}
+    tool_output = {
+        "stdout": result,
+        "stderr": None,
+        "artifacts": None,
+    }
+    return {"messages": [ToolMessage(content=tool_output["stdout"], artifact=tool_output, tool_call_id="roll_dice")]}
 
 async def call_web_search(state: MessagesState):
     last_message = state["messages"][-1]
     query = last_message.content.replace("search ", "").strip()
     result = web_search(query)
-    return {"messages": [AIMessage(content=result)]}
+    tool_output = {
+        "stdout": result,
+        "stderr": None,
+        "artifacts": None,
+    }
+    return {"messages": [ToolMessage(content=tool_output["stdout"], artifact=tool_output, tool_call_id="web_search")]}
 
 async def call_storyboard_generation(history: List[BaseMessage]):
     context = history
