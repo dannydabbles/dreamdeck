@@ -1,4 +1,4 @@
-.PHONY: install run start build test lint format restart stop
+.PHONY: install run start build test lint format restart stop log
 
 install:
 	@echo "Installing dependencies..."
@@ -34,3 +34,7 @@ restart: stop start
 stop:
 	@echo "Stopping the app..."
 	@docker-compose down
+
+log:
+	@echo "Viewing logs in real-time..."
+	@docker-compose logs -f
