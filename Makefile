@@ -1,4 +1,4 @@
-.PHONY: install run start build test lint format
+.PHONY: install run start build test lint format restart stop
 
 install:
 	@echo "Installing dependencies..."
@@ -10,7 +10,7 @@ run:
 
 start:
 	@echo "Starting the app with Docker..."
-	@docker-compose up
+	@docker-compose up -d
 
 build:
 	@echo "Building the Docker image..."
@@ -24,6 +24,13 @@ lint:
 	@echo "Linting the code..."
 	@poetry run flake8 src/
 
-format:
+format: lint
 	@echo "Formatting the code..."
 	@poetry run black src/
+
+restart: stop start
+	@echo "Restarting the app with Docker..."
+
+stop:
+	@echo "Stopping the app..."
+	@docker-compose down
