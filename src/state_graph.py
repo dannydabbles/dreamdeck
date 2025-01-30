@@ -10,6 +10,8 @@ from langchain_core.messages.system import SystemMessage
 from langchain_core.messages.modifier import RemoveMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.ai import AIMessage
+from langchain_core.messages.human import HumanMessage  # Import HumanMessage
+from langchain_core.messages.tool import ToolMessage  # Import ToolMessage
 from langchain.prompts import PromptTemplate  # Import PromptTemplate
 
 from tools_and_agents import writer_agent, storyboard_generation_agent, dice_roll, web_search, routing_agent, DECISION_PROMPT

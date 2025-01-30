@@ -24,7 +24,8 @@ from config import (
     LLM_FREQUENCY_PENALTY,
     LLM_TOP_P,
     LLM_VERBOSE,
-    DECISION_PROMPT  # Import the new prompt
+    DECISION_PROMPT,
+    AI_WRITER_PROMPT  # Import AI_WRITER_PROMPT
 )
 
 @tool
