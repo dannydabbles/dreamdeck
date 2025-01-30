@@ -10,8 +10,10 @@ from langchain_core.messages.system import SystemMessage
 from langchain_core.messages.modifier import RemoveMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.ai import AIMessage
+from langchain.prompts import PromptTemplate  # Import PromptTemplate
 
 from tools_and_agents import writer_agent, storyboard_generation_agent, dice_roll, web_search, categorize_input
+from config import DICE_SIDES, AI_WRITER_PROMPT, STORYBOARD_GENERATION_PROMPT, REFUSAL_LIST  # Import DICE_SIDES and prompts
 
 import chainnut as cl
 

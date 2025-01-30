@@ -1,17 +1,19 @@
 import random
 from typing import Optional, List
+import requests  # Import requests
 
 from langgraph.prebuilt import ToolNode, ToolExecutor
-from langchain.prompts import PromptTemplate
+from langchain.prompts import PromptTemplate  # Import PromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
 import logging
-import os
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
+
+from config import DICE_SIDES, LLM_TEMPERATURE, LLM_STREAMING, LLM_MODEL_NAME, LLM_TIMEOUT, LLM_MAX_TOKENS, LLM_PRESENCE_PENALTY, LLM_FREQUENCY_PENALTY, LLM_TOP_P, LLM_VERBOSE, AI_WRITER_PROMPT  # Import constants
 
 @tool
 def dice_roll(n: Optional[int] = DICE_SIDES) -> str:
