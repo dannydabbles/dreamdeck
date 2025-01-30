@@ -1,140 +1,118 @@
-# Chainlit datalayer
+# Dreamdeck: Your AI-Powered Storytelling Companion
 
-PostgresSQL data layer for Chainlit apps
-- Schema description is in `prisma/schema.prisma`
-- Option to upload elements to cloud storage
+Welcome to Dreamdeck! This application is your gateway to creating and managing immersive, collaborative stories with the help of AI. Whether you're a game master (GM) or a player, Dreamdeck will help you craft dynamic and engaging narratives.
 
-Works with chainlit >= `2.0.0`.
+## Overview
 
-## Demo app
+Dreamdeck is designed to:
+- **Generate Immersive Narratives:** The AI Game Master (GM) creates detailed, character-driven stories that adapt to your choices and preferences.
+- **Visualize Scenes:** Generate vivid storyboards and images to bring your narrative to life.
+- **Store Everything Locally:** All your stories, characters, and elements are stored locally, ensuring your data is safe and accessible.
+- **Support Multiple Languages:** Enjoy the app in multiple languages, including English, Bengali, Gujarati, Hebrew, Hindi, Kannada, Malayalam, Marathi, Dutch, Tamil, Telugu, and Chinese (Simplified).
 
-Here is an example on how to set up the data layer with a basic example in `demo_app/`:
+## Getting Started
 
-https://github.com/user-attachments/assets/a867d470-ccf8-4a6b-8a7d-2b217382a3ed
+### Installation
 
-## Try it locally
+1. **Clone the Repository:**
+   ```sh
+   git clone <repository-url>
+   cd dreamdeck
+   ```
 
-### Install dependencies
+2. **Install Dependencies:**
+   ```sh
+   poetry install
+   ```
 
-```
-# For the database.
-pip install asyncpg
+3. **Start the Application:**
+   ```sh
+   docker compose up -d
+   chainlit run src/app.py
+   ```
 
-# For cloud providers
-pip install boto3                       # AWS S3
-pip install azure-storage-blob aiohttp  # Azure
-pip install google-cloud-storage        # Google Cloud
-```
+4. **Access the App:**
+   Open your browser and navigate to `http://localhost:8080`.
 
-Copy environment variables:
-```
-cp .env.example .env
-```
+### How It Works
 
-If you want to test Azure Blob Storage locally, uncomment the corresponding section in `compose.yaml` and
-run `python init_azure_storage.py` to initialize the container. 
-You will have to temporarily change the `AzureBlobStorageClient` class in chainlit repository to use the `http`
-protocol and an adjusted blob endpoint (without the typical Microsoft extension).
+1. **Start a New Chat:**
+   - When you first open the app, you'll see a welcome message from the Game Master. You can choose the type of story you want to create.
+   - The Game Master will guide you through the narrative, responding to your inputs and creating a dynamic, collaborative adventure.
 
-### Run services
+2. **Interact with the GM:**
+   - **Describe Your Actions:** Type your actions or decisions in the chat box. The GM will respond with rich, detailed descriptions and narrative developments.
+   - **Explore Different Tones:** The GM can adapt to your preferred tone, whether it's lighthearted, serious, or intense. Just let the GM know how you want the story to feel.
+   - **Handle NPCs:** The GM will introduce and manage non-player characters (NPCs) with distinct personalities and motivations. Engage with them to uncover new story elements.
+   - **Avoid Speaking for the Player:** The GM will never assume your actions, thoughts, or emotions. You have full control over your character's decisions.
 
-Run:
+3. **Generate Storyboards:**
+   - After the GM generates a narrative segment, the app will create storyboards to visualize the scene. These storyboards are generated using stable diffusion prompts, ensuring a vivid and immersive experience.
+   - **View and Save Images:** The generated images will be displayed in the chat. You can save them for future reference or share them with others.
 
-```docker
-docker compose up -d
-```
+4. **Use the Dice Roll Tool:**
+   - The app includes a dice roll tool to add an element of chance to your game. Use the `/roll` command to roll a dice with a specified number of sides (default is 100).
 
-Two services are now up:
-- a fresh (empty) PostgreSQL
-- a 'fake' S3 bucket - to simulate storage for elements
+5. **Manage Knowledge:**
+   - The app can load and use knowledge documents to enrich the narrative. These documents can provide background information, lore, and additional context to your story.
 
-We now "imprint" our Prisma schema to the fresh PostgreSQL:
-```
-npx prisma migrate deploy
-```
+### Features
 
-To view your data, use `npx prisma studio`.
+- **Flexible Tone and Content:**
+  - The GM can shift the tone and content based on your cues. Whether you want a comedic, romantic, grim, or intense story, the GM will adapt accordingly.
+  - The GM remains ethically neutral, respecting your boundaries and preferences.
 
-Now, all tables are created and welcoming chat data!
+- **Rich Descriptions and World-Building:**
+  - The GM paints vivid environments, distinct cultures, and believable characters, balancing detail with pacing to keep the story engaging.
 
-## Use from Chainlit
+- **Adaptation and Improvisation:**
+  - The GM uses "Yes, and…" or "Yes, but…" techniques to incorporate new ideas and evolve the plot organically from your actions.
 
-Add the following environment variables in `.env`:
-```
-# To link to the PostgreSQL instance.
-DATABASE_URL=postgresql://root:root@localhost:5432/postgres
-```
+- **Clear Decision Points:**
+  - The GM presents meaningful choices that impact the story's direction, allowing you to shape the narrative.
 
-Upon running `chainlit run app.py`, Chainlit attempts to connect to the 
-specified database and keeps track of threads, users, steps, elements, feedback. 
+- **Out-of-Character (OOC) Notes:**
+  - System notes, dice rolls, and mechanic clarifications are placed in square brackets [like this] for clarity.
 
-Remember to activate user authentication: https://docs.chainlit.io/authentication/overview
+- **Neutral Ethical Stance:**
+  - The GM can handle themes that are either cozy or intense, responding to your direction without imposing bias.
 
-Elements -- that is files attached in the chat -- are written to a cloud storage. 
-Locally, we have a fake S3 running up, which you can connect to with the following
-`.env` configuration:
+### Example Scenarios
 
-```
-# S3 configuration.
-BUCKET_NAME=my-bucket
-APP_AWS_ACCESS_KEY=random-key
-APP_AWS_SECRET_KEY=random-key
-APP_AWS_REGION=eu-central-1
-DEV_AWS_ENDPOINT=http://localhost:4566
+- **Setting a Scene:**
+  - **GM:** The wooden floor creaks beneath your boots as you step into a dimly lit cabin. A single oil lamp illuminates frayed maps pinned to the walls, revealing an ominous coastline drawn in red ink.
+  - **Player:** I examine the maps to see if I recognize any landmarks.
+  - **GM:** They depict jagged cliffs and scattered islands. If you lean closer, you might notice faint notes scrawled along the margins, mentioning hidden passages. The question is: do you want to investigate the next location at night or rest until morning?
 
-# Azure Blob Storage configuration.
-BUCKET_NAME=my-container
-APP_AZURE_STORAGE_ACCOUNT=devstoreaccount1
-APP_AZURE_STORAGE_ACCESS_KEY=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
-APP_AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://localhost:10000/devstoreaccount1;QueueEndpoint=http://localhost:10001/devstoreaccount1;TableEndpoint=http://localhost:10002/devstoreaccount1
-DEV_AZURE_BLOB_ENDPOINT=http://localhost:10000/devstoreaccount1
-```
+- **Multi-NPC Social Encounter:**
+  - **GM:** In the bustling tavern, three notable patrons gather. A cloaked wanderer sips quietly by the fireplace, a traveling merchant waves a colorful scarf for sale, and the local bard strums a lute near the bar.
+  - **Player:** I approach the wanderer. Maybe they’ve heard rumors about the artifact I seek.
+  - **GM:** Wanderer (voice quiet): “Depends who’s asking. The roads are dangerous for those chasing old legends.”  
+  - **Merchant (calling out):** “Ah, but coin can buy safety, friend! Care for a scarf or two?”  
+  - **Bard (hums a tune):** “Or you can pay me to compose a mighty ballad of your quest.”
 
-Re-launch your Chainlit app and add files to your chat. Then browse to 
-http://localhost:4566/my-bucket to list your attachments. 
+- **Dramatic Combat:**
+  - **GM:** Two armed bandits block the forest trail ahead, each brandishing a crude blade. One yells, “Hand over your valuables!”
+  - **Player:** I step back, draw my bow, and warn them to leave me alone.
+  - **GM:** The lead bandit smirks. “Got some nerve, do you?” He signals the other to flank your left. [OOC: Roll for initiative or declare another action. If you want to intimidate them, we can resolve that too.]
 
-## Deploy in production
+- **Puzzle or Riddle:**
+  - **GM:** Deep in the catacombs, a sealed gate bears a riddle etched in marble: “When day merges with night, truth awakens in the silver light.” A circular depression suggests a missing object or key.
+  - **Player:** I investigate the altar nearby for anything that might fit that depression.
+  - **GM:** The altar holds a sun-and-moon motif carved in stone. If you’d like to attempt a lore check or solve the riddle directly, feel free.
 
-In production, deploy a production database -- please use robust passwords --
-and point to an actual cloud provider. 
+### Local Storage
 
-Chainlit supports the three major cloud providers, see below for `.env` example
-configurations.
+All your stories, characters, and elements are stored locally in a PostgreSQL database. This ensures that your data is safe and accessible, and you can resume your adventures at any time.
 
-### AWS S3
+### Support and Feedback
 
-```
-BUCKET_NAME=my-bucket
-APP_AWS_ACCESS_KEY=random-key
-APP_AWS_SECRET_KEY=random-key
-APP_AWS_REGION=eu-central-1
-```
+If you have any questions, suggestions, or encounter any issues, feel free to open an issue in the repository or reach out to the community. We're here to help you create the best possible narrative experiences!
 
-### Google Cloud Storage (GCS)
+### Contributing
 
-With Google Cloud, the following environment variables are necessary to connect:
-- `BUCKET_NAME`: GCS bucket name
-- `APP_GCS_PROJECT_ID`: project ID (not the project number)
-- `APP_GCS_CLIENT_EMAIL`: email of the service account with adequate permissions 
-- `APP_GCS_PRIVATE_KEY`: secret key to authenticate
+Feel free to contribute to this project by opening issues or pull requests. For major changes, please open an issue first to discuss what you would like to change.
 
-Create your service account from "IAM & Admin" > "Service Accounts". 
-You can go with Storage Object Viewer and Creator/Admin. 
-Key for the service account can be created from the "Keys" tab on the service account
-details page. 
+### License
 
-Here's an example of what your configuration could look like:
-```
-BUCKET_NAME=my-test-bucket
-APP_GCS_PROJECT_ID=chat-project-123456
-APP_GCS_CLIENT_EMAIL=chat-project-bucket@chat-project-123456.iam.gserviceaccount.com
-APP_GCS_PRIVATE_KEY=ABC...123...XYZ
-```
-
-### Azure Blob Storage
-
-```
-BUCKET_NAME= # should be the container name in Azure terminology.
-APP_AZURE_STORAGE_ACCOUNT=dev-store-account-xyz
-APP_AZURE_STORAGE_ACCESS_KEY=F9xkw3NOs...
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
