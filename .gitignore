@@ -7,3 +7,16 @@
 # Node modules.
 node_modules/
 my-localstack-data/
+
+#DBs
+chroma_db/
+my-localstack-data/
+
+# Cruft
+.files/
+src/__pycache__/
+
+# Aider
+.aider.chat.history.md
+
+.aider*
