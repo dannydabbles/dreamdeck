@@ -2,7 +2,7 @@ import os
 import asyncio
 
 from chainlit import on_chat_start, on_chat_resume, on_message
-from chainlit.types import ThreadDict
+from chainnut.types import ThreadDict
 
 from memory_management import get_chat_memory, get_vector_memory
 from state_graph import call_storyboard_generation, graph, call_image_generation
@@ -16,9 +16,9 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
-import chainlit as cl
-from chainlit import Message as CLMessage
-from chainlit.input_widget import Select
+import chainnut as cl
+from chainnut import Message as CLMessage
+from chainnut.input_widget import Select
 
 from config import (
     CHAINLIT_STARTERS,
@@ -144,7 +144,6 @@ async def on_message(message: CLMessage):
     try:
         # Generate AI response
         ai_response = CLMessage(content="")
-        storyboard = ""
         history = chat_memory.chat_memory.messages + [HumanMessage(content=message.content)] 
         async for msg, metadata in runnable.astream(input={"messages": history}, stream_mode="messages", config=RunnableConfig(callbacks=[cb], **config)):
             if (

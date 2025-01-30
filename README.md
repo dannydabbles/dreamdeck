@@ -2,6 +2,14 @@
 
 Dreamdeck is an AI-powered application designed to provide a Holodeck-like experience, enabling you to create and manage immersive, collaborative stories. Whether you're a game master (GM) or a player, Dreamdeck will guide you through dynamic and engaging narratives, generate vivid storyboards, and store all your data locally for safety and accessibility.
 
+## New Features
+
+- **Smart Categorization of User Input:**
+  - The app now categorizes user input into different buckets to handle specific actions:
+    - **Roll:** If the user wants to roll dice, the app will handle the roll before continuing the story.
+    - **Search:** If the user wants to look up information, the app will perform a web search using SerpAPI.
+    - **Continue Story:** If the user is continuing the story, the app will generate the next part of the narrative.
+
 ## Features
 
 - **Immersive Narratives:** The AI Game Master (GM) creates detailed, character-driven stories that adapt to your choices and preferences.
@@ -117,6 +125,20 @@ Dreamdeck is an AI-powered application designed to provide a Holodeck-like exper
 ### Contributing
 
 We welcome contributions! Feel free to open issues or pull requests. For major changes, please open an issue first to discuss what you would like to change.
+
+### Example Usage
+
+- **Rolling Dice:**
+  - **User:** "I want to roll a 20-sided die."
+  - **App:** 🎲 You rolled a 15 on a 20-sided die.
+
+- **Web Search:**
+  - **User:** "Search for the history of dragons in mythology."
+  - **App:** Dragons have been a part of mythology for centuries, often depicted as powerful and wise creatures. In Norse mythology, dragons like Fafnir and Nidhogg are well-known. In Chinese mythology, dragons are symbols of power and good fortune.
+
+- **Continuing the Story:**
+  - **User:** "I approach the old wizard in the tower."
+  - **App:** The wizard looks up from his ancient tome, his eyes twinkling with curiosity. "Ah, a visitor! What brings you to my humble abode?"
 
 ### License
 

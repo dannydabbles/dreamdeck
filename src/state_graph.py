@@ -11,11 +11,9 @@ from langchain_core.messages.modifier import RemoveMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.ai import AIMessage
 
-from langchain.prompts import PromptTemplate
+from tools_and_agents import writer_agent, storyboard_generation_agent, dice_roll, web_search, categorize_input
 
-from tools_and_agents import writer_agent, storyboard_generation_agent
-
-import chainlit as cl
+import chainnut as cl
 
 from config import (
     AI_WRITER_PROMPT,
@@ -31,8 +29,8 @@ builder = StateGraph(MessagesState)
 def start_router(state: MessagesState):
     messages = state["messages"]
     last_message = messages[-1]
-
-    return "writer"
+    category = categorize_input(last_message.content)
+    return category
 
 # Define the model invocation functions
 async def call_writer(state: MessagesState):
@@ -42,12 +40,12 @@ async def call_writer(state: MessagesState):
     memories = cl.user_session.get("vector_memory", None).retriever.vectorstore.similarity_search(context[-1].content, 5)
 
     # Format the system prompt using the PromptTemplate
-    engrams=list(set([memory.page_content for memory in memories]))
+    engrams = list(set([memory.page_content for memory in memories]))
     if engrams:
-        memories="\n".join(engrams)
+        memories = "\n".join(engrams)
     else:
-        memories="No additional inspiration provided"
-    recent_chat_history="\n".join([f"{message.type.upper()}: {message.content}" for message in context])
+        memories = "No additional inspiration provided"
+    recent_chat_history = "\n".join([f"{message.type.upper()}: {message.content}" for message in context])
     writer_prompt = PromptTemplate.from_template(AI_WRITER_PROMPT)
     system_content = writer_prompt.format(
         memories=memories,
@@ -77,6 +75,22 @@ async def call_writer(state: MessagesState):
 
     return {"messages": [response]}
 
+async def call_dice_roll(state: MessagesState):
+    last_message = state["messages"][-1]
+    try:
+        # Extract the number of sides from the message content
+        sides = int(last_message.content.split(" ")[1])
+    except (ValueError, IndexError):
+        sides = DICE_SIDES
+    result = dice_roll(sides)
+    return {"messages": [AIMessage(content=result)]}
+
+async def call_web_search(state: MessagesState):
+    last_message = state["messages"][-1]
+    query = last_message.content.replace("search ", "").strip()
+    result = web_search(query)
+    return {"messages": [AIMessage(content=result)]}
+
 async def call_storyboard_generation(history: List[BaseMessage]):
     context = history
     # Add memories relating to the last message
@@ -87,10 +101,10 @@ async def call_storyboard_generation(history: List[BaseMessage]):
     # Format the system prompt using the PromptTemplate
     engrams = list(set([memory.page_content for memory in memories]))
     if engrams:
-        memories="\n".join(engrams)
+        memories = "\n".join(engrams)
     else:
-        memories="No additional inspiration provided."
-    recent_chat_history="\n".join([f"{message.type.upper()}: {message.content}" for message in context])
+        memories = "No additional inspiration provided."
+    recent_chat_history = "\n".join([f"{message.type.upper()}: {message.content}" for message in context])
 
     image_prompt = PromptTemplate.from_template(STORYBOARD_GENERATION_PROMPT)
     system_content = image_prompt.format(
@@ -127,6 +141,8 @@ async def call_image_generation(state: MessagesState, ai_message_id: str):
 
 # Add nodes to the graph
 builder.add_node("writer", call_writer)
+builder.add_node("roll", call_dice_roll)
+builder.add_node("search", call_web_search)
 
 # Define edges based on the decision function
 builder.add_conditional_edges(
@@ -134,5 +150,7 @@ builder.add_conditional_edges(
     start_router,
 )
 builder.add_edge("writer", END)
+builder.add_edge("roll", END)
+builder.add_edge("search", END)
 
 graph = builder.compile()

@@ -2,6 +2,14 @@
 
 Welcome to Dreamdeck! This application is your gateway to creating and managing immersive, collaborative stories with the help of AI. Whether you're a game master (GM) or a player, Dreamdeck will help you craft dynamic and engaging narratives, providing a Holodeck-like experience.
 
+## New Features
+
+- **Smart Categorization of User Input:**
+  - The app now categorizes user input into different buckets to handle specific actions:
+    - **Roll:** If the user wants to roll dice, the app will handle the roll before continuing the story.
+    - **Search:** If the user wants to look up information, the app will perform a web search using SerpAPI.
+    - **Continue Story:** If the user is continuing the story, the app will generate the next part of the narrative.
+
 ## Overview
 
 Dreamdeck is designed to:
@@ -38,29 +46,19 @@ Dreamdeck is designed to:
 
 - **Enrich the Narrative:** The app can load and use knowledge documents to provide background information, lore, and additional context to your story.
 
-### Example Scenarios
+### Example Usage
 
-- **Setting a Scene:**
-  - **GM:** The wooden floor creaks beneath your boots as you step into a dimly lit cabin. A single oil lamp illuminates frayed maps pinned to the walls, revealing an ominous coastline drawn in red ink.
-  - **Player:** I examine the maps to see if I recognize any landmarks.
-  - **GM:** They depict jagged cliffs and scattered islands. If you lean closer, you might notice faint notes scrawled along the margins, mentioning hidden passages. The question is: do you want to investigate the next location at night or rest until morning?
+- **Rolling Dice:**
+  - **User:** "I want to roll a 20-sided die."
+  - **App:** 🎲 You rolled a 15 on a 20-sided die.
 
-- **Multi-NPC Social Encounter:**
-  - **GM:** In the bustling tavern, three notable patrons gather. A cloaked wanderer sips quietly by the fireplace, a traveling merchant waves a colorful scarf for sale, and the local bard strums a lute near the bar.
-  - **Player:** I approach the wanderer. Maybe they’ve heard rumors about the artifact I seek.
-  - **GM:** Wanderer (voice quiet): “Depends who’s asking. The roads are dangerous for those chasing old legends.”  
-  - **Merchant (calling out):** “Ah, but coin can buy safety, friend! Care for a scarf or two?”  
-  - **Bard (hums a tune):** “Or you can pay me to compose a mighty ballad of your quest.”
+- **Web Search:**
+  - **User:** "Search for the history of dragons in mythology."
+  - **App:** Dragons have been a part of mythology for centuries, often depicted as powerful and wise creatures. In Norse mythology, dragons like Fafnir and Nidhogg are well-known. In Chinese mythology, dragons are symbols of power and good fortune.
 
-- **Dramatic Combat:**
-  - **GM:** Two armed bandits block the forest trail ahead, each brandishing a crude blade. One yells, “Hand over your valuables!”
-  - **Player:** I step back, draw my bow, and warn them to leave me alone.
-  - **GM:** The lead bandit smirks. “Got some nerve, do you?” He signals the other to flank your left. [OOC: Roll for initiative or declare another action. If you want to intimidate them, we can resolve that too.]
-
-- **Puzzle or Riddle:**
-  - **GM:** Deep in the catacombs, a sealed gate bears a riddle etched in marble: “When day merges with night, truth awakens in the silver light.” A circular depression suggests a missing object or key.
-  - **Player:** I investigate the altar nearby for anything that might fit that depression.
-  - **GM:** The altar holds a sun-and-moon motif carved in stone. If you’d like to attempt a lore check or solve the riddle directly, feel free.
+- **Continuing the Story:**
+  - **User:** "I approach the old wizard in the tower."
+  - **App:** The wizard looks up from his ancient tome, his eyes twinkling with curiosity. "Ah, a visitor! What brings you to my humble abode?"
 
 ### Local Storage
 

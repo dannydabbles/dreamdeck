@@ -1,33 +1,14 @@
 import random
-from typing import Optional
+from typing import Optional, List
 
 from langgraph.prebuilt import ToolNode, ToolExecutor
-
 from langchain.prompts import PromptTemplate
-
 from langchain_openai import ChatOpenAI
-
-from langchain.schema.output_parser import StrOutputParser
 from langchain_core.tools import tool
-
-from config import (
-    LLM_TEMPERATURE,
-    LLM_MAX_TOKENS,
-    LLM_CHUNK_SIZE,
-    LLM_MODEL_NAME,
-    LLM_STREAMING,
-    LLM_TIMEOUT,
-    LLM_PRESENCE_PENALTY,
-    LLM_FREQUENCY_PENALTY,
-    LLM_TOP_P,
-    LLM_VERBOSE,
-    AI_WRITER_PROMPT,
-    STORYBOARD_GENERATION_PROMPT,
-    DICE_SIDES,
-)
-
+from langchain.schema.output_parser import StrOutputParser
+from langchain_core.messages import HumanMessage, AIMessage
 import logging
-
+import os
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -48,7 +29,44 @@ def dice_roll(n: Optional[int] = DICE_SIDES) -> str:
     cl_logger.info(f"Dice roll result: {result} on a {sides}-sided die.")
     return f"🎲 You rolled a {result} on a {sides}-sided die."
 
-tools = [dice_roll]
+@tool
+def web_search(query: str) -> str:
+    """
+    Performs a web search using SerpAPI.
+
+    Args:
+        query (str): The search query.
+
+    Returns:
+        str: The search result.
+    """
+    serpapi_key = os.getenv("SERPAPI_KEY")
+    if not serpapi_key:
+        raise ValueError("SERPAPI_KEY environment variable not set.")
+    url = f"https://serpapi.com/search.json?q={query}&api_key={serpapi_key}"
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
+    if "error" in data:
+        raise ValueError(f"Search error: {data['error']}")
+    return data.get("organic_results", [{}])[0].get("snippet", "No results found.")
+
+def categorize_input(input: str) -> str:
+    """
+    Categorizes the user input into one of the following categories: 'roll', 'search', 'continue_story'.
+
+    Args:
+        input (str): The user input.
+
+    Returns:
+        str: The category of the input.
+    """
+    input = input.lower()
+    if "roll" in input:
+        return "roll"
+    if "search" in input or "look up" in input or "find out" in input:
+        return "search"
+    return "continue_story"
 
 # Initialize the writer AI agent
 writer_model = ChatOpenAI(
@@ -67,7 +85,7 @@ writer_model = ChatOpenAI(
 writer_prompt = PromptTemplate.from_template(AI_WRITER_PROMPT)
 
 # Assuming ChatOpenAI has a bind_tools method; if not, adjust accordingly
-writer_agent = writer_model.bind_tools(tools)
+writer_agent = writer_model.bind_tools([dice_roll, web_search])
 
 # Initialize the image generation AI agent
 storyboard_model = ChatOpenAI(
@@ -82,7 +100,5 @@ storyboard_model = ChatOpenAI(
     top_p=LLM_TOP_P,
     verbose=LLM_VERBOSE
 )
-
-storyboard_generation_agent = storyboard_model
 
 storyboard_editor_agent = storyboard_model
