@@ -103,8 +103,9 @@ async def call_storyboard_generation(history: List[BaseMessage]):
     storyboard_message = await storyboard_generation_agent.ainvoke(messages)
 
     think_end = "</think>"
-    if think_end in storyboard_message.content:
-        storyboard = storyboard_message.content.split(think_end)[1].strip()
+    storyboard = storyboard_message.content
+    if think_end in storyboard:
+        storyboard = storyboard.split(think_end)[1].strip()
 
     return storyboard
 

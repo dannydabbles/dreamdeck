@@ -4,9 +4,8 @@ llm:
   model_name: "gpt-3.5-turbo"
   streaming: true
   timeout: 180
-  presence_penalty: 0.0
-  frequency_penalty: 0.0
-  repetition_penalty: 1.05
+  presence_penalty: 0.05
+  frequency_penalty: 0.05
   top_p: 0.8
   top_k: 20
   verbose: true
@@ -202,7 +201,7 @@ prompts:
 
 image_generation_payload:
   # Flux settings
-  steps: 50
+  steps: 30
   sampler_name: "Euler"
   scheduler: "Simple"
   cfg_scale: 3.5
@@ -214,7 +213,7 @@ image_generation_payload:
   hr_scale: 2
   hr_upscaler: "SwinIR 4x"
   denoising_strength: 0.6
-  hr_second_pass_steps: 15
+  hr_second_pass_steps: 10
 
   # Stable Diffusion settings
   #  negative_prompt: ""
