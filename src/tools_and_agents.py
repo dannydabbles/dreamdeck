@@ -1,6 +1,7 @@
 import random
 from typing import Optional, List
 import requests  # Import requests
+import os  # Import os
 
 from langgraph.prebuilt import ToolNode, ToolExecutor
 from langchain.prompts import PromptTemplate  # Import PromptTemplate
