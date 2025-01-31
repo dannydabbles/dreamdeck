@@ -19,7 +19,6 @@ from config import (
     LLM_STREAMING,
     LLM_MODEL_NAME,
     LLM_TIMEOUT,
-    LLM_MAX_TOKENS,
     LLM_PRESENCE_PENALTY,
     LLM_FREQUENCY_PENALTY,
     LLM_TOP_P,
@@ -66,22 +65,16 @@ def web_search(query: str) -> str:
         raise ValueError(f"Search error: {data['error']}")
     return data.get("organic_results", [{}])[0].get("snippet", "No results found.")
 
-def categorize_input(input: str) -> str:
-    """
-    Categorizes the user input into one of the following categories: 'roll', 'search', 'continue_story'.
-
-    Args:
-        input (str): The user input.
-
-    Returns:
-        str: The category of the input.
-    """
-    input = input.lower()
-    if "roll" in input:
-        return "roll"
-    if "search" in input or "look up" in input or "find out" in input:
-        return "search"
-    return "continue_story"
+# Initialize the decision agent
+decision_agent = ChatOpenAI(
+    base_url="http://192.168.1.111:5000/v1",
+    temperature=0.7,  # Adjust as needed
+    streaming=False,
+    model_name=LLM_MODEL_NAME,
+    request_timeout=LLM_TIMEOUT,
+    max_tokens=100,  # Adjust as needed
+    verbose=LLM_VERBOSE
+)
 
 # Initialize the writer AI agent
 writer_model = ChatOpenAI(
@@ -101,22 +94,6 @@ writer_prompt = PromptTemplate.from_template(AI_WRITER_PROMPT)
 
 # Assuming ChatOpenAI has a bind_tools method; if not, adjust accordingly
 writer_agent = writer_model.bind_tools([dice_roll, web_search])
-
-# Initialize the routing agent
-routing_model = ChatOpenAI(
-    base_url="http://192.168.1.111:5000/v1",
-    temperature=0.7,  # Adjust as needed
-    streaming=False,
-    model_name=LLM_MODEL_NAME,
-    request_timeout=LLM_TIMEOUT,
-    max_tokens=100,  # Adjust as needed
-    verbose=LLM_VERBOSE
-)
-
-routing_prompt = PromptTemplate.from_template(DECISION_PROMPT)
-
-# Define the routing agent
-routing_agent = routing_model.bind_tools([])
 
 # Initialize the image generation AI agent
 storyboard_model = ChatOpenAI(

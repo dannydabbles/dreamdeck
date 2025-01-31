@@ -14,7 +14,7 @@ from langchain_core.messages.human import HumanMessage  # Import HumanMessage
 from langchain_core.messages.tool import ToolMessage  # Import ToolMessage
 from langchain.prompts import PromptTemplate  # Import PromptTemplate
 
-from tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, DECISION_PROMPT
+from tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, DECISION_PROMPT, decision_agent  # Import decision_agent
 from config import DICE_SIDES, AI_WRITER_PROMPT, STORYBOARD_GENERATION_PROMPT, REFUSAL_LIST, DECISION_PROMPT  # Import DICE_SIDES and prompts
 
 import chainlit as cl
@@ -29,7 +29,7 @@ from config import (
 # Define the state graph
 builder = StateGraph(MessagesState)
 
-# Define decision function to route messages using the routing agent
+# Define decision function to route messages using the decision agent
 async def determine_next_action(state: MessagesState) -> str:
     last_message = state["messages"][-1]
     if not isinstance(last_message, HumanMessage):
@@ -42,8 +42,8 @@ async def determine_next_action(state: MessagesState) -> str:
     # Create the message list with the system message and the latest user message
     messages = [SystemMessage(content=system_content)]
 
-    # Invoke the routing agent to determine the next action
-    response = await routing_agent.ainvoke(messages)
+    # Invoke the decision agent to determine the next action
+    response = await decision_agent.ainvoke(messages)
     action = response.content.strip().lower()
 
     if action in ["roll", "search"]:
