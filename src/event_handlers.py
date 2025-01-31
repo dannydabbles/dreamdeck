@@ -149,7 +149,7 @@ async def on_message(message: CLMessage):
             if (
                 msg.content
                 and not isinstance(msg, HumanMessage)
-                and metadata.get("action") == "writer"  # Ensure the key is 'action'
+                and metadata["langgraph_node"] == "writer"
             ):
                 await ai_response.stream_token(msg.content)
         await ai_response.send()

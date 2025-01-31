@@ -53,8 +53,8 @@ async def determine_next_action(state: MessagesState) -> str:
     else:
         return "writer"  # Default to writer if the response is not recognized
 
-def start_router(state: MessagesState):
-    action = asyncio.run(determine_next_action(state))
+async def start_router(state: MessagesState):
+    action = await determine_next_action(state)
     return action  # Ensure the action key is set in the metadata
 
 # Define the model invocation functions
@@ -198,7 +198,7 @@ builder.add_conditional_edges(
     start_router,
 )
 builder.add_edge("writer", END)
-builder.add_edge("roll", END)
-builder.add_edge("search", END)
+builder.add_edge("roll", "writer")
+builder.add_edge("search", "writer")
 
 graph = builder.compile()

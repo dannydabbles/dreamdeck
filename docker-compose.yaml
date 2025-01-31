@@ -40,6 +40,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - OPENAI_API_KEY=sk-dummy
+      - SERPAPI_KEY=${SERPAPI_KEY}
       - CHAINLIT_AUTH_SECRET=${CHAINLIT_AUTH_SECRET}
       - DATABASE_URL=${DOCKER_DATABASE_URL:-$DATABASE_URL}
       - BUCKET_NAME=${BUCKET_NAME}
