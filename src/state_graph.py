@@ -14,10 +14,10 @@ from langchain_core.messages.human import HumanMessage  # Import HumanMessage
 from langchain_core.messages.tool import ToolMessage  # Import ToolMessage
 from langchain.prompts import PromptTemplate  # Import PromptTemplate
 
-from tools_and_agents import writer_agent, storyboard_generation_agent, dice_roll, web_search, routing_agent, DECISION_PROMPT
+from tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, routing_agent, DECISION_PROMPT
 from config import DICE_SIDES, AI_WRITER_PROMPT, STORYBOARD_GENERATION_PROMPT, REFUSAL_LIST, DECISION_PROMPT  # Import DICE_SIDES and prompts
 
-import chainnut as cl
+import chainlit as cl
 
 from config import (
     AI_WRITER_PROMPT,
@@ -158,7 +158,7 @@ async def call_storyboard_generation(history: List[BaseMessage]):
     # Create the message list with the system message and the latest user message
     messages = [SystemMessage(content=system_content)]
 
-    storyboard_message = await storyboard_generation_agent.ainvoke(messages)
+    storyboard_message = await storyboard_editor_agent.ainvoke(messages)
 
     think_end = "</think>"
     storyboard = storyboard_message.content

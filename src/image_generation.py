@@ -42,8 +42,6 @@ from config import (
 from chainlit import Message as CLMessage
 from chainlit.element import Image as CLImage
 
-from tools_and_agents import storyboard_generation_agent
-
 # Define an asynchronous range generator
 async def async_range(end):
     for i in range(0, end):
