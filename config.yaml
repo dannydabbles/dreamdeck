@@ -214,9 +214,8 @@ prompts:
     {user_input}
     </input>
 
-    <output>
-    {action}
-    </output>
+    Give a one word answer corresponding to the action that should be taken next:
+
   storyboard_generation_prompt_prefix: "" #"masterpiece,best quality,amazing quality"
 
   storyboard_generation_prompt_postfix: "" #"source_anime, source_cartoon"

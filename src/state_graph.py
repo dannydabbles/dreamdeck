@@ -46,14 +46,16 @@ async def determine_next_action(state: MessagesState) -> str:
     response = await routing_agent.ainvoke(messages)
     action = response.content.strip().lower()
 
-    if action in ["roll", "search", "continue_story"]:
+    if action in ["roll", "search"]:
         return action
+    elif action in ["continue_story"]:
+        return "writer"
     else:
         return "writer"  # Default to writer if the response is not recognized
 
 def start_router(state: MessagesState):
     action = asyncio.run(determine_next_action(state))
-    return {"action": action}  # Ensure the action key is set in the metadata
+    return action  # Ensure the action key is set in the metadata
 
 # Define the model invocation functions
 async def call_writer(state: MessagesState):
@@ -109,7 +111,7 @@ async def call_writer(state: MessagesState):
             response = None
 
     # Ensure the metadata includes the 'action' key
-    return {"messages": [response], "metadata": {"action": "writer"}}
+    return {"messages": [response]}
 
 async def call_dice_roll(state: MessagesState):
     last_message = state["messages"][-1]
