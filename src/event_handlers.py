@@ -149,7 +149,7 @@ async def on_message(message: CLMessage):
             if (
                 msg.content
                 and not isinstance(msg, HumanMessage)
-                and metadata["langgraph_node"] == "writer"
+                and metadata.get("action") == "writer"  # Ensure the key is 'action'
             ):
                 await ai_response.stream_token(msg.content)
         await ai_response.send()
@@ -163,6 +163,7 @@ async def on_message(message: CLMessage):
         asyncio.create_task(call_image_generation(history, ai_message_id))
     except Exception as e:
         cl.logger.error(f"Runnable stream failed: {e}")
+        cl.logger.error(f"Metadata: {metadata}")  # Log the metadata to see if 'action' is present
         await CLMessage(content="⚠️ An error occurred while generating the response. Please try again later.").send()
         return
 

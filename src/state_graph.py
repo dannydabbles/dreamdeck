@@ -14,7 +14,7 @@ from langchain_core.messages.human import HumanMessage  # Import HumanMessage
 from langchain_core.messages.tool import ToolMessage  # Import ToolMessage
 from langchain.prompts import PromptTemplate  # Import PromptTemplate
 
-from tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, routing_agent, DECISION_PROMPT
+from tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, DECISION_PROMPT
 from config import DICE_SIDES, AI_WRITER_PROMPT, STORYBOARD_GENERATION_PROMPT, REFUSAL_LIST, DECISION_PROMPT  # Import DICE_SIDES and prompts
 
 import chainlit as cl
@@ -52,7 +52,8 @@ async def determine_next_action(state: MessagesState) -> str:
         return "writer"  # Default to writer if the response is not recognized
 
 def start_router(state: MessagesState):
-    return asyncio.run(determine_next_action(state))
+    action = asyncio.run(determine_next_action(state))
+    return {"action": action}  # Ensure the action key is set in the metadata
 
 # Define the model invocation functions
 async def call_writer(state: MessagesState):
@@ -107,7 +108,8 @@ async def call_writer(state: MessagesState):
             cl.logger.error(f"Writer model invocation failed: {e}")
             response = None
 
-    return {"messages": [response]}
+    # Ensure the metadata includes the 'action' key
+    return {"messages": [response], "metadata": {"action": "writer"}}
 
 async def call_dice_roll(state: MessagesState):
     last_message = state["messages"][-1]
