@@ -24,7 +24,8 @@ from config import (
     LLM_TOP_P,
     LLM_VERBOSE,
     DECISION_PROMPT,
-    AI_WRITER_PROMPT  # Import AI_WRITER_PROMPT
+    AI_WRITER_PROMPT,
+    LLM_MAX_TOKENS  # Import LLM_MAX_TOKENS
 )
 
 @tool
