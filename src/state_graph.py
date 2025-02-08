@@ -31,6 +31,7 @@ builder = StateGraph(MessagesState)
 
 # Define decision function to route messages using the decision agent
 async def determine_next_action(state: MessagesState) -> str:
+    return "writer"  # Default to writer if the decision agent fails
     last_message = state["messages"][-1]
     if not isinstance(last_message, HumanMessage):
         return "writer"  # Default to writer if the last message is not from the user
@@ -62,26 +63,29 @@ async def call_writer(state: MessagesState):
     # Extract necessary information from the state
     context = state["messages"]
 
-    # Find the last user message
-    last_user_message_index = next((i for i, msg in enumerate(context) if isinstance(msg, HumanMessage)), None)
-    if last_user_message_index is None:
-        raise ValueError("No user message found in the context.")
-
     # Filter out ToolMessages since the last user message
-    tool_results = [msg.content for msg in context[last_user_message_index + 1:] if isinstance(msg, ToolMessage)]
-    user_messages = context[:last_user_message_index + 1]
+    tool_results = [msg for msg in context if isinstance(msg, ToolMessage)]
+    story_messages = [msg for msg in context if isinstance(msg, HumanMessage) or isinstance(msg, AIMessage)]
 
-    memories = cl.user_session.get("vector_memory", None).retriever.vectorstore.similarity_search(user_messages[-1].content, 5)
+    # Get the most recent chat history
+    memories = cl.user_session.get("vector_memory", None).retriever.vectorstore.similarity_search(story_messages[-1].content, 5)
 
-    # Format the system prompt using the PromptTemplate
-    engrams = list(set([memory.page_content for memory in memories]))
+    # Get the most recent chat history
+    recent_chat_history = "\n".join([f"{message.type.upper()}: {message.content}" for message in story_messages])
+    tool_results_str = "\n".join(tool_results) if tool_results else "No tool results"
+
+    # Add memories relating to the last message
+    engrams = []
+    for memory in memories:
+        # Check if the memory is already in the engrams list or in the chat history
+        if memory.page_content.strip() not in engrams and memory.page_content.strip() not in recent_chat_history:
+            engrams.append(memory.page_content)
     if engrams:
         memories = "\n".join(engrams)
     else:
         memories = "No additional inspiration provided"
-    recent_chat_history = "\n".join([f"{message.type.upper()}: {message.content}" for message in user_messages])
-    tool_results_str = "\n".join(tool_results) if tool_results else "No tool results"
 
+    # Format the system prompt using the PromptTemplate
     writer_prompt = PromptTemplate.from_template(AI_WRITER_PROMPT)
     system_content = writer_prompt.format(
         memories=memories,
@@ -92,6 +96,7 @@ async def call_writer(state: MessagesState):
     # Create the message list with the system message and the latest user message
     messages = [SystemMessage(content=system_content)]
 
+    # Invoke the writer agent
     response = None
     while not response:
         try:
@@ -102,7 +107,7 @@ async def call_writer(state: MessagesState):
             new_message = response.content
 
             # Check against refusal list or copying the question
-            if any([new_message.strip().startswith(refusal) for refusal in REFUSAL_LIST]) or new_message == user_messages[-1].content:
+            if any([new_message.strip().startswith(refusal) for refusal in REFUSAL_LIST]) or new_message == story_messages[-1].content:
                 response = None
                 raise ValueError("Writer model refused to generate message: {new_message}")
 
