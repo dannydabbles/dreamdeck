@@ -10,13 +10,11 @@ from langchain_core.messages.system import SystemMessage
 from langchain_core.messages.modifier import RemoveMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.ai import AIMessage
-from langchain_core.messages.human import HumanMessage  # Import HumanMessage
-from langchain_core.messages.tool import ToolMessage  # Import ToolMessage
-from langchain.prompts import PromptTemplate  # Import PromptTemplate
+from langchain_core.messages.human import HumanMessage
+from langchain_core.messages.tool import ToolMessage
+from langchain.prompts import PromptTemplate
 
-from tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, DECISION_PROMPT, decision_agent  # Import decision_agent
-from config import SEARCH_ENABLED  # Import the new configuration setting
-from config import DICE_SIDES, AI_WRITER_PROMPT, STORYBOARD_GENERATION_PROMPT, REFUSAL_LIST, DECISION_PROMPT  # Import DICE_SIDES and prompts
+from tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, DECISION_PROMPT, decision_agent
 
 import chainlit as cl
 
@@ -24,7 +22,10 @@ from config import (
     AI_WRITER_PROMPT,
     STORYBOARD_GENERATION_PROMPT,
     NUM_IMAGE_PROMPTS,
-    REFUSAL_LIST
+    REFUSAL_LIST,
+    DECISION_PROMPT,
+    SEARCH_ENABLED,
+    DICE_SIDES,
 )
 
 # Define the state graph
