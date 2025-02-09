@@ -15,6 +15,7 @@ from langchain_core.messages.tool import ToolMessage  # Import ToolMessage
 from langchain.prompts import PromptTemplate  # Import PromptTemplate
 
 from tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, DECISION_PROMPT, decision_agent  # Import decision_agent
+from config import SEARCH_ENABLED  # Import the new configuration setting
 from config import DICE_SIDES, AI_WRITER_PROMPT, STORYBOARD_GENERATION_PROMPT, REFUSAL_LIST, DECISION_PROMPT  # Import DICE_SIDES and prompts
 
 import chainlit as cl
@@ -47,8 +48,10 @@ async def determine_next_action(state: MessagesState) -> str:
     response = await decision_agent.ainvoke(messages)
     action = response.content.strip().lower()
 
-    if action in ["roll", "search"]:
-        return action
+    if action == "roll":
+        return "roll"
+    elif action == "search" and SEARCH_ENABLED:
+        return "search"
     elif action in ["continue_story"]:
         return "writer"
     else:
