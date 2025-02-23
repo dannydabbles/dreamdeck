@@ -6,6 +6,12 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode, ToolExecutor
 from langgraph.store.base import BaseStore
 from stores import VectorStore
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type
+)
 from langchain_core.messages import (
     AIMessage,
     HumanMessage,
@@ -132,14 +138,24 @@ async def handle_search(state: ChatState) -> Dict[str, Any]:
     return {"messages": [ToolMessage(content=result)]}
 
 @task
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    retry=retry_if_exception_type((TypeError, ValueError))
+)
 async def generate_story_response(state: ChatState) -> Dict[str, Any]:
     """Generate main story response with retry logic."""
     try:
         messages = []
-        async for chunk in writer_agent.astream(state.messages):
+        async for chunk in writer_agent.astream(
+            messages=state.messages,
+            stop=None,
+            timeout=LLM_TIMEOUT * 3
+        ):
             if isinstance(chunk, BaseMessage):
                 messages.append(chunk)
+            elif isinstance(chunk, dict) and chunk.get("content"):
+                messages.append(AIMessage(content=chunk["content"]))
         
         if not messages:
             raise ValueError("No messages generated")
@@ -147,6 +163,7 @@ async def generate_story_response(state: ChatState) -> Dict[str, Any]:
         return {"messages": messages}
         
     except Exception as e:
+        cl_logger.error(f"Story generation error: {str(e)}", exc_info=True)
         state.increment_error_count()
         if state.error_count >= 3:
             return {
@@ -287,22 +304,40 @@ async def story_workflow(
         # Generate GM response
         msg = cl.Message(content="")
         
-        # If we have tool results, add them to state
-        if roll_result or search_result:
-            if roll_result:
-                state.add_tool_result(roll_result["messages"][0].content)
-            if search_result:
-                state.add_tool_result(search_result["messages"][0].content)
+        try:
+            # If we have tool results, add them to state
+            if roll_result or search_result:
+                if roll_result:
+                    state.add_tool_result(roll_result["messages"][0].content)
+                if search_result:
+                    state.add_tool_result(search_result["messages"][0].content)
 
-        # Get response
-        response = await generate_story_response(state)
-        
-        # Stream the response content
-        if response and response.get("messages"):
-            for message in response["messages"]:
-                await msg.stream_token(message.content)
+            # Get response
+            response = await generate_story_response(state)
+            
+            # Stream the response content
+            if response and response.get("messages"):
+                for message in response["messages"]:
+                    if isinstance(message, (AIMessage, SystemMessage)):
+                        await msg.stream_token(message.content)
+                    
+            await msg.send()
+            
+            # Update state with GM response
+            if msg.content:
+                state.messages.append(AIMessage(content=msg.content))
+                state.metadata["current_message_id"] = msg.id
                 
-        await msg.send()
+        except Exception as e:
+            cl_logger.error(f"Story generation failed: {str(e)}", exc_info=True)
+            await cl.Message(content="I apologize, but I encountered an error. Please try again.").send()
+            return entrypoint.final(
+                value={
+                    "messages": [SystemMessage(content="I apologize, but I encountered an error. Please try again.")],
+                    "action": "error"
+                },
+                save=state
+            )
         
         # Clear tool results after they've been used
         state.clear_tool_results()

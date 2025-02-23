@@ -133,30 +133,30 @@ tool_node = ToolNode(tools=tools)  # Pass the tools list directly, not the execu
 # Initialize the writer AI agent with tools and longer timeout
 writer_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
-    model=LLM_MODEL_NAME,
+    model_name=LLM_MODEL_NAME,
     temperature=LLM_TEMPERATURE,
     max_tokens=LLM_MAX_TOKENS,
     streaming=True,
-    timeout=LLM_TIMEOUT * 3,  # Triple timeout for story generation
+    request_timeout=LLM_TIMEOUT * 3,
     presence_penalty=LLM_PRESENCE_PENALTY,
     frequency_penalty=LLM_FREQUENCY_PENALTY,
     top_p=LLM_TOP_P,
     verbose=LLM_VERBOSE
 ).bind_tools(
     tools=[dice_roll, web_search],
-    tool_choice="auto"  # Let the model decide when to use tools
+    tool_choice="auto"
 )
 
 # Initialize the storyboard editor agent with longer timeout
 storyboard_editor_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
+    model_name=LLM_MODEL_NAME,
     temperature=0.7,
     streaming=False,
-    model_name=LLM_MODEL_NAME,
-    request_timeout=LLM_TIMEOUT * 2,  # Double the timeout for storyboard generation
+    request_timeout=LLM_TIMEOUT * 2,
     max_tokens=LLM_MAX_TOKENS,
     presence_penalty=0.1,
     frequency_penalty=0.1,
     top_p=0.9,
     verbose=LLM_VERBOSE
-)  # No tool binding needed for storyboard generation
+)
