@@ -162,7 +162,7 @@ async def on_message(message: CLMessage):
         cl.user_session.set("state", state)
     except Exception as e:
         cl.logger.error(f"Runnable stream failed: {e}")
-        cl.logger.error(f"Metadata: {metadata}")  # Log the metadata to see if 'action' is present
+        cl.logger.error(f"State metadata: {state.metadata}")  # Log the state's metadata
         await CLMessage(content="⚠️ An error occurred while generating the response. Please try again later.").send()
         return
 
