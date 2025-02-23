@@ -103,15 +103,13 @@ async def generate_story_response(state: ChatState) -> Dict[str, Any]:
 
 @task
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-async def generate_storyboard(state: ChatState) -> Optional[str]:
+async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[str]:
     """Generate storyboard for visualization with retry logic."""
     try:
-        context = state.messages
-        memories = cl.user_session.get("vector_memory", None).retriever.vectorstore.similarity_search(context[-1].content, 3)
-        
-        engrams = list(set([memory.page_content for memory in memories]))
-        memories_str = "\n".join(engrams) if engrams else "No additional inspiration provided."
-        recent_chat_history = "\n".join([f"{message.type.upper()}: {message.content}" for message in context])
+        # Get relevant documents using the store
+        docs = store.get((state.thread_id,), state.messages[-1].content)
+        memories_str = "\n".join([doc.page_content for doc in docs]) if docs else "No additional inspiration provided."
+        recent_chat_history = "\n".join([f"{message.type.upper()}: {message.content}" for message in state.messages])
 
         image_prompt = PromptTemplate.from_template(STORYBOARD_GENERATION_PROMPT)
         system_content = image_prompt.format(
