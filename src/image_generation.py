@@ -2,6 +2,7 @@ import base64
 import random
 import asyncio
 from typing import List, Optional, Sequence
+from langgraph.func import task
 import httpx
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from langchain_core.messages.base import BaseMessage
