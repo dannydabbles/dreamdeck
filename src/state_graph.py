@@ -149,9 +149,8 @@ async def determine_action(state: ChatState) -> str:
         return "writer"
 
 @task
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
-    """Handle dice roll request with retry logic."""
+    """Handle dice roll request."""
     try:
         # Extract number from message like "Roll a d20"
         message = state.messages[-1].content.lower()
@@ -162,12 +161,27 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
             except (IndexError, ValueError):
                 n = 20  # Default to d20
                 
-        # Fix: Pass input as a dictionary
+        # Call dice_roll once
         result = await dice_roll.ainvoke({"n": n})
-        return {"messages": [ToolMessage(content=result)]}
+        
+        # Create the roll message
+        roll_message = ToolMessage(
+            content=result,
+            additional_kwargs={
+                "name": "dice_roll",
+                "type": "tool"
+            }
+        )
+        
+        # Add roll result to state's tool results for GM context
+        state.add_tool_result(result)
+        
+        return {"messages": [roll_message]}
+        
     except Exception as e:
         cl_logger.error(f"Handle dice roll failed: {e}")
-        return {"messages": [ToolMessage(content="🎲 Error handling dice roll. Using default d20.")]}
+        error_msg = "🎲 Error handling dice roll. Using default d20."
+        return {"messages": [ToolMessage(content=error_msg)]}
 
 @task
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
@@ -319,19 +333,34 @@ async def story_workflow(
         cl.logger.info(f"Determined action: {action}")
 
         # Handle dice roll
-        roll_result = None
         if action == "roll":
-            roll_result = await handle_dice_roll(state)
-            if roll_result.get("messages"):
-                roll_message = roll_result["messages"][0]
-                state.messages.append(roll_message)
-                await cl.Message(content=roll_message.content).send()
-                
-                # Return early after dice roll
+            try:
+                roll_result = await handle_dice_roll(state)
+                if roll_result and roll_result.get("messages"):
+                    roll_message = roll_result["messages"][0]
+                    
+                    # Add to state messages
+                    state.messages.append(roll_message)
+                    
+                    # Send to chat
+                    await cl.Message(content=roll_message.content).send()
+                    
+                    # Return early after dice roll
+                    return entrypoint.final(
+                        value={
+                            "messages": [roll_message],
+                            "action": action
+                        },
+                        save=state
+                    )
+            except Exception as e:
+                cl_logger.error(f"Dice roll handling failed: {e}")
+                error_msg = "🎲 Error handling dice roll."
+                await cl.Message(content=error_msg).send()
                 return entrypoint.final(
                     value={
-                        "messages": [roll_message],
-                        "action": action
+                        "messages": [SystemMessage(content=error_msg)],
+                        "action": "error"
                     },
                     save=state
                 )

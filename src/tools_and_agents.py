@@ -56,8 +56,9 @@ async def dice_roll(n: Optional[int] = None) -> str:
     try:
         sides = n if n is not None else 20  # Default to d20
         result = random.randint(1, sides)
-        cl_logger.info(f"Dice roll result: {result} on a {sides}-sided die.")
-        return f"🎲 You rolled a {result} on a {sides}-sided die."
+        roll_result = f"🎲 You rolled a {result} on a {sides}-sided die."
+        cl_logger.info(f"Dice roll result: {roll_result}")
+        return roll_result
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}")
         return f"🎲 Error rolling dice: {str(e)}"
