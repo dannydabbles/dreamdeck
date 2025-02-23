@@ -142,6 +142,16 @@ writer_agent = ChatOpenAI(
     frequency_penalty=LLM_FREQUENCY_PENALTY,
     top_p=LLM_TOP_P,
     verbose=LLM_VERBOSE
+).bind(
+    tools=[dice_roll, web_search],
+    tool_choice="auto",
+    tool_schemas=tool_schemas,
+    config={
+        "run_name": "writer_agent",
+        "callbacks": None,
+        "tags": ["writer"],
+        "metadata": {"type": "writer"}
+    }
 )
 
 # Create tool schemas that OpenAI can understand

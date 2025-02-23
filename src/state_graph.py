@@ -164,7 +164,7 @@ async def generate_story_response(state: ChatState) -> Dict[str, Any]:
         ]
         
         async for chunk in writer_agent.astream(
-            messages=input_messages,
+            input=input_messages,
             stop=None,
             timeout=LLM_TIMEOUT * 3
         ):
