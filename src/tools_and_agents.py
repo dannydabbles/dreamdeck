@@ -130,30 +130,6 @@ tool_executor = ToolExecutor(tools)
 # Create tool node with the tools list, not the executor
 tool_node = ToolNode(tools=tools)  # Pass the tools list directly, not the executor
 
-# Initialize the writer AI agent with tools and longer timeout
-writer_agent = ChatOpenAI(
-    base_url="http://192.168.1.111:5000/v1",
-    model_name=LLM_MODEL_NAME,
-    temperature=LLM_TEMPERATURE,
-    max_tokens=LLM_MAX_TOKENS,
-    streaming=True,
-    request_timeout=LLM_TIMEOUT * 3,
-    presence_penalty=LLM_PRESENCE_PENALTY,
-    frequency_penalty=LLM_FREQUENCY_PENALTY,
-    top_p=LLM_TOP_P,
-    verbose=LLM_VERBOSE
-).bind(
-    tools=[dice_roll, web_search],
-    tool_choice="auto",
-    tool_schemas=tool_schemas,
-    config={
-        "run_name": "writer_agent",
-        "callbacks": None,
-        "tags": ["writer"],
-        "metadata": {"type": "writer"}
-    }
-)
-
 # Create tool schemas that OpenAI can understand
 tool_schemas = [
     {
@@ -192,11 +168,28 @@ tool_schemas = [
     }
 ]
 
-# Bind the tools using the schemas
-writer_agent = writer_agent.bind(
+# Initialize the writer AI agent with tools and longer timeout
+writer_agent = ChatOpenAI(
+    base_url="http://192.168.1.111:5000/v1",
+    model_name=LLM_MODEL_NAME,
+    temperature=LLM_TEMPERATURE,
+    max_tokens=LLM_MAX_TOKENS,
+    streaming=True,
+    request_timeout=LLM_TIMEOUT * 3,
+    presence_penalty=LLM_PRESENCE_PENALTY,
+    frequency_penalty=LLM_FREQUENCY_PENALTY,
+    top_p=LLM_TOP_P,
+    verbose=LLM_VERBOSE
+).bind(
     tools=[dice_roll, web_search],
     tool_choice="auto",
-    tool_schemas=tool_schemas
+    tool_schemas=tool_schemas,
+    config={
+        "run_name": "writer_agent",
+        "callbacks": None,
+        "tags": ["writer"],
+        "metadata": {"type": "writer"}
+    }
 )
 
 # Initialize the storyboard editor agent with longer timeout
