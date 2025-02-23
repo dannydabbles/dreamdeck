@@ -142,7 +142,7 @@ writer_agent = ChatOpenAI(
     frequency_penalty=LLM_FREQUENCY_PENALTY,
     top_p=LLM_TOP_P,
     verbose=LLM_VERBOSE
-).bind_tools(
+).bind(
     tools=[dice_roll, web_search],
     tool_choice="auto"
 )
