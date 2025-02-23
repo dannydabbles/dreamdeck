@@ -183,13 +183,7 @@ writer_agent = ChatOpenAI(
 ).bind(
     tools=[dice_roll, web_search],
     tool_choice="auto",
-    tool_schemas=tool_schemas,
-    config={
-        "run_name": "writer_agent",
-        "callbacks": None,
-        "tags": ["writer"],
-        "metadata": {"type": "writer"}
-    }
+    tool_schemas=tool_schemas
 )
 
 # Initialize the storyboard editor agent with longer timeout

@@ -163,10 +163,17 @@ async def generate_story_response(state: ChatState) -> Dict[str, Any]:
             for msg in state.messages
         ]
         
+        # Create config for streaming
+        config = {
+            "run_name": "story_generation",
+            "callbacks": None,
+            "tags": ["story"],
+            "metadata": {"type": "story_generation"}
+        }
+        
         async for chunk in writer_agent.astream(
             input=input_messages,
-            stop=None,
-            timeout=LLM_TIMEOUT * 3
+            config=config
         ):
             if isinstance(chunk, BaseMessage):
                 messages.append(chunk)
