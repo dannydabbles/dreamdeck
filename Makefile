@@ -1,4 +1,4 @@
-.PHONY: install run start build test lint format restart stop log
+.PHONY: install run start build test lint format restart stop log aider-sonnet aider
 
 install:
 	@echo "Installing dependencies..."
@@ -38,3 +38,11 @@ stop:
 log:
 	@echo "Viewing logs in real-time..."
 	@docker-compose logs -f
+
+aider-sonnet:
+	@echo "Running aider with sonnet..."
+	@aider --multiline --architect --sonnet
+
+aider:
+	@echo "Running aider with local llm..."
+	@aider --multiline --architect --4o --openai-base-url http://192.168.1.111:5000/v1 --timeout 500
