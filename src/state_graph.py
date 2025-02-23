@@ -239,6 +239,17 @@ async def story_workflow(
 ) -> entrypoint.final[Dict[str, Any], ChatState]:
     """Main workflow using LangGraph constructs."""
     try:
+        # Get memories/context from store
+        memories = store.get((state.thread_id,), state.messages[-1].content)
+        memories_str = "\n".join([d.page_content for d in memories]) if memories else ""
+        
+        # Update system message with substituted variables
+        state.messages[0] = SystemMessage(content=state.messages[0].content.format(
+            recent_chat_history=state.get_recent_history_str(),
+            memories=memories_str,
+            tool_results="\n".join(state.tool_results) if state.tool_results else ""
+        ))
+
         # Determine action using task
         action = await determine_action(state)
         cl.logger.info(f"Determined action: {action}")

@@ -124,9 +124,16 @@ async def on_message(message: CLMessage):
     cb = cl.LangchainCallbackHandler()
 
     try:
+        # Log the state before processing
+        cl.logger.debug(f"Processing message: {message.content}")
+        cl.logger.debug(f"Current state: {state}")
+        
         # Add user message to state
         state = cl.user_session.get("state")
         state.messages.append(HumanMessage(content=message.content))
+        
+        # Format system message before generating response
+        state.format_system_message()
         
         # Generate AI response
         ai_response = CLMessage(content="")

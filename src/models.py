@@ -44,6 +44,31 @@ class ChatState(BaseModel):
     tool_results: List[str] = Field(default_factory=list)
     error_count: int = Field(default=0)
 
+    @validator('messages')
+    def validate_messages(cls, v):
+        if not v:
+            raise ValueError("Messages sequence cannot be empty")
+        if not isinstance(v[0], SystemMessage):
+            raise ValueError("First message must be a system message")
+        return v
+        
+    def format_system_message(self) -> None:
+        """Format the system message with current context."""
+        if not self.messages:
+            return
+            
+        sys_msg = self.messages[0]
+        if not isinstance(sys_msg, SystemMessage):
+            return
+            
+        self.messages[0] = SystemMessage(
+            content=sys_msg.content.format(
+                recent_chat_history=self.get_recent_history_str(),
+                memories="",  # Will be populated by workflow
+                tool_results="\n".join(self.tool_results) if self.tool_results else ""
+            )
+        )
+
     def get_thread_context(self) -> Dict[str, Any]:
         """Get context from thread history."""
         thread = cl.user_session.get("thread")
@@ -66,6 +91,14 @@ class ChatState(BaseModel):
     def get_recent_history(self, n: int = 5) -> Sequence[BaseMessage]:
         """Get n most recent messages."""
         return self.messages[-n:] if len(self.messages) > n else self.messages
+        
+    def get_recent_history_str(self) -> str:
+        """Get formatted string of recent message history."""
+        recent_messages = self.get_recent_history()
+        return "\n".join([
+            f"{'Human' if isinstance(msg, HumanMessage) else 'AI'}: {msg.content}" 
+            for msg in recent_messages
+        ])
     
     def add_tool_result(self, result: str) -> None:
         """Add a tool result to the state."""
