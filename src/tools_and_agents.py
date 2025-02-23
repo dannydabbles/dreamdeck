@@ -73,16 +73,23 @@ def web_search(query: str) -> str:
         raise ValueError(f"Search error: {data['error']}")
     return data.get("organic_results", [{}])[0].get("snippet", "No results found.")
 
-# Initialize the decision agent with proper configuration
+from langgraph.prebuilt import ToolNode, ToolExecutor
+
+# Initialize the decision agent with structured output
 decision_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
-    temperature=0.2,  # Lower temperature for more consistent decisions
+    temperature=0.2,
     streaming=False,
     model_name=LLM_MODEL_NAME,
     request_timeout=LLM_TIMEOUT,
-    max_tokens=100,  # Keep responses short for decisions
+    max_tokens=100,
     verbose=LLM_VERBOSE
-).with_structured_output(DecisionOutput)  # Use the Pydantic model
+).with_structured_output(DecisionOutput)
+
+# Create tool executors
+tools = [dice_roll, web_search]
+tool_executor = ToolExecutor(tools=tools)
+tool_node = ToolNode(tools=tool_executor)
 
 # Initialize the writer AI agent
 writer_model = ChatOpenAI(
