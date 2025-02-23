@@ -244,12 +244,22 @@ async def story_workflow(
         memories = store.get((state.thread_id,), state.messages[-1].content)
         memories_str = "\n".join([d.page_content for d in memories]) if memories else ""
         
-        # Update system message with substituted variables
-        state.messages[0] = SystemMessage(content=state.messages[0].content.format(
-            recent_chat_history=state.get_recent_history_str(),
+        # Format recent chat history properly
+        recent_messages = state.get_recent_history()
+        recent_chat = "\n".join([
+            f"{'Human' if isinstance(msg, HumanMessage) else 'AI'}: {msg.content}" 
+            for msg in recent_messages
+        ])
+
+        # Create a fresh system message with properly formatted variables
+        system_message = SystemMessage(content=AI_WRITER_PROMPT.format(
+            recent_chat_history=recent_chat,
             memories=memories_str,
             tool_results="\n".join(state.tool_results) if state.tool_results else ""
         ))
+        
+        # Replace the first message with our newly formatted system message
+        state.messages[0] = system_message
 
         # Determine action using task
         action = await determine_action(state)

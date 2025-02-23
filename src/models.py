@@ -50,6 +50,9 @@ class ChatState(BaseModel):
             raise ValueError("Messages sequence cannot be empty")
         if not isinstance(v[0], SystemMessage):
             raise ValueError("First message must be a system message")
+        # Validate no recursive content
+        if "{recent_chat_history}" in v[0].content:
+            v[0].content = v[0].content.replace("{recent_chat_history}", "")
         return v
         
     def format_system_message(self) -> None:
@@ -95,9 +98,14 @@ class ChatState(BaseModel):
     def get_recent_history_str(self) -> str:
         """Get formatted string of recent message history."""
         recent_messages = self.get_recent_history()
+        # Don't include system messages in history
+        filtered_messages = [
+            msg for msg in recent_messages 
+            if not isinstance(msg, SystemMessage)
+        ]
         return "\n".join([
             f"{'Human' if isinstance(msg, HumanMessage) else 'AI'}: {msg.content}" 
-            for msg in recent_messages
+            for msg in filtered_messages
         ])
     
     def add_tool_result(self, result: str) -> None:
