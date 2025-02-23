@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Dict, Any, List, Optional, AsyncIterator
 from langgraph.types import StreamWriter
 from langgraph.func import entrypoint, task
@@ -19,6 +20,9 @@ from langchain_core.messages import (
     ToolMessage,
     BaseMessage
 )
+
+# Initialize logging
+cl_logger = logging.getLogger("chainlit")
 from langchain.prompts import PromptTemplate
 import chainlit as cl
 from chainlit import Message as CLMessage
