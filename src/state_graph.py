@@ -368,10 +368,36 @@ async def story_workflow(
                         for result in command.update["tool_results"]:
                             state.add_tool_result(result)
                 
-                # Return early after dice roll
+                # Now generate GM response that takes into account both the human message and dice roll
+                msg = cl.Message(content="")
+                response = await generate_story_response(state)
+                
+                if response and response.get("messages"):
+                    for message in response["messages"]:
+                        if isinstance(message, (AIMessage, SystemMessage)):
+                            await msg.stream_token(message.content)
+                            
+                await msg.send()
+                
+                # Update state with GM response
+                if msg.content:
+                    state.messages.append(AIMessage(content=msg.content))
+                    state.metadata["current_message_id"] = msg.id
+
+                # Generate storyboard for GM's response
+                storyboard = await generate_storyboard(state)
+                if storyboard and state.metadata.get("current_message_id"):
+                    try:
+                        await process_storyboard_images(
+                            storyboard,
+                            state.metadata["current_message_id"]
+                        )
+                    except Exception as e:
+                        cl_logger.error(f"Failed to process storyboard images: {e}")
+
                 return entrypoint.final(
                     value={
-                        "messages": command.update.get("messages", []),
+                        "messages": state.messages[-2:],  # Include both dice roll and GM response
                         "action": action
                     },
                     save=state

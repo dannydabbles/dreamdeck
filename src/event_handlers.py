@@ -91,6 +91,12 @@ async def on_chat_resume(thread: ThreadDict):
                 content=step["output"],
                 additional_kwargs={"message_id": step["id"]}
             ))
+        elif step["type"] == "tool":  # Add handling for tool messages
+            messages.append(ToolMessage(
+                content=step["output"],
+                tool_call_id=step.get("tool_call_id", f"restored_tool_{step['id']}"),
+                name=step.get("name", "unknown_tool")
+            ))
         elif step["type"] == "image_generation":
             image_generation_memory.append(step["output"])
     
