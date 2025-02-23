@@ -80,6 +80,27 @@ dice_roll_schema = {
     }
 }
 
+# Define the web search tool schema
+web_search_schema = {
+    "type": "function",
+    "function": {
+        "name": "web_search",
+        "description": "Performs a web search using SerpAPI",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query"
+                }
+            },
+            "required": ["query"],
+            "additionalProperties": False
+        },
+        "strict": True
+    }
+}
+
 @tool
 def web_search(query: str) -> str:
     """
@@ -205,7 +226,7 @@ writer_agent = ChatOpenAI(
     top_p=LLM_TOP_P,
     verbose=LLM_VERBOSE
 ).bind(
-    tools=[dice_roll_schema],  # Pass the schema directly
+    tools=[dice_roll_schema, web_search_schema],  # Include both schemas
     tool_choice="auto"  # Allow the model to choose when to use tools
 )
 
