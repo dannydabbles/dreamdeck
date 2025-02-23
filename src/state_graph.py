@@ -151,8 +151,20 @@ async def generate_story_response(state: ChatState) -> Dict[str, Any]:
     """Generate main story response with retry logic."""
     try:
         messages = []
+        # Convert state messages to dict format that OpenAI can handle
+        input_messages = [
+            {
+                "role": "system" if isinstance(msg, SystemMessage) else 
+                        "assistant" if isinstance(msg, AIMessage) else
+                        "function" if isinstance(msg, ToolMessage) else
+                        "user",
+                "content": msg.content
+            }
+            for msg in state.messages
+        ]
+        
         async for chunk in writer_agent.astream(
-            input=state.messages,
+            messages=input_messages,
             stop=None,
             timeout=LLM_TIMEOUT * 3
         ):

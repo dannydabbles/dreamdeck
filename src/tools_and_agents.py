@@ -142,9 +142,51 @@ writer_agent = ChatOpenAI(
     frequency_penalty=LLM_FREQUENCY_PENALTY,
     top_p=LLM_TOP_P,
     verbose=LLM_VERBOSE
-).bind(
+)
+
+# Create tool schemas that OpenAI can understand
+tool_schemas = [
+    {
+        "type": "function",
+        "function": {
+            "name": "dice_roll",
+            "description": "Rolls a dice with a specified number of sides",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "n": {
+                        "type": "integer",
+                        "description": "Number of sides on the dice"
+                    }
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "web_search",
+            "description": "Performs a web search using SerpAPI",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query"
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    }
+]
+
+# Bind the tools using the schemas
+writer_agent = writer_agent.bind(
     tools=[dice_roll, web_search],
-    tool_choice="auto"
+    tool_choice="auto",
+    tool_schemas=tool_schemas
 )
 
 # Initialize the storyboard editor agent with longer timeout
