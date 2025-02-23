@@ -151,7 +151,7 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
         
         # Get relevant documents using the store
         docs = store.get((state.thread_id,), state.messages[-1].content)
-        memories_str = "\n".join([doc.page_content for d in docs]) if docs else ""
+        memories_str = "\n".join([d.page_content for d in docs]) if docs else ""
         
         # Format recent chat history properly
         recent_messages = state.get_recent_history()
