@@ -176,7 +176,7 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
                     ToolMessage(
                         content=result,
                         tool_call_id=tool_call_id,
-                        name="dice_roll"
+                        name="dice_roll"  # Add the required name field
                     )
                 ],
                 "tool_results": [result]  # Add to tool results for GM context
@@ -192,7 +192,7 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
                     ToolMessage(
                         content=error_msg,
                         tool_call_id=f"call_error_{random.randint(0, 1000000)}",
-                        name="dice_roll"
+                        name="dice_roll"  # Add the required name field here too
                     )
                 ]
             }

@@ -42,7 +42,7 @@ from config import (
     LLM_MAX_TOKENS  # Import LLM_MAX_TOKENS
 )
 
-@tool
+@tool(name="dice_roll")
 async def dice_roll(n: Optional[int] = None) -> str:
     """Rolls a dice with a specified number of sides."""
     try:
