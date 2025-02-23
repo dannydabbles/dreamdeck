@@ -40,6 +40,7 @@ from config import (
     DECISION_PROMPT,
     SEARCH_ENABLED,
     DICE_SIDES,
+    LLM_TIMEOUT,
 )
 
 @task
