@@ -308,9 +308,12 @@ async def story_workflow(
             except Exception as e:
                 cl.logger.error(f"Storyboard/image generation failed: {e}")
 
+        if writer:
+            writer("Processing completed")
+            
         return entrypoint.final(
             value={
-                "messages": state.messages,
+                "messages": state.messages[-1:],
                 "action": action
             },
             save=state
