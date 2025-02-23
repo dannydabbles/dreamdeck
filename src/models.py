@@ -5,6 +5,7 @@ from enum import Enum
 import operator
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage, SystemMessage
 from langgraph.managed import IsLastStep
+import chainlit as cl
 
 class MessageType(str, Enum):
     """Enum for message types in the chat."""
