@@ -59,14 +59,20 @@ from config import (
 async def determine_action(state: ChatState) -> str:
     """Determine next action using LangGraph task."""
     try:
-        last_message = state.messages[-1]
-        if not isinstance(last_message, HumanMessage):
-            cl.logger.info("Last message not a HumanMessage, defaulting to writer")
+        # Get the last human message
+        last_human_message = None
+        for msg in reversed(state.messages):
+            if isinstance(msg, HumanMessage):
+                last_human_message = msg
+                break
+
+        if not last_human_message:
+            cl.logger.info("No human message found, defaulting to writer")
             return "writer"
 
         # Format the decision prompt with the user's input
         formatted_prompt = DECISION_PROMPT.format(
-            user_input=last_message.content
+            user_input=last_human_message.content
         )
         
         cl.logger.debug(f"Formatted decision prompt: {formatted_prompt}")
@@ -96,6 +102,15 @@ async def determine_action(state: ChatState) -> str:
                         args = json.loads(function_call['arguments'])
                         action = args.get('action')
                         cl.logger.info(f"Decision agent returned action: {action}")
+                        
+                        # Check for dice roll keywords in the message
+                        if (
+                            "roll" in last_human_message.content.lower() or 
+                            "d20" in last_human_message.content.lower() or
+                            "dice" in last_human_message.content.lower()
+                        ):
+                            cl.logger.info("Dice roll detected in message, forcing roll action")
+                            action = "roll"
                     except json.JSONDecodeError as e:
                         cl.logger.error(f"Failed to parse function arguments: {e}")
                         cl.logger.debug(f"Raw arguments: {function_call['arguments']}")
@@ -126,11 +141,11 @@ async def determine_action(state: ChatState) -> str:
             return mapped_action
             
         except Exception as e:
-            cl.logger.error(f"Error in decision agent: {e}", exc_info=True)  # Include stack trace
+            cl.logger.error(f"Error in decision agent: {e}", exc_info=True)
             return "writer"
             
     except Exception as e:
-        cl.logger.error(f"Error determining action: {e}", exc_info=True)  # Include stack trace
+        cl.logger.error(f"Error determining action: {e}", exc_info=True)
         return "writer"
 
 @task
