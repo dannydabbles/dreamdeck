@@ -28,11 +28,7 @@ from config import (
 
 @on_chat_start
 async def on_chat_start():
-    """
-    Event handler for when a new chat starts. Initializes chat and vector memories, image generation memory,
-    sets up the runnable, loads knowledge documents, and sends starter messages.
-    """
-
+    """Initialize new chat session with Chainlit integration."""
     settings = await cl.ChatSettings(
         [
             Select(
@@ -43,82 +39,73 @@ async def on_chat_start():
             )
         ]
     ).send()
-    value = settings["Model"]
-
-    # Initialize memories
-    cl.user_session.set("chat_memory", get_chat_memory())
-    cl.user_session.set("vector_memory", get_vector_memory())
-    cl.user_session.set("image_generation_memory", [])  # Initialize image generation memory
+    
+    # Create initial state
+    state = ChatState(
+        messages=[SystemMessage(content=AI_WRITER_PROMPT)],
+        thread_id=cl.context.session.id
+    )
+    
+    # Initialize thread in Chainlit
+    await cl.Message(content=AI_WRITER_PROMPT, author="system").send()
+    
+    # Store state
+    cl.user_session.set("state", state)
+    cl.user_session.set("image_generation_memory", [])
     cl.user_session.set("ai_message_id", None)
-
+    
     # Setup runnable
     cl.user_session.set("runnable", graph)
-
-    # Load knowledge documents into vector store
+    
+    # Load knowledge documents
     await load_knowledge_documents()
-
-    # Send Chainlit starters
+    
+    # Send starters
     for starter in CHAINLIT_STARTERS:
-        await CLMessage(content=starter).send()
-        # Track in history
-        chat_memory = cl.user_session.get("chat_memory")
-        chat_memory.chat_memory.add_ai_message(starter)
-        vector_memory = cl.user_session.get("vector_memory")
-        vector_memory.save_context({"AI": starter}, {"AI": starter})
+        msg = await cl.Message(content=starter).send()
+        state.messages.append(AIMessage(content=starter, additional_kwargs={"message_id": msg.id}))
 
 @on_chat_resume
 async def on_chat_resume(thread: ThreadDict):
-    """
-    Event handler for resuming a chat. Reconstructs chat, vector, and image generation memories from the thread history.
-
-    Args:
-        thread (ThreadDict): The thread dictionary containing chat steps.
-    """
+    """Reconstruct state from Chainlit thread."""
     # Set the user in the session
     user_dict = thread.get('user')
     if user_dict:
         cl.user_session.set('user', cl.User(**user_dict))
 
-    cl.user_session.set("ai_message_id", None)
-
-    chat_memory = get_chat_memory()
-    vector_memory = get_vector_memory()
+    messages = [SystemMessage(content=AI_WRITER_PROMPT)]
     image_generation_memory = []
-
-    # Sort messages by createdAt to ensure correct order
-    sorted_steps = sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", ""))
-
-    message_pair = []
-    for message in sorted_steps:
-        message_prefix = None
-        if message["type"] == "user_message":
-            chat_memory.chat_memory.add_user_message(message["output"])
-            message_prefix = "HUMAN"
-        elif message["type"] == "ai_message":
-            chat_memory.chat_memory.add_ai_message(message["output"])
-            message_prefix = "AI"
-        elif message["type"] == "image_generation":
-            image_generation_memory.append(message["output"])
-            continue
-        else:
-            continue
-
-        message_pair.append((message_prefix, message["output"]))
-
-        if len(message_pair) == 2:
-            message_in = message_pair[0]
-            message_out = message_pair[1]
-            vector_memory.save_context({message_in[0]: message_in[1]}, {message_out[0]: message_out[1]})
-            message_pair = [message_pair[1]]
-
-    cl.user_session.set("chat_memory", chat_memory)
-    cl.user_session.set("vector_memory", vector_memory)
+    
+    # Reconstruct messages from thread history
+    for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
+        if step["type"] == "user_message":
+            messages.append(HumanMessage(
+                content=step["output"],
+                additional_kwargs={"message_id": step["id"]}
+            ))
+        elif step["type"] == "ai_message":
+            messages.append(AIMessage(
+                content=step["output"],
+                additional_kwargs={"message_id": step["id"]}
+            ))
+        elif step["type"] == "image_generation":
+            image_generation_memory.append(step["output"])
+    
+    # Create state
+    state = ChatState(
+        messages=messages,
+        thread_id=thread["id"]
+    )
+    
+    # Store state and memories
+    cl.user_session.set("state", state)
     cl.user_session.set("image_generation_memory", image_generation_memory)
-
+    cl.user_session.set("ai_message_id", None)
+    
     # Setup runnable
     cl.user_session.set("runnable", graph)
-
-    # Load knowledge documents into vector store
+    
+    # Load knowledge documents
     await load_knowledge_documents()
 
 @on_message

@@ -34,14 +34,33 @@ class Message(BaseModel):
         )
 
 class ChatState(BaseModel):
-    """Core state model for the chat application."""
+    """Enhanced state model with Chainlit integration."""
     messages: Annotated[Sequence[BaseMessage], operator.add]
     is_last_step: IsLastStep = Field(default_factory=lambda: IsLastStep(False))
-    vector_store_id: str | None = None  # Track vector store session
-    metadata: Dict[str, Any] = Field(default_factory=dict)  # For additional state info
-    current_tool: str | None = None  # Track current tool being used
-    tool_results: List[str] = Field(default_factory=list)  # Store tool results
-    error_count: int = Field(default=0)  # Track errors for retry logic
+    thread_id: str = Field(default_factory=lambda: cl.context.session.id)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    current_tool: str | None = None
+    tool_results: List[str] = Field(default_factory=list)
+    error_count: int = Field(default=0)
+
+    def get_thread_context(self) -> Dict[str, Any]:
+        """Get context from thread history."""
+        thread = cl.user_session.get("thread")
+        if not thread:
+            return {}
+        return {
+            "thread_id": thread.get("id"),
+            "user_id": thread.get("userId"),
+            "created_at": thread.get("createdAt")
+        }
+
+    def to_chainlit_message(self, message: BaseMessage) -> Dict[str, Any]:
+        """Convert message to Chainlit format."""
+        return {
+            "content": message.content,
+            "type": "ai_message" if isinstance(message, AIMessage) else "user_message",
+            "metadata": message.additional_kwargs
+        }
 
     def get_recent_history(self, n: int = 5) -> Sequence[BaseMessage]:
         """Get n most recent messages."""
