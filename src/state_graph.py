@@ -64,10 +64,16 @@ async def determine_action(state: ChatState) -> str:
             cl.logger.info("Last message not a HumanMessage, defaulting to writer")
             return "writer"
 
-        # Format messages for decision agent
+        # Format the decision prompt with the user's input
+        formatted_prompt = DECISION_PROMPT.format(
+            user_input=last_message.content
+        )
+        
+        cl.logger.debug(f"Formatted decision prompt: {formatted_prompt}")
+        
+        # Create messages list for decision agent
         messages = [
-            SystemMessage(content=DECISION_PROMPT),
-            last_message
+            SystemMessage(content=formatted_prompt)
         ]
         
         cl.logger.debug(f"Sending messages to decision agent: {messages}")
@@ -213,14 +219,14 @@ async def generate_storyboard(state: ChatState) -> Optional[str]:
             return None
 
         # Format the prompt with proper context
-        prompt = STORYBOARD_GENERATION_PROMPT.format(
+        formatted_prompt = STORYBOARD_GENERATION_PROMPT.format(
             recent_chat_history=state.get_recent_history_str(),
-            memories=state.get_memories_str() if hasattr(state, 'get_memories_str') else ""
+            memories=state.get_memories_str()
         )
 
         # Create messages list for the storyboard generation
         messages = [
-            SystemMessage(content=prompt),
+            SystemMessage(content=formatted_prompt),
             HumanMessage(content=last_gm_message.content)
         ]
         
