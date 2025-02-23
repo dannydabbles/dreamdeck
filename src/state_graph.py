@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Dict, Any, List, Optional, AsyncIterator
 from langgraph.types import StreamWriter
+from langchain_core.runnables import RunnableConfig
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode, ToolExecutor
@@ -164,12 +165,11 @@ async def generate_story_response(state: ChatState) -> Dict[str, Any]:
         ]
         
         # Create config for streaming
-        config = {
-            "run_name": "story_generation",
-            "callbacks": None,
-            "tags": ["story"],
-            "metadata": {"type": "story_generation"}
-        }
+        config = RunnableConfig(
+            callbacks=None,
+            tags=["story"],
+            metadata={"type": "story_generation"}
+        )
         
         async for chunk in writer_agent.astream(
             input=input_messages,

@@ -181,9 +181,35 @@ writer_agent = ChatOpenAI(
     top_p=LLM_TOP_P,
     verbose=LLM_VERBOSE
 ).bind(
-    tools=[dice_roll, web_search],
-    tool_choice="auto",
-    tool_schemas=tool_schemas
+    functions=[{
+        "name": "dice_roll",
+        "description": "Rolls a dice with a specified number of sides",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "n": {
+                    "type": "integer",
+                    "description": "Number of sides on the dice"
+                }
+            },
+            "required": []
+        }
+    },
+    {
+        "name": "web_search",
+        "description": "Performs a web search using SerpAPI",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query"
+                }
+            },
+            "required": ["query"]
+        }
+    }],
+    function_call="auto"
 )
 
 # Initialize the storyboard editor agent with longer timeout
