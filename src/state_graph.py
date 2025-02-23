@@ -46,15 +46,18 @@ async def determine_action(state: ChatState) -> str:
     """Determine next action based on user input using decision agent."""
     try:
         last_message = state.messages[-1]
-        if last_message.type != MessageType.HUMAN:
+        if not isinstance(last_message, HumanMessage):
             return "writer"
 
-        response = await decision_agent.ainvoke({
-            "input": last_message.content,
-            "chat_history": state.get_recent_history()
-        })
+        # Format the input properly for the decision agent
+        messages = [
+            SystemMessage(content=DECISION_PROMPT),
+            HumanMessage(content=last_message.content)
+        ]
         
-        action = response.get("output", "writer").strip().lower()
+        response = await decision_agent.ainvoke(messages)
+        
+        action = response.content.strip().lower()
         action_map = {
             "roll": "roll",
             "search": "search" if SEARCH_ENABLED else "writer",
@@ -135,20 +138,17 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
         try:
             storyboard_message = await storyboard_editor_agent.ainvoke(messages)
             
-            if not storyboard_message or not isinstance(storyboard_message, BaseMessage):
-                cl.logger.warning("Invalid storyboard message format")
-                return None
-                
-            content = storyboard_message.content
-            if not content:
-                return None
-                
-            # Process the response
-            think_end = "</think>"
-            if think_end in content:
-                content = content.split(think_end)[1].strip()
+            if isinstance(storyboard_message, BaseMessage):
+                content = storyboard_message.content
+                if content:
+                    # Process the response
+                    think_end = "</think>"
+                    if think_end in content:
+                        content = content.split(think_end)[1].strip()
+                    return content if content.strip() else None
             
-            return content if content else None
+            cl.logger.warning("Invalid storyboard message format")
+            return None
             
         except Exception as e:
             cl.logger.error(f"Storyboard agent invocation failed: {e}")

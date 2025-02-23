@@ -66,16 +66,16 @@ def web_search(query: str) -> str:
         raise ValueError(f"Search error: {data['error']}")
     return data.get("organic_results", [{}])[0].get("snippet", "No results found.")
 
-# Initialize the decision agent
+# Initialize the decision agent with proper configuration
 decision_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
-    temperature=0.7,  # Adjust as needed
+    temperature=0.2,  # Lower temperature for more consistent decisions
     streaming=False,
     model_name=LLM_MODEL_NAME,
     request_timeout=LLM_TIMEOUT,
-    max_tokens=100,  # Adjust as needed
+    max_tokens=100,  # Keep responses short for decisions
     verbose=LLM_VERBOSE
-)
+).with_structured_output(str)  # Ensure string output
 
 # Initialize the writer AI agent
 writer_model = ChatOpenAI(
@@ -96,8 +96,8 @@ writer_prompt = PromptTemplate.from_template(AI_WRITER_PROMPT)
 # Assuming ChatOpenAI has a bind_tools method; if not, adjust accordingly
 writer_agent = writer_model.bind_tools([dice_roll, web_search])
 
-# Initialize the image generation AI agent
-storyboard_model = ChatOpenAI(
+# Initialize the storyboard editor agent with proper configuration
+storyboard_editor_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
     temperature=0.7,  # Slightly higher temperature for creative generation
     streaming=False,
@@ -109,6 +109,3 @@ storyboard_model = ChatOpenAI(
     top_p=0.9,
     verbose=LLM_VERBOSE
 )
-
-# Create a chain for storyboard generation
-storyboard_editor_agent = storyboard_model
