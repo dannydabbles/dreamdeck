@@ -52,9 +52,9 @@ prompts:
        - If there are tool results, integrate them naturally into the narrative. For example, if a dice roll or web search provides new information, use it to enrich the story. If the tool results are not relevant, you can acknowledge them briefly and move the story forward.
     </guidelines>
 
-    <history>
+    <chat_history>
     {recent_chat_history}
-    </history>
+    </chat_history>
 
     <examples>
     Below are scenarios demonstrating how you might respond, incorporating back-and-forth dialogue, multi-NPC interactions, deeper narrative, puzzles, and even adult themes if a player moves in that direction. These examples illustrate neutrality: you neither steer toward family-friendly nor adult content unless the player does.
