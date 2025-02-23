@@ -133,16 +133,27 @@ async def handle_search(state: ChatState) -> Dict[str, Any]:
 
 @task
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-async def generate_story_response(state: ChatState) -> AsyncIterator[Dict[str, Any]]:
+async def generate_story_response(state: ChatState) -> Dict[str, Any]:
     """Generate main story response with retry logic."""
     try:
+        messages = []
         async for chunk in writer_agent.astream(state.messages):
             if isinstance(chunk, BaseMessage):
-                yield {"messages": [chunk]}
+                messages.append(chunk)
+        
+        if not messages:
+            raise ValueError("No messages generated")
+            
+        return {"messages": messages}
+        
     except Exception as e:
         state.increment_error_count()
         if state.error_count >= 3:
-            yield {"messages": [SystemMessage(content="I apologize, but I'm having trouble generating a response. Please try again.")]}
+            return {
+                "messages": [
+                    SystemMessage(content="I apologize, but I'm having trouble generating a response. Please try again.")
+                ]
+            }
         raise
 
 @task
@@ -283,10 +294,14 @@ async def story_workflow(
             if search_result:
                 state.add_tool_result(search_result["messages"][0].content)
 
-        # Stream GM response
-        async for chunk in generate_story_response(state):
-            if isinstance(chunk, dict) and chunk.get("messages"):
-                await msg.stream_token(chunk["messages"][-1].content)
+        # Get response
+        response = await generate_story_response(state)
+        
+        # Stream the response content
+        if response and response.get("messages"):
+            for message in response["messages"]:
+                await msg.stream_token(message.content)
+                
         await msg.send()
         
         # Clear tool results after they've been used
