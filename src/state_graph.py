@@ -57,7 +57,8 @@ async def determine_action(state: ChatState) -> str:
         
         response = await decision_agent.ainvoke(messages)
         
-        action = response.content.strip().lower()
+        # Response will now be a DecisionOutput object
+        action = response.action
         action_map = {
             "roll": "roll",
             "search": "search" if SEARCH_ENABLED else "writer",

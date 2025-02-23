@@ -13,6 +13,12 @@ import logging
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
+class DecisionOutput(BaseModel):
+    """Schema for the decision output."""
+    action: Literal["roll", "search", "continue_story"] = Field(
+        description="The next action to take based on user input"
+    )
+
 from config import (
     DICE_SIDES,
     LLM_TEMPERATURE,
@@ -75,7 +81,7 @@ decision_agent = ChatOpenAI(
     request_timeout=LLM_TIMEOUT,
     max_tokens=100,  # Keep responses short for decisions
     verbose=LLM_VERBOSE
-).with_structured_output(str)  # Ensure string output
+).with_structured_output(DecisionOutput)  # Use the Pydantic model
 
 # Initialize the writer AI agent
 writer_model = ChatOpenAI(

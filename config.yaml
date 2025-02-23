@@ -200,17 +200,17 @@ prompts:
     Generate a storyboard (3–10 newline-separated lines describing the latest scene, each line a stable diffusion prompt with short comma-separated descriptors, make awesome vibrant art), try to achieve your goals as a cinematographer AI:
   decision_prompt: |
     <goal>
-    Determine the next action based on the user's input. The options are:
+    Determine the next action based on the user's input. You must choose one of these actions:
     - roll: if the user wants to roll a dice
     - search: if the user wants to perform a web search
-    - continue_story: if the user wants to continue the story
+    - continue_story: if the user wants to continue the story (default)
     </goal>
 
     <input>
     {user_input}
     </input>
 
-    Give a one word answer corresponding to the action that should be taken next:
+    Analyze the input and respond with the most appropriate action. If unsure, use "continue_story".
   storyboard_generation_prompt_prefix: "" #"masterpiece,best quality,amazing quality"
 
   storyboard_generation_prompt_postfix: "" #"source_anime, source_cartoon"
