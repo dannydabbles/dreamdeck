@@ -40,7 +40,7 @@ from tools_and_agents import (
 )
 from image_generation import (
     async_range,
-    handle_image_generation,
+    process_storyboard_images,
     generate_image_generation_prompts
 )
 
@@ -356,10 +356,12 @@ async def story_workflow(
                     image_prompts = await generate_image_generation_prompts(storyboard)
                     if image_prompts and state.metadata.get("current_message_id"):
                         # Don't add storyboard text to history
-                        asyncio.create_task(handle_image_generation(
-                            image_prompts,
-                            state.metadata["current_message_id"]
-                        ))
+                        asyncio.create_task(
+                            process_storyboard_images(
+                                storyboard,
+                                state.metadata["current_message_id"]
+                            )
+                        )
             except Exception as e:
                 cl.logger.error(f"Storyboard/image generation failed: {e}")
 
@@ -389,4 +391,4 @@ async def story_workflow(
 graph = story_workflow
 
 # Export the necessary functions
-__all__ = ['story_workflow', 'generate_storyboard', 'handle_image_generation']
+__all__ = ['story_workflow', 'generate_storyboard', 'process_storyboard_images']
