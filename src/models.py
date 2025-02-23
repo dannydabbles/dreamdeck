@@ -39,10 +39,25 @@ class ChatState(BaseModel):
     is_last_step: IsLastStep = Field(default_factory=lambda: IsLastStep(False))
     vector_store_id: str | None = None  # Track vector store session
     metadata: Dict[str, Any] = Field(default_factory=dict)  # For additional state info
+    current_tool: str | None = None  # Track current tool being used
+    tool_results: List[str] = Field(default_factory=list)  # Store tool results
+    error_count: int = Field(default=0)  # Track errors for retry logic
 
     def get_recent_history(self, n: int = 5) -> Sequence[BaseMessage]:
         """Get n most recent messages."""
         return self.messages[-n:] if len(self.messages) > n else self.messages
+    
+    def add_tool_result(self, result: str) -> None:
+        """Add a tool result to the state."""
+        self.tool_results.append(result)
+    
+    def clear_tool_results(self) -> None:
+        """Clear tool results after processing."""
+        self.tool_results = []
+    
+    def increment_error_count(self) -> None:
+        """Increment error count for retry logic."""
+        self.error_count += 1
 
 class ImageGenerationState(BaseModel):
     """State model for image generation."""

@@ -3,6 +3,8 @@ from typing import Dict, Any, List
 from langgraph.graph import StateGraph, END, START
 from langgraph.prebuilt.tool_executor import ToolExecutor
 from langgraph.graph.message import MessagesState
+from langgraph.func import entrypoint, task
+from langgraph.checkpoint import MemorySaver
 
 from langchain_core.messages import (
     AIMessage,
@@ -43,6 +45,7 @@ from config import (
 # Define the state graph
 builder = StateGraph(MessagesState)
 
+@task
 async def determine_next_action(state: ChatState) -> str:
     """Determine the next action based on the latest message using the decision agent."""
     try:
@@ -65,10 +68,17 @@ async def determine_next_action(state: ChatState) -> str:
             "continue_story": "writer"
         }
         
-        return action_map.get(action, "writer")
+        # Update state with chosen tool
+        state.current_tool = action_map.get(action, "writer")
+        state.clear_tool_results()
+        
+        return state.current_tool
         
     except Exception as e:
         cl.logger.error(f"Error determining next action: {e}")
+        state.increment_error_count()
+        if state.error_count >= 3:
+            return END
         return "writer"
 
 async def start_router(state: MessagesState):
@@ -209,18 +219,41 @@ async def call_image_generation(state: MessagesState, ai_message_id: str):
         cl.logger.warning("Image generation failed!")
         await CLMessage(content="⚠️ Image generation failed!", parent_id=ai_message_id).send()
 
-# Add nodes to the graph
-builder.add_node("writer", call_writer)
-builder.add_node("roll", call_dice_roll)
-builder.add_node("search", call_web_search)
+@entrypoint(checkpointer=MemorySaver())
+async def story_workflow(state: ChatState) -> Dict[str, Any]:
+    """Main workflow with proper state management."""
+    # Initialize the graph
+    builder = StateGraph(ChatState)
+    
+    # Add nodes with proper error handling
+    builder.add_node("writer", call_writer)
+    builder.add_node("roll", call_dice_roll)
+    builder.add_node("search", call_web_search)
+    
+    # Add error handling node
+    builder.add_node("error", handle_error)
+    
+    # Define edges with conditional routing
+    builder.add_conditional_edges(
+        START,
+        determine_next_action
+    )
+    
+    # Add error handling edges
+    builder.add_edge("writer", "error", condition=lambda x: x.error_count > 0)
+    builder.add_edge("roll", "error", condition=lambda x: x.error_count > 0)
+    builder.add_edge("search", "error", condition=lambda x: x.error_count > 0)
+    
+    # Add success paths
+    builder.add_edge("writer", END)
+    builder.add_edge("roll", "writer")
+    builder.add_edge("search", "writer")
+    builder.add_edge("error", END)
+    
+    # Compile and return the graph
+    graph = builder.compile()
+    
+    return await graph.ainvoke(state)
 
-# Define edges based on the decision function
-builder.add_conditional_edges(
-    START,
-    start_router,
-)
-builder.add_edge("writer", END)
-builder.add_edge("roll", "writer")
-builder.add_edge("search", "writer")
-
-graph = builder.compile()
+# Initialize the graph
+graph = story_workflow
