@@ -43,38 +43,31 @@ from config import (
 
 @task
 async def determine_action(state: ChatState) -> str:
-    """Determine next action based on user input using decision agent."""
+    """Determine next action using LangGraph task."""
     try:
         last_message = state.messages[-1]
         if not isinstance(last_message, HumanMessage):
             return "writer"
 
-        # Format the input properly for the decision agent
+        # Format messages for decision agent
         messages = [
             SystemMessage(content=DECISION_PROMPT),
-            HumanMessage(content=last_message.content)
+            last_message
         ]
         
+        # Use the decision agent directly
         response = await decision_agent.ainvoke(messages)
         
-        # Response will now be a DecisionOutput object
-        action = response.action
         action_map = {
             "roll": "roll",
             "search": "search" if SEARCH_ENABLED else "writer",
             "continue_story": "writer"
         }
         
-        state.current_tool = action_map.get(action, "writer")
-        state.clear_tool_results()
-        
-        return state.current_tool
+        return action_map.get(response.action, "writer")
         
     except Exception as e:
         cl.logger.error(f"Error determining action: {e}")
-        state.increment_error_count()
-        if state.error_count >= 3:
-            return "error"
         return "writer"
 
 @task
@@ -159,6 +152,19 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
         cl.logger.error(f"Storyboard generation failed: {e}")
         return None
 
+@task
+async def handle_tools(state: ChatState, action: str) -> Dict[str, Any]:
+    """Handle tool execution using LangGraph's ToolNode."""
+    if action not in ["roll", "search"]:
+        return {"messages": []}
+        
+    try:
+        result = await tool_node.ainvoke(state)
+        return result
+    except Exception as e:
+        cl.logger.error(f"Tool execution failed: {e}")
+        return {"messages": []}
+
 @entrypoint(checkpointer=MemorySaver(), store=VectorStore())
 async def story_workflow(
     state: ChatState,
@@ -166,38 +172,38 @@ async def story_workflow(
     store: BaseStore,
     previous: Any = None
 ) -> entrypoint.final[Dict[str, Any], ChatState]:
-    """Main workflow with proper state management."""
+    """Main workflow using LangGraph constructs."""
     try:
-        # Determine next action
+        # Determine action using task
         action = await determine_action(state)
+        cl.logger.info(f"Determined action: {action}")
         
-        # Handle tools using ToolNode
-        if action in ["roll", "search"]:
-            tool_executor = ToolExecutor(tools=[dice_roll, web_search])
-            tool_node = ToolNode(tools=tool_executor)
-            tool_result = await tool_node.ainvoke(state)
+        # Handle tools using ToolNode task
+        tool_result = await handle_tools(state, action)
+        if tool_result.get("messages"):
             state.messages.extend(tool_result["messages"])
             
         # Generate story response
         response = await generate_story_response(state)
-        state.messages.extend(response["messages"])
+        if response and "messages" in response:
+            state.messages.extend(response["messages"])
         
         # Generate storyboard and images
         storyboard = None
-        try:
-            storyboard = await generate_storyboard(state, store)
-            if storyboard:
-                # Only attempt image generation if we have a valid storyboard
-                image_prompts = await generate_image_generation_prompts(storyboard)
-                if image_prompts:
-                    current_message_id = state.metadata.get("current_message_id")
-                    if current_message_id:
-                        asyncio.create_task(handle_image_generation(image_prompts, current_message_id))
-        except Exception as e:
-            cl.logger.error(f"Storyboard/image generation failed: {e}")
-            # Continue without storyboard/images
-            
-        # Save state for next interaction
+        if state.messages:
+            try:
+                storyboard = await generate_storyboard(state, store)
+                if storyboard:
+                    image_prompts = await generate_image_generation_prompts(storyboard)
+                    if image_prompts and state.metadata.get("current_message_id"):
+                        asyncio.create_task(handle_image_generation(
+                            image_prompts, 
+                            state.metadata["current_message_id"]
+                        ))
+            except Exception as e:
+                cl.logger.error(f"Storyboard/image generation failed: {e}")
+        
+        # Create new state
         new_state = ChatState(
             messages=state.messages,
             thread_id=state.thread_id,
@@ -216,9 +222,9 @@ async def story_workflow(
             },
             save=new_state
         )
+        
     except Exception as e:
         cl.logger.error(f"Workflow error: {e}")
-        state.increment_error_count()
         return entrypoint.final(
             value={
                 "messages": [SystemMessage(content="I apologize, but I encountered an error. Please try again.")],
