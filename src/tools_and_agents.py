@@ -42,9 +42,13 @@ from config import (
     LLM_MAX_TOKENS  # Import LLM_MAX_TOKENS
 )
 
-@tool(name="dice_roll")
+@tool
 async def dice_roll(n: Optional[int] = None) -> str:
-    """Rolls a dice with a specified number of sides."""
+    """Roll a dice with a specified number of sides.
+    
+    Args:
+        n (int, optional): Number of sides on the dice. Defaults to 20 if not specified.
+    """
     try:
         sides = n if n is not None else 20  # Default to d20
         result = random.randint(1, sides)
