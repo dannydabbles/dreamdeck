@@ -1,7 +1,7 @@
 import asyncio
 from typing import Dict, Any, List, Optional
 from langgraph.func import entrypoint, task
-from langgraph.checkpoint import MemorySaver
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode, ToolExecutor
 from langgraph.store.base import BaseStore
 from stores import VectorStore
