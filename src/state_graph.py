@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 from typing import Dict, Any, List, Optional, AsyncIterator
+from langgraph.types import Command
 from langgraph.types import StreamWriter
 from langchain_core.runnables import RunnableConfig
 from langgraph.func import entrypoint, task
@@ -165,36 +166,37 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
         # Call dice_roll with proper argument format
         result = await dice_roll.ainvoke({"n": n})
         
-        # Create the roll message with proper tool call formatting
-        roll_message = ToolMessage(
-            content=result,
-            additional_kwargs={
-                "name": "dice_roll",
-                "type": "function",
-                "tool_call_id": f"dice_roll_{random.randint(0, 1000000)}"
+        # Create unique tool call ID
+        tool_call_id = f"call_dice_{random.randint(0, 1000000)}"
+        
+        # Return Command with proper state updates
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result,
+                        tool_call_id=tool_call_id,
+                        name="dice_roll"
+                    )
+                ],
+                "tool_results": [result]  # Add to tool results for GM context
             }
         )
-        
-        # Add roll result to state's tool results for GM context
-        state.add_tool_result(result)
-        
-        return {"messages": [roll_message]}
         
     except Exception as e:
         cl_logger.error(f"Handle dice roll failed: {e}")
         error_msg = "🎲 Error handling dice roll."
-        return {
-            "messages": [
-                ToolMessage(
-                    content=error_msg,
-                    additional_kwargs={
-                        "name": "dice_roll",
-                        "type": "function",
-                        "tool_call_id": f"dice_roll_error_{random.randint(0, 1000000)}"
-                    }
-                )
-            ]
-        }
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=error_msg,
+                        tool_call_id=f"call_error_{random.randint(0, 1000000)}",
+                        name="dice_roll"
+                    )
+                ]
+            }
+        )
 
 @task
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
@@ -352,24 +354,29 @@ async def story_workflow(
         # Handle dice roll
         if action == "roll":
             try:
-                roll_result = await handle_dice_roll(state)
-                if roll_result and roll_result.get("messages"):
-                    roll_message = roll_result["messages"][0]
+                command = await handle_dice_roll(state)
+                
+                # Apply the command's updates to state
+                if command.update:
+                    if "messages" in command.update:
+                        for msg in command.update["messages"]:
+                            state.messages.append(msg)
+                            # Send to chat
+                            await cl.Message(content=msg.content).send()
                     
-                    # Add to state messages
-                    state.messages.append(roll_message)
-                    
-                    # Send to chat
-                    await cl.Message(content=roll_message.content).send()
-                    
-                    # Return early after dice roll
-                    return entrypoint.final(
-                        value={
-                            "messages": [roll_message],
-                            "action": action
-                        },
-                        save=state
-                    )
+                    if "tool_results" in command.update:
+                        for result in command.update["tool_results"]:
+                            state.add_tool_result(result)
+                
+                # Return early after dice roll
+                return entrypoint.final(
+                    value={
+                        "messages": command.update.get("messages", []),
+                        "action": action
+                    },
+                    save=state
+                )
+                
             except Exception as e:
                 cl_logger.error(f"Dice roll handling failed: {e}")
                 error_msg = "🎲 Error handling dice roll."
