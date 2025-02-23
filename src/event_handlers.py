@@ -6,7 +6,7 @@ from chainlit.types import ThreadDict
 
 from memory_management import get_chat_memory, get_vector_memory
 from state_graph import story_workflow as graph, generate_storyboard
-from image_generation import handle_image_generation, generate_image_generation_prompts
+from image_generation import process_storyboard_images, generate_image_generation_prompts
 from models import ChatState
 from config import AI_WRITER_PROMPT, CHAINLIT_STARTERS
 
@@ -152,8 +152,8 @@ async def on_message(message: CLMessage):
         
         # Handle image generation if there's a storyboard
         if "storyboard" in chunk:
-            asyncio.create_task(handle_image_generation(
-                await generate_image_generation_prompts(chunk["storyboard"]),
+            asyncio.create_task(process_storyboard_images(
+                chunk["storyboard"],
                 ai_message_id
             ))
         
