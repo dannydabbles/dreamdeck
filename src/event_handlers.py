@@ -113,17 +113,9 @@ async def on_chat_resume(thread: ThreadDict):
 
 @on_message
 async def on_message(message: CLMessage):
-    """
-    Event handler for incoming messages. Processes user input, generates AI response, initiates image generation,
-    and updates memories.
-
-    Args:
-        message (CLMessage): The incoming message from the user.
-    """
-    chat_memory = cl.user_session.get("chat_memory")  # type: ConversationSummaryBufferMemory
-    vector_memory = cl.user_session.get("vector_memory")  # type: VectorStoreRetrieverMemory
-    image_generation_memory = cl.user_session.get("image_generation_memory", [])  # type: list
-    runnable = cl.user_session.get("runnable")  # type: Runnable
+    """Handle incoming messages."""
+    state = cl.user_session.get("state")
+    runnable = cl.user_session.get("runnable")
 
     if message.type != "user_message":
         return
@@ -166,10 +158,8 @@ async def on_message(message: CLMessage):
         await CLMessage(content="⚠️ An error occurred while generating the response. Please try again later.").send()
         return
 
-    # Update memories with the latest interaction
-    chat_memory.chat_memory.add_user_message(message.content)
-    chat_memory.chat_memory.add_ai_message(ai_response.content)
-    vector_memory.save_context({"HUMAN": message.content}, {"AI": ai_response.content})
+    # Update session state
+    cl.user_session.set("state", state)
 
 async def load_knowledge_documents():
     """
