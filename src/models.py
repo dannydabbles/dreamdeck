@@ -63,6 +63,15 @@ class ChatState(BaseModel):
             for msg in filtered_messages
         ])
 
+    def get_tool_results_str(self) -> str:
+        """Get formatted string of recent tool results from message history."""
+        tool_results = []
+        # Look through recent messages for tool results
+        for msg in self.messages[-10:]:  # Last 10 messages should be enough
+            if isinstance(msg, ToolMessage):
+                tool_results.append(f"{msg.name}: {msg.content}")
+        return "\n".join(tool_results) if tool_results else ""
+
     def format_system_message(self) -> None:
         """Format the system message with current context."""
         if not self.messages:
@@ -71,13 +80,25 @@ class ChatState(BaseModel):
         sys_msg = self.messages[0]
         if not isinstance(sys_msg, SystemMessage):
             return
+
+        # Get vector memory for inspiration if available
+        vector_memory = cl.user_session.get("vector_memory")
+        memories = []
+        if vector_memory:
+            # Get relevant memories based on recent messages
+            recent_content = "\n".join(msg.content for msg in self.messages[-3:])
+            try:
+                relevant_docs = vector_memory.get(recent_content)
+                memories = [doc.page_content for doc in relevant_docs]
+            except Exception as e:
+                cl.logger.error(f"Failed to get memories: {e}")
             
         # Format with all available context
         self.messages[0] = SystemMessage(
             content=sys_msg.content.format(
                 recent_chat_history=self.get_recent_history_str(),
-                memories=self.get_memories_str(),
-                tool_results="\n".join(self.tool_results) if self.tool_results else ""
+                memories="\n".join(memories) if memories else "",
+                tool_results=self.get_tool_results_str()  # Use tool results from message history
             )
         )
 
