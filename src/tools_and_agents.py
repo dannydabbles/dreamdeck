@@ -54,13 +54,6 @@ async def dice_roll(n: Optional[int] = None) -> str:
         str: Result of the dice roll.
     """
     try:
-        # Parse common dice notation (e.g., d20, d6)
-        if isinstance(n, str) and n.lower().startswith('d'):
-            try:
-                n = int(n[1:])
-            except ValueError:
-                n = 20  # Default to d20 if parsing fails
-        
         sides = n if n is not None else 20  # Default to d20
         result = random.randint(1, sides)
         cl_logger.info(f"Dice roll result: {result} on a {sides}-sided die.")

@@ -147,7 +147,8 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
             except (IndexError, ValueError):
                 n = 20  # Default to d20
                 
-        result = await dice_roll(n)
+        # Fix: Pass input as a dictionary
+        result = await dice_roll.ainvoke({"n": n})
         return {"messages": [ToolMessage(content=result)]}
     except Exception as e:
         cl_logger.error(f"Handle dice roll failed: {e}")
