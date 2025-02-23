@@ -2,7 +2,7 @@ import os
 
 from initialization import *
 from tools_and_agents import *
-from state_graph import graph
+from state_graph import story_workflow as graph
 from memory_management import *
 from image_generation import *
 from event_handlers import *

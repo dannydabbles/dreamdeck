@@ -5,7 +5,8 @@ from chainlit import on_chat_start, on_chat_resume, on_message
 from chainlit.types import ThreadDict
 
 from memory_management import get_chat_memory, get_vector_memory
-from state_graph import call_storyboard_generation, graph, call_image_generation
+from state_graph import story_workflow as graph, generate_storyboard
+from image_generation import handle_image_generation, generate_image_generation_prompts
 from models import ChatState
 from config import AI_WRITER_PROMPT, CHAINLIT_STARTERS
 
@@ -131,25 +132,34 @@ async def on_message(message: CLMessage):
     cb = cl.LangchainCallbackHandler()
 
     try:
+        # Add user message to state
+        state = cl.user_session.get("state")
+        state.messages.append(HumanMessage(content=message.content))
+        
         # Generate AI response
         ai_response = CLMessage(content="")
-        history = chat_memory.chat_memory.messages + [HumanMessage(content=message.content)] 
-        async for msg, metadata in runnable.astream(input={"messages": history}, stream_mode="messages", config=RunnableConfig(callbacks=[cb], **config)):
-            if (
-                msg.content
-                and not isinstance(msg, HumanMessage)
-                and metadata["langgraph_node"] == "writer"
-            ):
-                await ai_response.stream_token(msg.content)
+        async for chunk in runnable.astream(
+            state,
+            config=RunnableConfig(callbacks=[cb], **config)
+        ):
+            if isinstance(chunk, dict) and chunk.get("messages"):
+                await ai_response.stream_token(chunk["messages"][-1].content)
+        
         await ai_response.send()
-        history += [ai_response]
-
-        # After sending the AI response, get its message ID
+        
+        # Update state with the new message ID
         ai_message_id = ai_response.id
-        cl.user_session.set("ai_message_id", ai_message_id) # Assuming CLMessage.send() populates the 'id' attribute
-        cl.logger.debug(f"AI Response Message ID: {ai_message_id}")
-
-        asyncio.create_task(call_image_generation(history, ai_message_id))
+        state.metadata["current_message_id"] = ai_message_id
+        
+        # Handle image generation if there's a storyboard
+        if "storyboard" in chunk:
+            asyncio.create_task(handle_image_generation(
+                await generate_image_generation_prompts(chunk["storyboard"]),
+                ai_message_id
+            ))
+        
+        # Update session state
+        cl.user_session.set("state", state)
     except Exception as e:
         cl.logger.error(f"Runnable stream failed: {e}")
         cl.logger.error(f"Metadata: {metadata}")  # Log the metadata to see if 'action' is present

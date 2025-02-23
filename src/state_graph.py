@@ -178,3 +178,6 @@ async def story_workflow(
 
 # Initialize the workflow
 graph = story_workflow
+
+# Export the necessary functions
+__all__ = ['story_workflow', 'generate_storyboard', 'handle_image_generation']
