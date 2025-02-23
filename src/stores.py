@@ -38,6 +38,9 @@ class VectorStore(BaseStore):
         """Get relevant documents from thread history."""
         try:
             thread_id = key[0] if key else cl.context.session.id
+            if not thread_id:
+                return []
+                
             thread = self._get_thread_history(thread_id)
             if not thread:
                 return []
@@ -47,14 +50,22 @@ class VectorStore(BaseStore):
                 return []
                 
             # Get relevant documents using embeddings
-            query_embedding = self.embeddings.embed_query(field)
-            doc_embeddings = self.embeddings.embed_documents([d.page_content for d in docs])
-            
+            try:
+                query_embedding = self.embeddings.embed_query(field)
+                doc_embeddings = self.embeddings.embed_documents([d.page_content for d in docs])
+            except Exception as e:
+                cl.logger.error(f"Embedding error: {e}")
+                return []
+                
             # Cosine similarity search with metadata preservation
-            similarities = [np.dot(query_embedding, doc_emb) for doc_emb in doc_embeddings]
-            most_similar = sorted(zip(similarities, docs), reverse=True)[:3]
-            
-            return [doc for _, doc in most_similar]
+            try:
+                similarities = [np.dot(query_embedding, doc_emb) for doc_emb in doc_embeddings]
+                most_similar = sorted(zip(similarities, docs), reverse=True)[:3]
+                return [doc for _, doc in most_similar]
+            except Exception as e:
+                cl.logger.error(f"Similarity calculation error: {e}")
+                return []
+                
         except Exception as e:
             cl.logger.error(f"Error in vector store get operation: {e}")
             return []

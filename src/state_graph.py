@@ -109,23 +109,38 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
         # Get relevant documents using the store
         docs = store.get((state.thread_id,), state.messages[-1].content)
         memories_str = "\n".join([doc.page_content for doc in docs]) if docs else "No additional inspiration provided."
-        recent_chat_history = "\n".join([f"{message.type.upper()}: {message.content}" for message in state.messages])
+        
+        # Format recent chat history properly
+        recent_messages = state.get_recent_history()
+        recent_chat_history = "\n".join([
+            f"{msg.__class__.__name__.upper()}: {msg.content}" 
+            for msg in recent_messages
+        ])
 
+        # Create the prompt with proper formatting
         image_prompt = PromptTemplate.from_template(STORYBOARD_GENERATION_PROMPT)
         system_content = image_prompt.format(
             memories=memories_str,
             recent_chat_history=recent_chat_history
         )
         
+        # Create messages list with proper typing
         messages = [SystemMessage(content=system_content)]
+        
+        # Invoke the agent with proper async call
         storyboard_message = await storyboard_editor_agent.ainvoke(messages)
         
+        # Process the response
+        if not storyboard_message or not storyboard_message.content:
+            return None
+            
         think_end = "</think>"
         storyboard = storyboard_message.content
         if think_end in storyboard:
             storyboard = storyboard.split(think_end)[1].strip()
             
-        return storyboard
+        return storyboard if storyboard else None
+        
     except Exception as e:
         cl.logger.error(f"Storyboard generation failed: {e}")
         return None
@@ -154,27 +169,42 @@ async def story_workflow(
         state.messages.extend(response["messages"])
         
         # Generate storyboard and images
-        storyboard = await generate_storyboard(state, store)
+        try:
+            storyboard = await generate_storyboard(state, store)
+        except Exception as e:
+            cl.logger.error(f"Storyboard generation failed: {e}")
+            storyboard = None
         
         # Save state for next interaction
         new_state = ChatState(
             messages=state.messages,
-            vector_store_id=state.vector_store_id,
-            metadata={"last_action": action, "storyboard": storyboard}
+            thread_id=state.thread_id,
+            metadata={
+                "last_action": action,
+                "storyboard": storyboard,
+                "current_message_id": state.metadata.get("current_message_id")
+            }
         )
         
         return entrypoint.final(
-            value={"messages": state.messages, "action": action, "storyboard": storyboard},
+            value={
+                "messages": state.messages,
+                "action": action,
+                "storyboard": storyboard
+            },
             save=new_state
         )
     except Exception as e:
         cl.logger.error(f"Workflow error: {e}")
         state.increment_error_count()
-        return {
-            "messages": [SystemMessage(content="I apologize, but I encountered an error. Please try again.")],
-            "action": "error",
-            "storyboard": None
-        }
+        return entrypoint.final(
+            value={
+                "messages": [SystemMessage(content="I apologize, but I encountered an error. Please try again.")],
+                "action": "error",
+                "storyboard": None
+            },
+            save=state
+        )
 
 # Initialize the workflow
 graph = story_workflow
