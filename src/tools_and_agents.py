@@ -8,6 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 import logging
 
