@@ -276,17 +276,21 @@ async def story_workflow(
         # Generate GM response
         msg = cl.Message(content="")
         
-        # Prepare context for GM
-        context = {
-            "search_result": search_result["messages"][0].content if search_result else None,
-            "roll_result": roll_result["messages"][0].content if action == "roll" else None
-        }
-        
+        # If we have tool results, add them to state
+        if roll_result or search_result:
+            if roll_result:
+                state.add_tool_result(roll_result["messages"][0].content)
+            if search_result:
+                state.add_tool_result(search_result["messages"][0].content)
+
         # Stream GM response
-        async for chunk in generate_story_response(state, context):
+        async for chunk in generate_story_response(state):
             if isinstance(chunk, dict) and chunk.get("messages"):
                 await msg.stream_token(chunk["messages"][-1].content)
         await msg.send()
+        
+        # Clear tool results after they've been used
+        state.clear_tool_results()
         
         # Update state with GM response
         if msg.content:
