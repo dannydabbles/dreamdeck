@@ -86,10 +86,12 @@ decision_agent = ChatOpenAI(
     verbose=LLM_VERBOSE
 ).with_structured_output(DecisionOutput)
 
-# Create tool executors
+# Create tools list and executor
 tools = [dice_roll, web_search]
-tool_executor = ToolExecutor(tools=tools)
-tool_node = ToolNode(tools=tool_executor)
+tool_executor = ToolExecutor(tools)
+
+# Create tool node with the tools list, not the executor
+tool_node = ToolNode(tools=tools)  # Pass the tools list directly, not the executor
 
 # Initialize the writer AI agent
 writer_model = ChatOpenAI(

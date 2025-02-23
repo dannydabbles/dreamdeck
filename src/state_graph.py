@@ -159,8 +159,14 @@ async def handle_tools(state: ChatState, action: str) -> Dict[str, Any]:
         return {"messages": []}
         
     try:
-        result = await tool_node.ainvoke(state)
-        return result
+        if action == "roll":
+            result = await dice_roll()
+            return {"messages": [ToolMessage(content=result)]}
+        elif action == "search":
+            query = state.messages[-1].content
+            result = await web_search(query)
+            return {"messages": [ToolMessage(content=result)]}
+            
     except Exception as e:
         cl.logger.error(f"Tool execution failed: {e}")
         return {"messages": []}
