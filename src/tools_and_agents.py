@@ -105,6 +105,7 @@ decision_agent = ChatOpenAI(
     max_tokens=100,
     verbose=LLM_VERBOSE
 ).bind(
+    function_call={"name": "decide_action"},  # Force this function to be called
     functions=[{
         "name": "decide_action",
         "description": "Decide the next action based on user input",
@@ -119,8 +120,7 @@ decision_agent = ChatOpenAI(
             },
             "required": ["action"]
         }
-    }],
-    function_call={"name": "decide_action"}  # Force the function call
+    }]
 )
 
 # Create tools list and executor

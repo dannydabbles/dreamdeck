@@ -148,18 +148,13 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
     """Generate storyboard for visualization with retry logic."""
     try:
         cl.logger.debug("Starting storyboard generation")
-        cl.logger.debug(f"State: {state}")
         
         # Get relevant documents using the store
         docs = store.get((state.thread_id,), state.messages[-1].content)
-        cl.logger.debug(f"Retrieved documents: {docs}")
-        
         memories_str = "\n".join([doc.page_content for doc in docs]) if docs else ""
         
         # Format recent chat history properly
         recent_messages = state.get_recent_history()
-        cl.logger.debug(f"Recent messages: {recent_messages}")
-        
         recent_chat_history = "\n".join([
             f"{msg.__class__.__name__.replace('Message', '').upper()}: {msg.content}" 
             for msg in recent_messages
@@ -170,7 +165,6 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
             memories=memories_str,
             recent_chat_history=recent_chat_history
         )
-        cl.logger.debug(f"Generated prompt: {prompt}")
 
         # Create messages list with proper typing
         messages = [SystemMessage(content=prompt)]
@@ -179,7 +173,7 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
             # Use the storyboard editor agent
             cl.logger.debug("Invoking storyboard editor agent")
             response = await storyboard_editor_agent.ainvoke(messages)
-            cl.logger.debug(f"Storyboard editor response: {response}")
+            cl.logger.debug(f"Raw storyboard response: {response}")
             
             if not isinstance(response, BaseMessage):
                 cl.logger.warning(f"Invalid response type: {type(response)}")
@@ -194,9 +188,12 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
             think_end = "</think>"
             if think_end in content:
                 content = content.split(think_end)[1].strip()
-                cl.logger.debug(f"Processed content after think: {content}")
             
-            return content if content.strip() else None
+            if not content.strip():
+                cl.logger.warning("Empty content after processing")
+                return None
+                
+            return content
             
         except Exception as e:
             cl.logger.error(f"Storyboard agent invocation failed: {str(e)}", exc_info=True)
@@ -214,15 +211,16 @@ async def handle_tools(state: ChatState, action: str) -> Dict[str, Any]:
         
     try:
         if action == "roll":
-            result = await dice_roll()
-            return {"messages": [ToolMessage(content=result)]}
+            # Pass None as default input for dice roll
+            result = await dice_roll.ainvoke({"n": None})  # Use ainvoke instead of direct call
+            return {"messages": [ToolMessage(content=str(result))]}
         elif action == "search":
             query = state.messages[-1].content
-            result = await web_search(query)
-            return {"messages": [ToolMessage(content=result)]}
+            result = await web_search.ainvoke({"query": query})  # Use ainvoke for web search too
+            return {"messages": [ToolMessage(content=str(result))]}
             
     except Exception as e:
-        cl.logger.error(f"Tool execution failed: {e}")
+        cl.logger.error(f"Tool execution failed: {e}", exc_info=True)
         return {"messages": []}
 
 @entrypoint(checkpointer=MemorySaver(), store=VectorStore())
