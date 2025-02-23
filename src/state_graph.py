@@ -5,6 +5,7 @@ from langgraph.prebuilt.tool_executor import ToolExecutor
 from langgraph.graph.message import MessagesState
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint import MemorySaver
+from langchain_core.messages import SystemMessage
 
 from langchain_core.messages import (
     AIMessage,
@@ -159,6 +160,11 @@ async def call_dice_roll(state: MessagesState):
         "artifacts": None,
     }
     return {"messages": [ToolMessage(content=tool_output["stdout"], artifact=tool_output, tool_call_id="roll_dice")]}
+
+async def handle_error(state: MessagesState):
+    """Handle errors in the workflow."""
+    error_message = SystemMessage(content="An error occurred in the workflow. Attempting to recover...")
+    return {"messages": [error_message]}
 
 async def call_web_search(state: MessagesState):
     last_message = state["messages"][-1]
