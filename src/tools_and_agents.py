@@ -1,13 +1,14 @@
 import os
 import random
 import requests
-from typing import Optional, List
+from typing import Optional, List, Literal
 from langgraph.prebuilt import ToolNode, ToolExecutor
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from pydantic import BaseModel, Field
 import logging
 
 # Initialize logging
