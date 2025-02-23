@@ -43,20 +43,31 @@ from config import (
 )
 
 @tool
-def dice_roll(n: Optional[int] = DICE_SIDES) -> str:
+async def dice_roll(n: Optional[int] = None) -> str:
     """
     Rolls a dice with a specified number of sides.
-
+    
     Args:
-        n (Optional[int]): Number of sides on the dice. Defaults to DICE_SIDES.
-
+        n (Optional[int]): Number of sides on the dice. Defaults to 20 if None.
+    
     Returns:
         str: Result of the dice roll.
     """
-    sides = n if n else DICE_SIDES
-    result = random.randint(1, sides)
-    cl_logger.info(f"Dice roll result: {result} on a {sides}-sided die.")
-    return f"🎲 You rolled a {result} on a {sides}-sided die."
+    try:
+        # Parse common dice notation (e.g., d20, d6)
+        if isinstance(n, str) and n.lower().startswith('d'):
+            try:
+                n = int(n[1:])
+            except ValueError:
+                n = 20  # Default to d20 if parsing fails
+        
+        sides = n if n is not None else 20  # Default to d20
+        result = random.randint(1, sides)
+        cl_logger.info(f"Dice roll result: {result} on a {sides}-sided die.")
+        return f"🎲 You rolled a {result} on a {sides}-sided die."
+    except Exception as e:
+        cl_logger.error(f"Dice roll failed: {e}")
+        return f"🎲 Error rolling dice: {str(e)}"
 
 @tool
 def web_search(query: str) -> str:

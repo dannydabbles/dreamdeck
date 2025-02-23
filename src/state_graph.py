@@ -137,8 +137,21 @@ async def determine_action(state: ChatState) -> str:
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
     """Handle dice roll request with retry logic."""
-    result = await dice_roll()
-    return {"messages": [ToolMessage(content=result)]}
+    try:
+        # Extract number from message like "Roll a d20"
+        message = state.messages[-1].content.lower()
+        n = None
+        if 'd' in message:
+            try:
+                n = int(message.split('d')[1].split()[0])
+            except (IndexError, ValueError):
+                n = 20  # Default to d20
+                
+        result = await dice_roll(n)
+        return {"messages": [ToolMessage(content=result)]}
+    except Exception as e:
+        cl_logger.error(f"Handle dice roll failed: {e}")
+        return {"messages": [ToolMessage(content="🎲 Error handling dice roll. Using default d20.")]}
 
 @task
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
@@ -294,12 +307,18 @@ async def story_workflow(
         if action == "roll":
             roll_result = await handle_dice_roll(state)
             if roll_result.get("messages"):
-                # Add roll result to chat history
                 roll_message = roll_result["messages"][0]
                 state.messages.append(roll_message)
-                
-                # Display roll in chat
                 await cl.Message(content=roll_message.content).send()
+                
+                # Return early after dice roll
+                return entrypoint.final(
+                    value={
+                        "messages": [roll_message],
+                        "action": action
+                    },
+                    save=state
+                )
 
         # Handle search silently if needed
         search_result = None
@@ -340,13 +359,13 @@ async def story_workflow(
             
             # Process storyboard images asynchronously if we have content
             if storyboard and state.metadata.get("current_message_id"):
-                # Create a coroutine first
-                process_coro = process_storyboard_images(
-                    storyboard,
-                    state.metadata["current_message_id"]
-                )
-                # Then create the task with the coroutine
-                asyncio.create_task(process_coro)
+                try:
+                    await process_storyboard_images(
+                        storyboard,
+                        state.metadata["current_message_id"]
+                    )
+                except Exception as e:
+                    cl_logger.error(f"Failed to process storyboard images: {e}")
                 
         except Exception as e:
             cl_logger.error(f"Story generation failed: {str(e)}", exc_info=True)
