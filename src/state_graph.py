@@ -108,39 +108,52 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
     try:
         # Get relevant documents using the store
         docs = store.get((state.thread_id,), state.messages[-1].content)
-        memories_str = "\n".join([doc.page_content for doc in docs]) if docs else "No additional inspiration provided."
+        memories_str = "\n".join([doc.page_content for doc in docs]) if docs else ""
         
         # Format recent chat history properly
         recent_messages = state.get_recent_history()
         recent_chat_history = "\n".join([
-            f"{msg.__class__.__name__.upper()}: {msg.content}" 
+            f"{msg.__class__.__name__.replace('Message', '').upper()}: {msg.content}" 
             for msg in recent_messages
         ])
 
         # Create the prompt with proper formatting
-        image_prompt = PromptTemplate.from_template(STORYBOARD_GENERATION_PROMPT)
-        system_content = image_prompt.format(
+        prompt = PromptTemplate(
+            template=STORYBOARD_GENERATION_PROMPT,
+            input_variables=["memories", "recent_chat_history"]
+        )
+        
+        formatted_prompt = prompt.format(
             memories=memories_str,
             recent_chat_history=recent_chat_history
         )
         
         # Create messages list with proper typing
-        messages = [SystemMessage(content=system_content)]
+        messages = [SystemMessage(content=formatted_prompt)]
         
         # Invoke the agent with proper async call
-        storyboard_message = await storyboard_editor_agent.ainvoke(messages)
-        
-        # Process the response
-        if not storyboard_message or not storyboard_message.content:
+        try:
+            storyboard_message = await storyboard_editor_agent.ainvoke(messages)
+            
+            if not storyboard_message or not isinstance(storyboard_message, BaseMessage):
+                cl.logger.warning("Invalid storyboard message format")
+                return None
+                
+            content = storyboard_message.content
+            if not content:
+                return None
+                
+            # Process the response
+            think_end = "</think>"
+            if think_end in content:
+                content = content.split(think_end)[1].strip()
+            
+            return content if content else None
+            
+        except Exception as e:
+            cl.logger.error(f"Storyboard agent invocation failed: {e}")
             return None
             
-        think_end = "</think>"
-        storyboard = storyboard_message.content
-        if think_end in storyboard:
-            storyboard = storyboard.split(think_end)[1].strip()
-            
-        return storyboard if storyboard else None
-        
     except Exception as e:
         cl.logger.error(f"Storyboard generation failed: {e}")
         return None
@@ -169,12 +182,20 @@ async def story_workflow(
         state.messages.extend(response["messages"])
         
         # Generate storyboard and images
+        storyboard = None
         try:
             storyboard = await generate_storyboard(state, store)
+            if storyboard:
+                # Only attempt image generation if we have a valid storyboard
+                image_prompts = await generate_image_generation_prompts(storyboard)
+                if image_prompts:
+                    current_message_id = state.metadata.get("current_message_id")
+                    if current_message_id:
+                        asyncio.create_task(handle_image_generation(image_prompts, current_message_id))
         except Exception as e:
-            cl.logger.error(f"Storyboard generation failed: {e}")
-            storyboard = None
-        
+            cl.logger.error(f"Storyboard/image generation failed: {e}")
+            # Continue without storyboard/images
+            
         # Save state for next interaction
         new_state = ChatState(
             messages=state.messages,

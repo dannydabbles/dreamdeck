@@ -99,15 +99,16 @@ writer_agent = writer_model.bind_tools([dice_roll, web_search])
 # Initialize the image generation AI agent
 storyboard_model = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
-    temperature=LLM_TEMPERATURE,
+    temperature=0.7,  # Slightly higher temperature for creative generation
     streaming=False,
     model_name=LLM_MODEL_NAME,
     request_timeout=LLM_TIMEOUT,
     max_tokens=LLM_MAX_TOKENS,
-    presence_penalty=LLM_PRESENCE_PENALTY,
-    frequency_penalty=LLM_FREQUENCY_PENALTY,
-    top_p=LLM_TOP_P,
+    presence_penalty=0.1,
+    frequency_penalty=0.1,
+    top_p=0.9,
     verbose=LLM_VERBOSE
 )
 
+# Create a chain for storyboard generation
 storyboard_editor_agent = storyboard_model
