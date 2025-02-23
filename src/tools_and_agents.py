@@ -95,13 +95,13 @@ def log_decision_agent_response(response):
     if hasattr(response, 'content'):
         cl_logger.debug(f"Content: {response.content}")
 
-# Initialize the decision agent with proper function binding
+# Initialize the decision agent with proper function binding and longer timeout
 decision_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
     temperature=0.2,
     streaming=False,
     model_name=LLM_MODEL_NAME,
-    request_timeout=LLM_TIMEOUT,
+    request_timeout=LLM_TIMEOUT * 2,  # Double the timeout for decision making
     max_tokens=100,
     verbose=LLM_VERBOSE
 ).bind(
@@ -130,13 +130,13 @@ tool_executor = ToolExecutor(tools)
 # Create tool node with the tools list, not the executor
 tool_node = ToolNode(tools=tools)  # Pass the tools list directly, not the executor
 
-# Initialize the writer AI agent with tools
+# Initialize the writer AI agent with tools and longer timeout
 writer_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
     temperature=LLM_TEMPERATURE,
-    streaming=LLM_STREAMING,
+    streaming=True,  # Enable streaming
     model_name=LLM_MODEL_NAME,
-    request_timeout=LLM_TIMEOUT,
+    request_timeout=LLM_TIMEOUT * 3,  # Triple the timeout for story generation
     max_tokens=LLM_MAX_TOKENS,
     presence_penalty=LLM_PRESENCE_PENALTY,
     frequency_penalty=LLM_FREQUENCY_PENALTY,
@@ -147,13 +147,13 @@ writer_agent = ChatOpenAI(
     tool_choice="auto"  # Let the model decide when to use tools
 )
 
-# Initialize the storyboard editor agent
+# Initialize the storyboard editor agent with longer timeout
 storyboard_editor_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
     temperature=0.7,
     streaming=False,
     model_name=LLM_MODEL_NAME,
-    request_timeout=LLM_TIMEOUT,
+    request_timeout=LLM_TIMEOUT * 2,  # Double the timeout for storyboard generation
     max_tokens=LLM_MAX_TOKENS,
     presence_penalty=0.1,
     frequency_penalty=0.1,

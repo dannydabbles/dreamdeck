@@ -151,7 +151,7 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
         
         # Get relevant documents using the store
         docs = store.get((state.thread_id,), state.messages[-1].content)
-        memories_str = "\n".join([doc.page_content for doc in docs]) if docs else ""
+        memories_str = "\n".join([doc.page_content for d in docs]) if docs else ""
         
         # Format recent chat history properly
         recent_messages = state.get_recent_history()
@@ -160,29 +160,36 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
             for msg in recent_messages
         ])
 
-        # Create the prompt with proper formatting
-        prompt = STORYBOARD_GENERATION_PROMPT.format(
-            memories=memories_str,
-            recent_chat_history=recent_chat_history
-        )
-
         # Create messages list with proper typing
-        messages = [SystemMessage(content=prompt)]
+        messages = [
+            SystemMessage(content=STORYBOARD_GENERATION_PROMPT.format(
+                memories=memories_str,
+                recent_chat_history=recent_chat_history
+            ))
+        ]
         
         try:
-            # Use the storyboard editor agent
-            cl.logger.debug("Invoking storyboard editor agent")
-            response = await storyboard_editor_agent.ainvoke(messages)
+            # Use the storyboard editor agent with proper async call
+            response = await storyboard_editor_agent.ainvoke(
+                messages,
+                timeout=LLM_TIMEOUT * 2  # Give more time for storyboard generation
+            )
+            cl.logger.debug(f"Raw storyboard response type: {type(response)}")
             cl.logger.debug(f"Raw storyboard response: {response}")
             
-            if not isinstance(response, BaseMessage):
-                cl.logger.warning(f"Invalid response type: {type(response)}")
-                return None
-                
-            content = response.content
-            if not content:
-                cl.logger.warning("Empty content in response")
-                return None
+            if isinstance(response, BaseMessage):
+                content = response.content
+                if content:
+                    # Process the response
+                    think_end = "</think>"
+                    if think_end in content:
+                        content = content.split(think_end)[1].strip()
+                    
+                    if content.strip():
+                        return content
+                        
+            cl.logger.warning("Invalid or empty storyboard response")
+            return None
                 
             # Process the response
             think_end = "</think>"
@@ -241,10 +248,17 @@ async def story_workflow(
         if tool_result.get("messages"):
             state.messages.extend(tool_result["messages"])
             
-        # Generate story response
-        response = await generate_story_response(state)
-        if response and "messages" in response:
-            state.messages.extend(response["messages"])
+        # Generate story response with streaming
+        msg = cl.Message(content="")
+        async for chunk in generate_story_response(state):
+            if isinstance(chunk, dict) and chunk.get("messages"):
+                await msg.stream_token(chunk["messages"][-1].content)
+        await msg.send()
+        
+        # Update state with new message
+        if msg.content:
+            state.messages.append(AIMessage(content=msg.content))
+            state.metadata["current_message_id"] = msg.id
         
         # Generate storyboard and images
         storyboard = None
