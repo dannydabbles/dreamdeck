@@ -2,6 +2,9 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint import MemorySaver
+from langgraph.prebuilt import ToolNode, ToolExecutor
+from langgraph.store.base import BaseStore
+from stores import VectorStore
 from langchain_core.messages import (
     AIMessage,
     HumanMessage,
@@ -129,41 +132,43 @@ async def generate_storyboard(state: ChatState) -> Optional[str]:
         cl.logger.error(f"Storyboard generation failed: {e}")
         return None
 
-@entrypoint(checkpointer=MemorySaver())
-async def story_workflow(state: ChatState) -> Dict[str, Any]:
-    """Main workflow orchestrator with proper error handling."""
+@entrypoint(checkpointer=MemorySaver(), store=VectorStore())
+async def story_workflow(
+    state: ChatState,
+    *,
+    store: BaseStore,
+    previous: Any = None
+) -> entrypoint.final[Dict[str, Any], ChatState]:
+    """Main workflow with proper state management."""
     try:
         # Determine next action
         action = await determine_action(state)
         
-        # Handle tools first
-        if action == "roll":
-            tool_result = await handle_dice_roll(state)
+        # Handle tools using ToolNode
+        if action in ["roll", "search"]:
+            tool_executor = ToolExecutor(tools=[dice_roll, web_search])
+            tool_node = ToolNode(tools=tool_executor)
+            tool_result = await tool_node.ainvoke(state)
             state.messages.extend(tool_result["messages"])
-        elif action == "search":
-            tool_result = await handle_search(state)
-            state.messages.extend(tool_result["messages"])
-        elif action == "error":
-            return {"messages": [SystemMessage(content="An error occurred. Please try again.")]}
-        
+            
         # Generate story response
         response = await generate_story_response(state)
         state.messages.extend(response["messages"])
         
         # Generate storyboard and images
-        storyboard = await generate_storyboard(state)
-        if storyboard:
-            # Handle image generation asynchronously
-            asyncio.create_task(handle_image_generation(
-                await generate_image_generation_prompts(storyboard),
-                state.metadata.get("current_message_id")
-            ))
+        storyboard = await generate_storyboard(state, store)
         
-        return {
-            "messages": state.messages,
-            "action": action,
-            "storyboard": storyboard
-        }
+        # Save state for next interaction
+        new_state = ChatState(
+            messages=state.messages,
+            vector_store_id=state.vector_store_id,
+            metadata={"last_action": action, "storyboard": storyboard}
+        )
+        
+        return entrypoint.final(
+            value={"messages": state.messages, "action": action, "storyboard": storyboard},
+            save=new_state
+        )
     except Exception as e:
         cl.logger.error(f"Workflow error: {e}")
         state.increment_error_count()
