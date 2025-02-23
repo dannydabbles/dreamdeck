@@ -56,6 +56,9 @@ DENOISING_STRENGTH = IMAGE_GENERATION_PAYLOAD.get("denoising_strength", 0.1)
 HR_SECOND_PASS_STEPS = IMAGE_GENERATION_PAYLOAD.get("hr_second_pass_steps", 0)
 cl_logger.info(f"Image generation payload loaded: negative_prompt={NEGATIVE_PROMPT}, steps={STEPS}, sampler_name={SAMPLER_NAME}, scheduler={SCHEDULER}, cfg_scale={CFG_SCALE}, width={WIDTH}, height={HEIGHT}")
 
+# Search enabled
+SEARCH_ENABLED = config_yaml.get("search_enabled", False)
+
 # Timeouts
 IMAGE_GENERATION_TIMEOUT = config_yaml.get("timeouts", {}).get("image_generation_timeout", 300)
 cl_logger.info(f"Image generation timeout loaded: {IMAGE_GENERATION_TIMEOUT}")
