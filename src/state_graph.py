@@ -202,9 +202,40 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def handle_search(state: ChatState) -> Dict[str, Any]:
     """Handle web search request with retry logic."""
-    query = state.messages[-1].content
-    result = await web_search(query)
-    return {"messages": [ToolMessage(content=result)]}
+    try:
+        query = state.messages[-1].content
+        result = await web_search.ainvoke({"query": query})
+        
+        # Generate unique tool call ID
+        tool_call_id = f"search_{random.randint(0, 1000000)}"
+        
+        # Return Command with proper state updates
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result,
+                        tool_call_id=tool_call_id,
+                        name="web_search"
+                    )
+                ],
+                "tool_results": [result]
+            }
+        )
+    except Exception as e:
+        cl_logger.error(f"Search failed: {e}")
+        error_msg = "🔍 Error performing web search."
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=error_msg,
+                        tool_call_id=f"error_{random.randint(0, 1000000)}",
+                        name="web_search"
+                    )
+                ]
+            }
+        )
 
 @task
 @retry(
@@ -430,12 +461,27 @@ async def story_workflow(
                     save=state
                 )
 
-        # Handle search silently if needed
-        search_result = None
+        # Handle search if needed
         if action == "search":
-            search_result = await handle_search(state)
-            # Don't add search result to messages/chat history
-            # It will be used internally by the GM
+            try:
+                command = await handle_search(state)
+                
+                # Apply the command's updates to state
+                if command.update:
+                    if "messages" in command.update:
+                        for msg in command.update["messages"]:
+                            state.messages.append(msg)
+                            # Send to chat
+                            await cl.Message(content=msg.content).send()
+                    
+                    if "tool_results" in command.update:
+                        for result in command.update["tool_results"]:
+                            state.add_tool_result(result)
+                            
+            except Exception as e:
+                cl_logger.error(f"Search handling failed: {e}")
+                error_msg = "🔍 Error performing web search."
+                await cl.Message(content=error_msg).send()
 
         # Generate GM response
         msg = cl.Message(content="")
