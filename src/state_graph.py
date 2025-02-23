@@ -162,21 +162,18 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
             except (IndexError, ValueError):
                 n = 20  # Default to d20
                 
-        # Call dice_roll once
+        # Call dice_roll with proper argument format
         result = await dice_roll.ainvoke({"n": n})
         
-        # Create the roll message with proper formatting
+        # Create the roll message with proper tool call formatting
         roll_message = ToolMessage(
             content=result,
             additional_kwargs={
                 "name": "dice_roll",
-                "type": "tool",
-                "tool_call_id": f"dice_roll_{random.randint(0, 1000000)}"  # Add unique tool_call_id
+                "type": "function",
+                "tool_call_id": f"dice_roll_{random.randint(0, 1000000)}"
             }
         )
-        
-        # Log the result
-        cl_logger.info(f"Dice roll completed: {result}")
         
         # Add roll result to state's tool results for GM context
         state.add_tool_result(result)
@@ -185,15 +182,15 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
         
     except Exception as e:
         cl_logger.error(f"Handle dice roll failed: {e}")
-        error_msg = "🎲 Error handling dice roll. Using default d20."
+        error_msg = "🎲 Error handling dice roll."
         return {
             "messages": [
                 ToolMessage(
                     content=error_msg,
                     additional_kwargs={
                         "name": "dice_roll",
-                        "type": "tool",
-                        "tool_call_id": f"dice_roll_error_{random.randint(0, 1000000)}"  # Add unique tool_call_id for error case
+                        "type": "function",
+                        "tool_call_id": f"dice_roll_error_{random.randint(0, 1000000)}"
                     }
                 )
             ]

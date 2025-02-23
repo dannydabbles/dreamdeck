@@ -44,15 +44,7 @@ from config import (
 
 @tool
 async def dice_roll(n: Optional[int] = None) -> str:
-    """
-    Rolls a dice with a specified number of sides.
-    
-    Args:
-        n (Optional[int]): Number of sides on the dice. Defaults to 20 if None.
-    
-    Returns:
-        str: Result of the dice roll.
-    """
+    """Rolls a dice with a specified number of sides."""
     try:
         sides = n if n is not None else 20  # Default to d20
         result = random.randint(1, sides)
@@ -62,6 +54,27 @@ async def dice_roll(n: Optional[int] = None) -> str:
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}")
         return f"🎲 Error rolling dice: {str(e)}"
+
+# Define the dice roll tool schema
+dice_roll_schema = {
+    "type": "function",
+    "function": {
+        "name": "dice_roll",
+        "description": "Roll a dice with a specified number of sides",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "n": {
+                    "type": ["integer", "null"],
+                    "description": "Number of sides on the dice. Defaults to 20 if not specified."
+                }
+            },
+            "required": ["n"],
+            "additionalProperties": False
+        },
+        "strict": True
+    }
+}
 
 @tool
 def web_search(query: str) -> str:
@@ -106,24 +119,28 @@ decision_agent = ChatOpenAI(
     temperature=0.2,
     streaming=False,
     model_name=LLM_MODEL_NAME,
-    request_timeout=LLM_TIMEOUT * 2,  # Double the timeout for decision making
+    request_timeout=LLM_TIMEOUT * 2,
     max_tokens=100,
     verbose=LLM_VERBOSE
 ).bind(
-    function_call={"name": "decide_action"},  # Force this function to be called
-    functions=[{
-        "name": "decide_action",
-        "description": "Decide the next action based on user input",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["roll", "search", "continue_story"],
-                    "description": "The action to take"
-                }
+    tools=[{
+        "type": "function",
+        "function": {
+            "name": "decide_action",
+            "description": "Decide the next action based on user input. Choose 'roll' for any dice commands.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["roll", "search", "continue_story"],
+                        "description": "The action to take. Choose 'roll' for dice rolls."
+                    }
+                },
+                "required": ["action"],
+                "additionalProperties": False
             },
-            "required": ["action"]
+            "strict": True
         }
     }]
 )
@@ -186,35 +203,8 @@ writer_agent = ChatOpenAI(
     top_p=LLM_TOP_P,
     verbose=LLM_VERBOSE
 ).bind(
-    functions=[{
-        "name": "dice_roll",
-        "description": "Rolls a dice with a specified number of sides",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "n": {
-                    "type": "integer",
-                    "description": "Number of sides on the dice"
-                }
-            },
-            "required": []
-        }
-    },
-    {
-        "name": "web_search",
-        "description": "Performs a web search using SerpAPI",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "The search query"
-                }
-            },
-            "required": ["query"]
-        }
-    }],
-    function_call="auto"
+    tools=[dice_roll_schema],  # Pass the schema directly
+    tool_choice="auto"  # Allow the model to choose when to use tools
 )
 
 # Initialize the storyboard editor agent with longer timeout
