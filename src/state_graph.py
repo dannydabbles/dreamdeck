@@ -163,11 +163,11 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
             except (IndexError, ValueError):
                 n = 20  # Default to d20
                 
+        # Generate a unique tool call ID
+        tool_call_id = f"dice_roll_{random.randint(0, 1000000)}"
+        
         # Call dice_roll with proper argument format
         result = await dice_roll.ainvoke({"n": n})
-        
-        # Create unique tool call ID
-        tool_call_id = f"call_dice_{random.randint(0, 1000000)}"
         
         # Return Command with proper state updates
         return Command(
@@ -176,10 +176,10 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
                     ToolMessage(
                         content=result,
                         tool_call_id=tool_call_id,
-                        name="dice_roll"  # Add the required name field
+                        name="dice_roll"
                     )
                 ],
-                "tool_results": [result]  # Add to tool results for GM context
+                "tool_results": [result]
             }
         )
         
@@ -191,8 +191,8 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
                 "messages": [
                     ToolMessage(
                         content=error_msg,
-                        tool_call_id=f"call_error_{random.randint(0, 1000000)}",
-                        name="dice_roll"  # Add the required name field here too
+                        tool_call_id=f"error_{random.randint(0, 1000000)}",
+                        name="dice_roll"
                     )
                 ]
             }

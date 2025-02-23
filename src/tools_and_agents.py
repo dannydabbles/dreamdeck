@@ -43,7 +43,7 @@ from config import (
 )
 
 @tool
-async def dice_roll(n: Optional[int] = None) -> str:
+def dice_roll(n: Optional[int] = None) -> str:
     """Roll a dice with a specified number of sides.
     
     Args:
@@ -152,9 +152,7 @@ decision_agent = ChatOpenAI(
 # Create tools list and executor
 tools = [dice_roll, web_search]
 tool_executor = ToolExecutor(tools)
-
-# Create tool node with the tools list, not the executor
-tool_node = ToolNode(tools=tools)  # Pass the tools list directly, not the executor
+tool_node = ToolNode(tools=tools)
 
 # Create tool schemas that OpenAI can understand
 tool_schemas = [
