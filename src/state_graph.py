@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 from typing import Dict, Any, List, Optional, AsyncIterator
 from langgraph.types import StreamWriter
 from langchain_core.runnables import RunnableConfig
@@ -164,14 +165,18 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
         # Call dice_roll once
         result = await dice_roll.ainvoke({"n": n})
         
-        # Create the roll message
+        # Create the roll message with proper formatting
         roll_message = ToolMessage(
             content=result,
             additional_kwargs={
                 "name": "dice_roll",
-                "type": "tool"
+                "type": "tool",
+                "tool_call_id": f"dice_roll_{random.randint(0, 1000000)}"  # Add unique tool_call_id
             }
         )
+        
+        # Log the result
+        cl_logger.info(f"Dice roll completed: {result}")
         
         # Add roll result to state's tool results for GM context
         state.add_tool_result(result)
@@ -181,7 +186,18 @@ async def handle_dice_roll(state: ChatState) -> Dict[str, Any]:
     except Exception as e:
         cl_logger.error(f"Handle dice roll failed: {e}")
         error_msg = "🎲 Error handling dice roll. Using default d20."
-        return {"messages": [ToolMessage(content=error_msg)]}
+        return {
+            "messages": [
+                ToolMessage(
+                    content=error_msg,
+                    additional_kwargs={
+                        "name": "dice_roll",
+                        "type": "tool",
+                        "tool_call_id": f"dice_roll_error_{random.randint(0, 1000000)}"  # Add unique tool_call_id for error case
+                    }
+                )
+            ]
+        }
 
 @task
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
