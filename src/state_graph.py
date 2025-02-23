@@ -198,70 +198,48 @@ async def generate_story_response(state: ChatState) -> Dict[str, Any]:
 
 @task
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[str]:
-    """Generate storyboard for visualization with retry logic."""
+async def generate_storyboard(state: ChatState) -> Optional[str]:
+    """Generate storyboard prompts based on the GM's last response."""
     try:
-        cl.logger.debug("Starting storyboard generation")
-        
-        # Get relevant documents using the store
-        docs = store.get((state.thread_id,), state.messages[-1].content)
-        memories_str = "\n".join([d.page_content for d in docs]) if docs else ""
-        
-        # Format recent chat history properly
-        recent_messages = state.get_recent_history()
-        recent_chat_history = "\n".join([
-            f"{msg.__class__.__name__.replace('Message', '').upper()}: {msg.content}" 
-            for msg in recent_messages
-        ])
+        # Get the last GM response
+        last_gm_message = None
+        for msg in reversed(state.messages):
+            if isinstance(msg, AIMessage):
+                last_gm_message = msg
+                break
+                
+        if not last_gm_message:
+            cl.logger.warning("No GM message found to generate storyboard from")
+            return None
 
-        # Create messages list with proper typing
+        # Format the prompt with proper context
+        prompt = STORYBOARD_GENERATION_PROMPT.format(
+            recent_chat_history=state.get_recent_history_str(),
+            memories=state.get_memories_str() if hasattr(state, 'get_memories_str') else ""
+        )
+
+        # Create messages list for the storyboard generation
         messages = [
-            SystemMessage(content=STORYBOARD_GENERATION_PROMPT.format(
-                memories=memories_str,
-                recent_chat_history=recent_chat_history
-            ))
+            SystemMessage(content=prompt),
+            HumanMessage(content=last_gm_message.content)
         ]
         
-        try:
-            # Use the storyboard editor agent with proper async call
-            response = await storyboard_editor_agent.ainvoke(
-                messages,
-                timeout=LLM_TIMEOUT * 2  # Give more time for storyboard generation
-            )
-            cl.logger.debug(f"Raw storyboard response type: {type(response)}")
-            cl.logger.debug(f"Raw storyboard response: {response}")
-            
-            if isinstance(response, BaseMessage):
-                content = response.content
-                if content:
-                    # Process the response
-                    think_end = "</think>"
-                    if think_end in content:
-                        content = content.split(think_end)[1].strip()
-                    
-                    if content.strip():
-                        return content
-                        
-            cl.logger.warning("Invalid or empty storyboard response")
+        # Get storyboard prompts from the agent
+        response = await storyboard_editor_agent.ainvoke(messages)
+        
+        if not response or not response.content:
+            cl.logger.warning("Empty storyboard response")
             return None
-                
-            # Process the response
-            think_end = "</think>"
-            if think_end in content:
-                content = content.split(think_end)[1].strip()
             
-            if not content.strip():
-                cl.logger.warning("Empty content after processing")
-                return None
-                
-            return content
+        # Clean up the response - remove any thinking tags, etc.
+        content = response.content
+        if "</think>" in content:
+            content = content.split("</think>")[1].strip()
             
-        except Exception as e:
-            cl.logger.error(f"Storyboard agent invocation failed: {str(e)}", exc_info=True)
-            return None
+        return content.strip()
             
     except Exception as e:
-        cl.logger.error(f"Storyboard outer error: {str(e)}", exc_info=True)
+        cl.logger.error(f"Storyboard generation failed: {str(e)}", exc_info=True)
         return None
 
 @task

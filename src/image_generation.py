@@ -168,45 +168,41 @@ async def generate_image_generation_prompts(
 
     return image_gen_prompts
 
-async def handle_image_generation(image_generation_prompts: List[str], parent_id: str):
-    """
-    Handles the asynchronous image generation process and sends the image once it's ready.
-
-    Args:
-        image_generation_prompts (List[str]): The image generation prompt.
-        parent_id (str): The message ID of the AI response to associate the image with.
-    """
-    async for i in async_range(len(image_generation_prompts)):
-        image_generation_prompt = image_generation_prompts[i]
-        try:
-            seed = random.randint(0, 2**32)
-            image_bytes = await generate_image_async(image_generation_prompt, seed)
-        except Exception as e:
-            cl.logger.error(f"Image generation failed after retries: {e}")
-            image_bytes = None
-            seed = None
-
-        if image_bytes and seed:
-            # Save the image generation prompt in image generation memory
-            image_generation_memory = cl.user_session.get("image_generation_memory", [])
-            image_generation_memory.append(image_generation_prompt)
-            # Keep only the last 50 image prompts
-            image_generation_memory = image_generation_memory[-50:]
-            cl.user_session.set("image_generation_memory", image_generation_memory)
-
-            # Send the image as a child message of the AI response
-            image_element = CLImage(
-                content=image_bytes,
-                display="inline",
-                size="large",
-                alt="Generated Image",
-                name="generated_image"
-            )
-            await CLMessage(
-                    content=f"**Image Generation Prompt:**\n{image_generation_prompt}\n\n**Negative Prompt**:\n{NEGATIVE_PROMPT}\n\n**Seed:**\n{seed}",
-                elements=[image_element],
-                parent_id=parent_id  # Associate with the AI response
-            ).send()
-        else:
-            cl.logger.warning("Image generation failed. Skipping image display.")
-            await CLMessage(content="⚠️ Image generation failed. Please try again later.", parent_id=parent_id).send()
+@task
+async def process_storyboard_images(storyboard: str, message_id: str) -> None:
+    """Process storyboard into images and send to chat."""
+    if not storyboard:
+        return
+        
+    try:
+        # Generate image prompts
+        image_prompts = await generate_image_generation_prompts(storyboard)
+        
+        # Process each prompt in order
+        for prompt in image_prompts:
+            try:
+                # Generate image
+                seed = random.randint(0, 2**32)
+                image_bytes = await generate_image_async(prompt, seed)
+                
+                if image_bytes:
+                    # Create and send image message
+                    image_element = CLImage(
+                        content=image_bytes,
+                        display="inline",
+                        size="large",
+                        alt="Generated Image",
+                        name="generated_image"
+                    )
+                    
+                    await CLMessage(
+                        content=f"**Image Generation Prompt:**\n{prompt}\n\n**Seed:**\n{seed}",
+                        elements=[image_element],
+                        parent_id=message_id
+                    ).send()
+                    
+            except Exception as e:
+                cl.logger.error(f"Failed to generate image for prompt: {prompt}. Error: {str(e)}")
+                
+    except Exception as e:
+        cl.logger.error(f"Failed to process storyboard images: {str(e)}")

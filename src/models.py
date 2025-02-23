@@ -43,18 +43,26 @@ class ChatState(BaseModel):
     current_tool: str | None = None
     tool_results: List[str] = Field(default_factory=list)
     error_count: int = Field(default=0)
+    memories: List[str] = Field(default_factory=list)  # Add memories field
 
-    @validator('messages')
-    def validate_messages(cls, v):
-        if not v:
-            raise ValueError("Messages sequence cannot be empty")
-        if not isinstance(v[0], SystemMessage):
-            raise ValueError("First message must be a system message")
-        # Validate no recursive content
-        if "{recent_chat_history}" in v[0].content:
-            v[0].content = v[0].content.replace("{recent_chat_history}", "")
-        return v
-        
+    def get_memories_str(self) -> str:
+        """Get formatted string of memories."""
+        return "\n".join(self.memories) if self.memories else ""
+
+    def get_recent_history_str(self) -> str:
+        """Get formatted string of recent message history."""
+        recent_messages = self.get_recent_history()
+        # Only include player messages, GM responses, and dice rolls
+        filtered_messages = [
+            msg for msg in recent_messages 
+            if isinstance(msg, (HumanMessage, AIMessage)) or
+            (isinstance(msg, ToolMessage) and "roll" in msg.content.lower())
+        ]
+        return "\n".join([
+            f"{'Human' if isinstance(msg, HumanMessage) else 'GM' if isinstance(msg, AIMessage) else 'Dice'}: {msg.content}" 
+            for msg in filtered_messages
+        ])
+
     def format_system_message(self) -> None:
         """Format the system message with current context."""
         if not self.messages:
@@ -64,10 +72,11 @@ class ChatState(BaseModel):
         if not isinstance(sys_msg, SystemMessage):
             return
             
+        # Format with all available context
         self.messages[0] = SystemMessage(
             content=sys_msg.content.format(
                 recent_chat_history=self.get_recent_history_str(),
-                memories="",  # Will be populated by workflow
+                memories=self.get_memories_str(),
                 tool_results="\n".join(self.tool_results) if self.tool_results else ""
             )
         )
