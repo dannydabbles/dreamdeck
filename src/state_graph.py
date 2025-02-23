@@ -217,16 +217,31 @@ async def generate_story_response(state: ChatState) -> Dict[str, Any]:
     try:
         messages = []
         # Convert state messages to dict format that OpenAI can handle
-        input_messages = [
-            {
-                "role": "system" if isinstance(msg, SystemMessage) else 
-                        "assistant" if isinstance(msg, AIMessage) else
-                        "function" if isinstance(msg, ToolMessage) else
-                        "user",
-                "content": msg.content
-            }
-            for msg in state.messages
-        ]
+        input_messages = []
+        for msg in state.messages:
+            if isinstance(msg, SystemMessage):
+                input_messages.append({
+                    "role": "system",
+                    "content": msg.content
+                })
+            elif isinstance(msg, AIMessage):
+                input_messages.append({
+                    "role": "assistant",
+                    "content": msg.content
+                })
+            elif isinstance(msg, ToolMessage):
+                # Use the name and tool_call_id from the ToolMessage
+                input_messages.append({
+                    "role": "function",
+                    "name": msg.name,  # Use the actual function name from the message
+                    "content": msg.content,
+                    "tool_call_id": msg.tool_call_id
+                })
+            else:  # HumanMessage
+                input_messages.append({
+                    "role": "user",
+                    "content": msg.content
+                })
         
         # Create config for streaming
         config = RunnableConfig(
