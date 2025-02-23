@@ -328,6 +328,10 @@ async def story_workflow(
         if previous:
             state.messages.extend(previous.messages)
 
+        # Initialize result variables
+        roll_result = None
+        search_result = None
+
         # Determine action
         action = await determine_action(state)
         cl.logger.info(f"Determined action: {action}")
