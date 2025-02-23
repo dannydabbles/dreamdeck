@@ -332,14 +332,15 @@ async def story_workflow(
             # Generate storyboard immediately after GM response
             storyboard = await generate_storyboard(state)
             
-            # Process storyboard images asynchronously
+            # Process storyboard images asynchronously if we have content
             if storyboard and state.metadata.get("current_message_id"):
-                asyncio.create_task(
-                    process_storyboard_images(
-                        storyboard,
-                        state.metadata["current_message_id"]
-                    )
+                # Create a coroutine first
+                process_coro = process_storyboard_images(
+                    storyboard,
+                    state.metadata["current_message_id"]
                 )
+                # Then create the task with the coroutine
+                asyncio.create_task(process_coro)
                 
         except Exception as e:
             cl_logger.error(f"Story generation failed: {str(e)}", exc_info=True)
@@ -354,23 +355,6 @@ async def story_workflow(
         
         # Clear tool results after they've been used
         state.clear_tool_results()
-
-        # Generate and display storyboard images asynchronously
-        if state.messages:
-            try:
-                # Generate storyboard immediately after GM response
-                storyboard = await generate_storyboard(state)
-                
-                # Process storyboard images asynchronously
-                if storyboard and state.metadata.get("current_message_id"):
-                    asyncio.create_task(
-                        process_storyboard_images(
-                            storyboard,
-                            state.metadata["current_message_id"]
-                        )
-                    )
-            except Exception as e:
-                cl.logger.error(f"Storyboard/image generation failed: {e}")
 
         if writer:
             writer("Processing completed")
