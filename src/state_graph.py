@@ -56,16 +56,19 @@ async def determine_action(state: ChatState) -> str:
         ]
         
         try:
-            # Use the decision agent with proper error handling
             response = await decision_agent.ainvoke(messages)
             
             # Extract the function call result
-            if hasattr(response, 'additional_kwargs') and 'function_call' in response.additional_kwargs:
+            if (
+                hasattr(response, 'additional_kwargs') 
+                and 'function_call' in response.additional_kwargs
+            ):
                 function_call = response.additional_kwargs['function_call']
                 if function_call.get('name') == 'decide_action':
                     import json
-                    result = json.loads(function_call['arguments'])
-                    action = result.get('action', 'continue_story')
+                    args = json.loads(function_call['arguments'])
+                    action = args.get('action')
+                    cl.logger.info(f"Decision agent returned action: {action}")
                 else:
                     cl.logger.warning(f"Unexpected function call: {function_call.get('name')}")
                     action = 'continue_story'
@@ -80,7 +83,7 @@ async def determine_action(state: ChatState) -> str:
             }
             
             mapped_action = action_map.get(action, "writer")
-            cl.logger.info(f"Determined action: {mapped_action}")
+            cl.logger.info(f"Mapped action to: {mapped_action}")
             return mapped_action
             
         except Exception as e:

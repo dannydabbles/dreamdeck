@@ -10,6 +10,12 @@ from langchain.schema.output_parser import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
+
+class DecisionOutput(BaseModel):
+    """Schema for the decision output."""
+    action: Literal["roll", "search", "continue_story"] = Field(
+        description="The next action to take based on user input"
+    )
 import logging
 
 # Initialize logging
@@ -79,25 +85,22 @@ from langgraph.prebuilt import ToolNode, ToolExecutor
 # Create a parser for the decision output
 decision_parser = PydanticOutputParser(pydantic_object=DecisionOutput)
 
-# Initialize the decision agent with function calling
-decision_agent = (
-    ChatOpenAI(
-        base_url="http://192.168.1.111:5000/v1",
-        temperature=0.2,
-        streaming=False,
-        model_name=LLM_MODEL_NAME,
-        request_timeout=LLM_TIMEOUT,
-        max_tokens=100,
-        verbose=LLM_VERBOSE
-    )
-    .bind(
-        function_call={"name": "decide_action"},
-        functions=[{
-            "name": "decide_action",
-            "description": "Decide the next action based on user input",
-            "parameters": DecisionOutput.model_json_schema()
-        }]
-    )
+# Initialize the decision agent with proper function binding
+decision_agent = ChatOpenAI(
+    base_url="http://192.168.1.111:5000/v1",
+    temperature=0.2,
+    streaming=False,
+    model_name=LLM_MODEL_NAME,
+    request_timeout=LLM_TIMEOUT,
+    max_tokens=100,
+    verbose=LLM_VERBOSE
+).bind(
+    functions=[{
+        "name": "decide_action",
+        "description": "Decide the next action based on user input",
+        "parameters": DecisionOutput.model_json_schema()
+    }],
+    function_call={"name": "decide_action"}  # Force the function call
 )
 
 # Create tools list and executor
@@ -107,8 +110,8 @@ tool_executor = ToolExecutor(tools)
 # Create tool node with the tools list, not the executor
 tool_node = ToolNode(tools=tools)  # Pass the tools list directly, not the executor
 
-# Initialize the writer AI agent
-writer_model = ChatOpenAI(
+# Initialize the writer AI agent with tools
+writer_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
     temperature=LLM_TEMPERATURE,
     streaming=LLM_STREAMING,
@@ -119,17 +122,15 @@ writer_model = ChatOpenAI(
     frequency_penalty=LLM_FREQUENCY_PENALTY,
     top_p=LLM_TOP_P,
     verbose=LLM_VERBOSE
+).bind_tools(
+    tools=[dice_roll, web_search],
+    tool_choice="auto"  # Let the model decide when to use tools
 )
 
-writer_prompt = PromptTemplate.from_template(AI_WRITER_PROMPT)
-
-# Assuming ChatOpenAI has a bind_tools method; if not, adjust accordingly
-writer_agent = writer_model.bind_tools([dice_roll, web_search])
-
-# Initialize the storyboard editor agent with proper configuration
+# Initialize the storyboard editor agent
 storyboard_editor_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
-    temperature=0.7,  # Slightly higher temperature for creative generation
+    temperature=0.7,
     streaming=False,
     model_name=LLM_MODEL_NAME,
     request_timeout=LLM_TIMEOUT,
@@ -138,4 +139,4 @@ storyboard_editor_agent = ChatOpenAI(
     frequency_penalty=0.1,
     top_p=0.9,
     verbose=LLM_VERBOSE
-)
+)  # No tool binding needed for storyboard generation
