@@ -85,6 +85,16 @@ from langgraph.prebuilt import ToolNode, ToolExecutor
 # Create a parser for the decision output
 decision_parser = PydanticOutputParser(pydantic_object=DecisionOutput)
 
+def log_decision_agent_response(response):
+    """Log detailed information about the decision agent's response."""
+    cl_logger.debug(f"Decision agent raw response: {response}")
+    cl_logger.debug(f"Response type: {type(response)}")
+    cl_logger.debug(f"Response attributes: {dir(response)}")
+    if hasattr(response, 'additional_kwargs'):
+        cl_logger.debug(f"Additional kwargs: {response.additional_kwargs}")
+    if hasattr(response, 'content'):
+        cl_logger.debug(f"Content: {response.content}")
+
 # Initialize the decision agent with proper function binding
 decision_agent = ChatOpenAI(
     base_url="http://192.168.1.111:5000/v1",
@@ -98,7 +108,17 @@ decision_agent = ChatOpenAI(
     functions=[{
         "name": "decide_action",
         "description": "Decide the next action based on user input",
-        "parameters": DecisionOutput.model_json_schema()
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["roll", "search", "continue_story"],
+                    "description": "The action to take"
+                }
+            },
+            "required": ["action"]
+        }
     }],
     function_call={"name": "decide_action"}  # Force the function call
 )

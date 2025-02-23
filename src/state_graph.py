@@ -47,6 +47,7 @@ async def determine_action(state: ChatState) -> str:
     try:
         last_message = state.messages[-1]
         if not isinstance(last_message, HumanMessage):
+            cl.logger.info("Last message not a HumanMessage, defaulting to writer")
             return "writer"
 
         # Format messages for decision agent
@@ -55,8 +56,11 @@ async def determine_action(state: ChatState) -> str:
             last_message
         ]
         
+        cl.logger.debug(f"Sending messages to decision agent: {messages}")
+        
         try:
             response = await decision_agent.ainvoke(messages)
+            log_decision_agent_response(response)  # Log detailed response info
             
             # Extract the function call result
             if (
@@ -64,17 +68,32 @@ async def determine_action(state: ChatState) -> str:
                 and 'function_call' in response.additional_kwargs
             ):
                 function_call = response.additional_kwargs['function_call']
+                cl.logger.debug(f"Function call details: {function_call}")
+                
                 if function_call.get('name') == 'decide_action':
                     import json
-                    args = json.loads(function_call['arguments'])
-                    action = args.get('action')
-                    cl.logger.info(f"Decision agent returned action: {action}")
+                    try:
+                        args = json.loads(function_call['arguments'])
+                        action = args.get('action')
+                        cl.logger.info(f"Decision agent returned action: {action}")
+                    except json.JSONDecodeError as e:
+                        cl.logger.error(f"Failed to parse function arguments: {e}")
+                        cl.logger.debug(f"Raw arguments: {function_call['arguments']}")
+                        action = 'continue_story'
                 else:
                     cl.logger.warning(f"Unexpected function call: {function_call.get('name')}")
                     action = 'continue_story'
             else:
                 cl.logger.warning("No function call in response")
-                action = 'continue_story'
+                # Try to extract from content as fallback
+                content = response.content.lower().strip() if hasattr(response, 'content') else ''
+                cl.logger.debug(f"Attempting to extract action from content: {content}")
+                if "roll" in content:
+                    action = "roll"
+                elif "search" in content:
+                    action = "search"
+                else:
+                    action = "continue_story"
             
             action_map = {
                 "roll": "roll",
@@ -87,11 +106,11 @@ async def determine_action(state: ChatState) -> str:
             return mapped_action
             
         except Exception as e:
-            cl.logger.error(f"Error in decision agent: {e}")
+            cl.logger.error(f"Error in decision agent: {e}", exc_info=True)  # Include stack trace
             return "writer"
             
     except Exception as e:
-        cl.logger.error(f"Error determining action: {e}")
+        cl.logger.error(f"Error determining action: {e}", exc_info=True)  # Include stack trace
         return "writer"
 
 @task
@@ -127,47 +146,63 @@ async def generate_story_response(state: ChatState) -> Dict[str, Any]:
 async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[str]:
     """Generate storyboard for visualization with retry logic."""
     try:
+        cl.logger.debug("Starting storyboard generation")
+        cl.logger.debug(f"State: {state}")
+        
         # Get relevant documents using the store
         docs = store.get((state.thread_id,), state.messages[-1].content)
+        cl.logger.debug(f"Retrieved documents: {docs}")
+        
         memories_str = "\n".join([doc.page_content for doc in docs]) if docs else ""
         
         # Format recent chat history properly
         recent_messages = state.get_recent_history()
+        cl.logger.debug(f"Recent messages: {recent_messages}")
+        
         recent_chat_history = "\n".join([
             f"{msg.__class__.__name__.replace('Message', '').upper()}: {msg.content}" 
             for msg in recent_messages
         ])
 
+        # Create the prompt with proper formatting
+        prompt = STORYBOARD_GENERATION_PROMPT.format(
+            memories=memories_str,
+            recent_chat_history=recent_chat_history
+        )
+        cl.logger.debug(f"Generated prompt: {prompt}")
+
         # Create messages list with proper typing
-        messages = [
-            SystemMessage(content=STORYBOARD_GENERATION_PROMPT.format(
-                memories=memories_str,
-                recent_chat_history=recent_chat_history
-            ))
-        ]
+        messages = [SystemMessage(content=prompt)]
         
-        # Invoke the agent with proper async call
         try:
-            storyboard_message = await storyboard_editor_agent.ainvoke(messages)
+            # Use the storyboard editor agent
+            cl.logger.debug("Invoking storyboard editor agent")
+            response = await storyboard_editor_agent.ainvoke(messages)
+            cl.logger.debug(f"Storyboard editor response: {response}")
             
-            if isinstance(storyboard_message, BaseMessage):
-                content = storyboard_message.content
-                if content:
-                    # Process the response
-                    think_end = "</think>"
-                    if think_end in content:
-                        content = content.split(think_end)[1].strip()
-                    return content if content.strip() else None
+            if not isinstance(response, BaseMessage):
+                cl.logger.warning(f"Invalid response type: {type(response)}")
+                return None
+                
+            content = response.content
+            if not content:
+                cl.logger.warning("Empty content in response")
+                return None
+                
+            # Process the response
+            think_end = "</think>"
+            if think_end in content:
+                content = content.split(think_end)[1].strip()
+                cl.logger.debug(f"Processed content after think: {content}")
             
-            cl.logger.warning("Invalid storyboard message format")
-            return None
+            return content if content.strip() else None
             
         except Exception as e:
-            cl.logger.error(f"Storyboard agent invocation failed: {e}")
+            cl.logger.error(f"Storyboard agent invocation failed: {str(e)}", exc_info=True)
             return None
             
     except Exception as e:
-        cl.logger.error(f"Storyboard generation failed: {e}")
+        cl.logger.error(f"Storyboard outer error: {str(e)}", exc_info=True)
         return None
 
 @task
