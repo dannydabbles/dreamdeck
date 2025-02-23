@@ -55,17 +55,38 @@ async def determine_action(state: ChatState) -> str:
             last_message
         ]
         
-        # Use the decision agent directly
-        response = await decision_agent.ainvoke(messages)
-        
-        action_map = {
-            "roll": "roll",
-            "search": "search" if SEARCH_ENABLED else "writer",
-            "continue_story": "writer"
-        }
-        
-        return action_map.get(response.action, "writer")
-        
+        try:
+            # Use the decision agent with proper error handling
+            response = await decision_agent.ainvoke(messages)
+            
+            # Extract the function call result
+            if hasattr(response, 'additional_kwargs') and 'function_call' in response.additional_kwargs:
+                function_call = response.additional_kwargs['function_call']
+                if function_call.get('name') == 'decide_action':
+                    import json
+                    result = json.loads(function_call['arguments'])
+                    action = result.get('action', 'continue_story')
+                else:
+                    cl.logger.warning(f"Unexpected function call: {function_call.get('name')}")
+                    action = 'continue_story'
+            else:
+                cl.logger.warning("No function call in response")
+                action = 'continue_story'
+            
+            action_map = {
+                "roll": "roll",
+                "search": "search" if SEARCH_ENABLED else "writer",
+                "continue_story": "writer"
+            }
+            
+            mapped_action = action_map.get(action, "writer")
+            cl.logger.info(f"Determined action: {mapped_action}")
+            return mapped_action
+            
+        except Exception as e:
+            cl.logger.error(f"Error in decision agent: {e}")
+            return "writer"
+            
     except Exception as e:
         cl.logger.error(f"Error determining action: {e}")
         return "writer"
@@ -114,19 +135,13 @@ async def generate_storyboard(state: ChatState, store: BaseStore) -> Optional[st
             for msg in recent_messages
         ])
 
-        # Create the prompt with proper formatting
-        prompt = PromptTemplate(
-            template=STORYBOARD_GENERATION_PROMPT,
-            input_variables=["memories", "recent_chat_history"]
-        )
-        
-        formatted_prompt = prompt.format(
-            memories=memories_str,
-            recent_chat_history=recent_chat_history
-        )
-        
         # Create messages list with proper typing
-        messages = [SystemMessage(content=formatted_prompt)]
+        messages = [
+            SystemMessage(content=STORYBOARD_GENERATION_PROMPT.format(
+                memories=memories_str,
+                recent_chat_history=recent_chat_history
+            ))
+        ]
         
         # Invoke the agent with proper async call
         try:

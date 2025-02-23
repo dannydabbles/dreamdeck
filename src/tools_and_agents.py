@@ -75,16 +75,29 @@ def web_search(query: str) -> str:
 
 from langgraph.prebuilt import ToolNode, ToolExecutor
 
-# Initialize the decision agent with structured output
-decision_agent = ChatOpenAI(
-    base_url="http://192.168.1.111:5000/v1",
-    temperature=0.2,
-    streaming=False,
-    model_name=LLM_MODEL_NAME,
-    request_timeout=LLM_TIMEOUT,
-    max_tokens=100,
-    verbose=LLM_VERBOSE
-).with_structured_output(DecisionOutput)
+# Create a parser for the decision output
+decision_parser = PydanticOutputParser(pydantic_object=DecisionOutput)
+
+# Initialize the decision agent with function calling
+decision_agent = (
+    ChatOpenAI(
+        base_url="http://192.168.1.111:5000/v1",
+        temperature=0.2,
+        streaming=False,
+        model_name=LLM_MODEL_NAME,
+        request_timeout=LLM_TIMEOUT,
+        max_tokens=100,
+        verbose=LLM_VERBOSE
+    )
+    .bind(
+        function_call={"name": "decide_action"},
+        functions=[{
+            "name": "decide_action",
+            "description": "Decide the next action based on user input",
+            "parameters": DecisionOutput.model_json_schema()
+        }]
+    )
+)
 
 # Create tools list and executor
 tools = [dice_roll, web_search]
