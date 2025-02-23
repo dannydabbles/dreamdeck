@@ -1,22 +1,24 @@
 import asyncio
-from typing import Annotated, List, Literal, TypedDict
-
-from chainlit import Message as CLMessage
-from image_generation import async_range, handle_image_generation, generate_image_generation_prompts
+from typing import Dict, Any, List
 from langgraph.graph import StateGraph, END, START
-from langgraph.graph.message import MessagesState
-
-from langchain_core.messages.system import SystemMessage
-from langchain_core.messages.modifier import RemoveMessage
-from langchain_core.messages.base import BaseMessage
-from langchain_core.messages.ai import AIMessage
-from langchain_core.messages.human import HumanMessage
-from langchain_core.messages.tool import ToolMessage
-from langchain.prompts import PromptTemplate
-
-from tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, DECISION_PROMPT, decision_agent
+from langgraph.prebuilt.tool_executor import ToolExecutor
 
 import chainlit as cl
+from chainlit import Message as CLMessage
+
+from models import ChatState, MessageType
+from tools_and_agents import (
+    writer_agent,
+    storyboard_editor_agent,
+    dice_roll,
+    web_search,
+    decision_agent
+)
+from image_generation import (
+    async_range,
+    handle_image_generation,
+    generate_image_generation_prompts
+)
 
 from config import (
     AI_WRITER_PROMPT,
@@ -31,32 +33,33 @@ from config import (
 # Define the state graph
 builder = StateGraph(MessagesState)
 
-# Define decision function to route messages using the decision agent
-async def determine_next_action(state: MessagesState) -> str:
-    return "writer"  # Default to writer if the decision agent fails
-    last_message = state["messages"][-1]
-    if not isinstance(last_message, HumanMessage):
-        return "writer"  # Default to writer if the last message is not from the user
+async def determine_next_action(state: ChatState) -> str:
+    """Determine the next action based on the latest message using the decision agent."""
+    try:
+        last_message = state.messages[-1]
+        if last_message.type != MessageType.HUMAN:
+            return "writer"
 
-    # Format the system prompt using the PromptTemplate
-    decision_prompt = PromptTemplate.from_template(DECISION_PROMPT)
-    system_content = decision_prompt.format(user_input=last_message.content)
-
-    # Create the message list with the system message and the latest user message
-    messages = [SystemMessage(content=system_content)]
-
-    # Invoke the decision agent to determine the next action
-    response = await decision_agent.ainvoke(messages)
-    action = response.content.strip().lower()
-
-    if action == "roll":
-        return "roll"
-    elif action == "search" and SEARCH_ENABLED:
-        return "search"
-    elif action in ["continue_story"]:
+        # Get decision from agent
+        response = await decision_agent.ainvoke({
+            "input": last_message.content,
+            "chat_history": state.get_recent_history()
+        })
+        
+        action = response.get("output", "writer").strip().lower()
+        
+        # Map actions to handlers
+        action_map = {
+            "roll": "roll",
+            "search": "search" if SEARCH_ENABLED else "writer",
+            "continue_story": "writer"
+        }
+        
+        return action_map.get(action, "writer")
+        
+    except Exception as e:
+        cl.logger.error(f"Error determining next action: {e}")
         return "writer"
-    else:
-        return "writer"  # Default to writer if the response is not recognized
 
 async def start_router(state: MessagesState):
     action = await determine_next_action(state)
