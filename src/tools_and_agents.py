@@ -132,12 +132,11 @@ tool_node = ToolNode(tools=tools)  # Pass the tools list directly, not the execu
 
 # Initialize the writer AI agent with tools and longer timeout
 writer_agent = ChatOpenAI(
-    base_url="http://192.168.1.111:5000/v1",
+    model=LLM_MODEL_NAME,
     temperature=LLM_TEMPERATURE,
-    streaming=True,  # Enable streaming
-    model_name=LLM_MODEL_NAME,
-    request_timeout=LLM_TIMEOUT * 3,  # Triple the timeout for story generation
     max_tokens=LLM_MAX_TOKENS,
+    streaming=True,
+    timeout=LLM_TIMEOUT * 3,  # Triple timeout for story generation
     presence_penalty=LLM_PRESENCE_PENALTY,
     frequency_penalty=LLM_FREQUENCY_PENALTY,
     top_p=LLM_TOP_P,

@@ -1,5 +1,6 @@
 import asyncio
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, AsyncIterator
+from langgraph.types import StreamWriter
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode, ToolExecutor
@@ -132,15 +133,16 @@ async def handle_search(state: ChatState) -> Dict[str, Any]:
 
 @task
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-async def generate_story_response(state: ChatState) -> Dict[str, Any]:
+async def generate_story_response(state: ChatState) -> AsyncIterator[Dict[str, Any]]:
     """Generate main story response with retry logic."""
     try:
-        response = await writer_agent.ainvoke(state.messages)
-        return {"messages": [response]}
+        async for chunk in writer_agent.astream(state.messages):
+            if isinstance(chunk, BaseMessage):
+                yield {"messages": [chunk]}
     except Exception as e:
         state.increment_error_count()
         if state.error_count >= 3:
-            return {"messages": [SystemMessage(content="I apologize, but I'm having trouble generating a response. Please try again.")]}
+            yield {"messages": [SystemMessage(content="I apologize, but I'm having trouble generating a response. Please try again.")]}
         raise
 
 @task
@@ -236,10 +238,18 @@ async def story_workflow(
     state: ChatState,
     *,
     store: BaseStore,
-    previous: Any = None
+    previous: Any = None,
+    writer: StreamWriter = None
 ) -> entrypoint.final[Dict[str, Any], ChatState]:
     """Main workflow using LangGraph constructs."""
     try:
+        if writer:
+            writer("Processing started")
+            
+        # Initialize messages from previous state if available
+        if previous:
+            state.messages.extend(previous.messages)
+
         # Determine action
         action = await determine_action(state)
         cl.logger.info(f"Determined action: {action}")
