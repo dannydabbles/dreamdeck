@@ -23,7 +23,8 @@ from tools_and_agents import (
     storyboard_editor_agent,
     dice_roll,
     web_search,
-    decision_agent
+    decision_agent,
+    log_decision_agent_response
 )
 from image_generation import (
     async_range,
