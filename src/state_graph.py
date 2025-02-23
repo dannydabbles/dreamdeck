@@ -328,6 +328,18 @@ async def story_workflow(
             if msg.content:
                 state.messages.append(AIMessage(content=msg.content))
                 state.metadata["current_message_id"] = msg.id
+
+            # Generate storyboard immediately after GM response
+            storyboard = await generate_storyboard(state)
+            
+            # Process storyboard images asynchronously
+            if storyboard and state.metadata.get("current_message_id"):
+                asyncio.create_task(
+                    process_storyboard_images(
+                        storyboard,
+                        state.metadata["current_message_id"]
+                    )
+                )
                 
         except Exception as e:
             cl_logger.error(f"Story generation failed: {str(e)}", exc_info=True)
@@ -342,26 +354,21 @@ async def story_workflow(
         
         # Clear tool results after they've been used
         state.clear_tool_results()
-        
-        # Update state with GM response
-        if msg.content:
-            state.messages.append(AIMessage(content=msg.content))
-            state.metadata["current_message_id"] = msg.id
 
         # Generate and display storyboard images asynchronously
         if state.messages:
             try:
-                storyboard = await generate_storyboard(state, store)
-                if storyboard:
-                    image_prompts = await generate_image_generation_prompts(storyboard)
-                    if image_prompts and state.metadata.get("current_message_id"):
-                        # Don't add storyboard text to history
-                        asyncio.create_task(
-                            process_storyboard_images(
-                                storyboard,
-                                state.metadata["current_message_id"]
-                            )
+                # Generate storyboard immediately after GM response
+                storyboard = await generate_storyboard(state)
+                
+                # Process storyboard images asynchronously
+                if storyboard and state.metadata.get("current_message_id"):
+                    asyncio.create_task(
+                        process_storyboard_images(
+                            storyboard,
+                            state.metadata["current_message_id"]
                         )
+                    )
             except Exception as e:
                 cl.logger.error(f"Storyboard/image generation failed: {e}")
 
