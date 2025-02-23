@@ -98,13 +98,14 @@ class ChatState(BaseModel):
     def get_recent_history_str(self) -> str:
         """Get formatted string of recent message history."""
         recent_messages = self.get_recent_history()
-        # Don't include system messages in history
+        # Only include player messages, GM responses, and dice rolls
         filtered_messages = [
             msg for msg in recent_messages 
-            if not isinstance(msg, SystemMessage)
+            if isinstance(msg, (HumanMessage, AIMessage)) or
+            (isinstance(msg, ToolMessage) and "roll" in msg.content.lower())
         ]
         return "\n".join([
-            f"{'Human' if isinstance(msg, HumanMessage) else 'AI'}: {msg.content}" 
+            f"{'Human' if isinstance(msg, HumanMessage) else 'GM' if isinstance(msg, AIMessage) else 'Dice'}: {msg.content}" 
             for msg in filtered_messages
         ])
     

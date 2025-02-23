@@ -240,81 +240,70 @@ async def story_workflow(
 ) -> entrypoint.final[Dict[str, Any], ChatState]:
     """Main workflow using LangGraph constructs."""
     try:
-        # Get memories/context from store
-        memories = store.get((state.thread_id,), state.messages[-1].content)
-        memories_str = "\n".join([d.page_content for d in memories]) if memories else ""
-        
-        # Format recent chat history properly
-        recent_messages = state.get_recent_history()
-        recent_chat = "\n".join([
-            f"{'Human' if isinstance(msg, HumanMessage) else 'AI'}: {msg.content}" 
-            for msg in recent_messages
-        ])
-
-        # Create a fresh system message with properly formatted variables
-        system_message = SystemMessage(content=AI_WRITER_PROMPT.format(
-            recent_chat_history=recent_chat,
-            memories=memories_str,
-            tool_results="\n".join(state.tool_results) if state.tool_results else ""
-        ))
-        
-        # Replace the first message with our newly formatted system message
-        state.messages[0] = system_message
-
-        # Determine action using task
+        # Determine action
         action = await determine_action(state)
         cl.logger.info(f"Determined action: {action}")
-        
-        # Handle tools using ToolNode task
-        tool_result = await handle_tools(state, action)
-        if tool_result.get("messages"):
-            state.messages.extend(tool_result["messages"])
-            
-        # Generate story response with streaming
+
+        # Handle dice roll
+        roll_result = None
+        if action == "roll":
+            roll_result = await handle_dice_roll(state)
+            if roll_result.get("messages"):
+                # Add roll result to chat history
+                roll_message = roll_result["messages"][0]
+                state.messages.append(roll_message)
+                
+                # Display roll in chat
+                await cl.Message(content=roll_message.content).send()
+
+        # Handle search silently if needed
+        search_result = None
+        if action == "search":
+            search_result = await handle_search(state)
+            # Don't add search result to messages/chat history
+            # It will be used internally by the GM
+
+        # Generate GM response
         msg = cl.Message(content="")
-        async for chunk in generate_story_response(state):
+        
+        # Prepare context for GM
+        context = {
+            "search_result": search_result["messages"][0].content if search_result else None,
+            "roll_result": roll_result["messages"][0].content if action == "roll" else None
+        }
+        
+        # Stream GM response
+        async for chunk in generate_story_response(state, context):
             if isinstance(chunk, dict) and chunk.get("messages"):
                 await msg.stream_token(chunk["messages"][-1].content)
         await msg.send()
         
-        # Update state with new message
+        # Update state with GM response
         if msg.content:
             state.messages.append(AIMessage(content=msg.content))
             state.metadata["current_message_id"] = msg.id
-        
-        # Generate storyboard and images
-        storyboard = None
+
+        # Generate and display storyboard images asynchronously
         if state.messages:
             try:
                 storyboard = await generate_storyboard(state, store)
                 if storyboard:
                     image_prompts = await generate_image_generation_prompts(storyboard)
                     if image_prompts and state.metadata.get("current_message_id"):
+                        # Don't add storyboard text to history
                         asyncio.create_task(handle_image_generation(
-                            image_prompts, 
+                            image_prompts,
                             state.metadata["current_message_id"]
                         ))
             except Exception as e:
                 cl.logger.error(f"Storyboard/image generation failed: {e}")
-        
-        # Create new state
-        new_state = ChatState(
-            messages=state.messages,
-            thread_id=state.thread_id,
-            metadata={
-                "last_action": action,
-                "storyboard": storyboard,
-                "current_message_id": state.metadata.get("current_message_id")
-            }
-        )
-        
+
         return entrypoint.final(
             value={
                 "messages": state.messages,
-                "action": action,
-                "storyboard": storyboard
+                "action": action
             },
-            save=new_state
+            save=state
         )
         
     except Exception as e:
