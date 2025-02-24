@@ -45,4 +45,5 @@ aider-sonnet:
 
 aider:
 	@echo "Running aider with local llm..."
-	@aider --multiline --architect --4o --openai-base-url http://192.168.1.111:5000/v1 --timeout 500
+	@aider --multiline --architect --4o --openai-api-base http://192.168.1.111:5000/v1 --timeout 500
+
