@@ -43,8 +43,11 @@ aider-sonnet:
 	@echo "Running aider with sonnet..."
 	@aider --multiline --architect --sonnet
 
+aider-dual:
+	@echo "Running aider with local dual coder and reasoner models..."
+	@aider --multiline --architect --4o --openai-api-base http://192.168.1.111:5000/v1 --timeout 500 --model-settings-file .aider.model.settings.yml --model openai/reasoner --editor-model openai/coder --editor-edit-format editor-whole --no-show-model-warnings
+
 aider:
 	@echo "Running aider with local llm..."
-	@aider --multiline --architect --4o --openai-api-base http://192.168.1.111:5000/v1 --timeout 500 --model-settings-file .aider.model.settings.yml --model openai/reasoner --editor-model openai/coder --editor-edit-format editor-whole
-
+	@aider --multiline --architect --o1-mini --openai-api-base http://192.168.1.111:5000/v1 --timeout 500 --model-settings-file .aider.model.settings.yml
 
