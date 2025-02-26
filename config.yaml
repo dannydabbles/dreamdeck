@@ -297,3 +297,45 @@ search:
 openai:
   base_url: "http://192.168.1.111:5000/v1"
   api_key: ""
+
+logging:
+  level: "INFO"
+  file: "chainlit.log"
+
+paths:
+  storage: "public/storage"
+  knowledge: "./knowledge"
+  db: "chainlit.db"
+
+error_handling:
+  max_retries: 3
+  retry_delay: 5
+  log_level: "ERROR"
+
+api:
+  base_url: "http://localhost:8080"
+  timeout: 30
+  max_connections: 10
+
+features:
+  image_generation: true
+  web_search: false
+  dice_rolling: true
+
+rate_limits:
+  image_generation: "5/minute"
+  api_calls: "60/hour"
+
+security:
+  secret_key: "your-secret-key-here"
+  session_timeout: 3600
+
+monitoring:
+  enabled: false
+  endpoint: "http://localhost:9411"
+  sample_rate: 0.1
+
+caching:
+  enabled: true
+  ttl: 3600
+  max_size: "100MB"

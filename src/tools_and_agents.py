@@ -17,7 +17,7 @@ from src.config import (
     DECISION_AGENT_TEMPERATURE, DECISION_AGENT_MAX_TOKENS, DECISION_AGENT_STREAMING, DECISION_AGENT_VERBOSE,
     WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_AGENT_STREAMING, WRITER_AGENT_VERBOSE,
     STORYBOARD_EDITOR_AGENT_TEMPERATURE, STORYBOARD_EDITOR_AGENT_MAX_TOKENS, STORYBOARD_EDITOR_AGENT_STREAMING, STORYBOARD_EDITOR_AGENT_VERBOSE,
-    OPENAI_BASE_URL, SERPAPI_KEY
+    OPENAI_BASE_URL, SERPAPI_KEY, DICE_SIDES, WEB_SEARCH_ENABLED, MONITORING_ENABLED, MONITORING_ENDPOINT, MONITORING_SAMPLE_RATE
 )
 
 # Initialize logging
@@ -62,14 +62,14 @@ def dice_roll(input_str: Optional[str] = None) -> str:
     try:
         # Default to d20 if no input is provided
         if not input_str:
-            sides = 20
+            sides = DICE_SIDES
             count = 1
         else:
             # Parse the input to get dice specifications
             dice_list = parse_dice_input(input_str)
             if not dice_list:
                 # Fallback to d20 if parsing fails
-                sides = 20
+                sides = DICE_SIDES
                 count = 1
             else:
                 # Use the first parsed dice specification
@@ -89,7 +89,7 @@ def dice_roll(input_str: Optional[str] = None) -> str:
         return result
         
     except Exception as e:
-        cl_logger.error(f"Dice roll failed: {e}")
+        cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
         return f"🎲 Error rolling dice: {str(e)}"
 
 # Define the dice roll tool schema
@@ -147,13 +147,19 @@ def web_search(query: str) -> str:
     """
     if not SERPAPI_KEY:
         raise ValueError("SERPAPI_KEY environment variable not set.")
+    if not WEB_SEARCH_ENABLED:
+        return "Web search is disabled."
     url = f"https://serpapi.com/search.json?q={query}&api_key={SERPAPI_KEY}"
-    response = requests.get(url)
-    response.raise_for_status()
-    data = response.json()
-    if "error" in data:
-        raise ValueError(f"Search error: {data['error']}")
-    return data.get("organic_results", [{}])[0].get("snippet", "No results found.")
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if "error" in data:
+            raise ValueError(f"Search error: {data['error']}")
+        return data.get("organic_results", [{}])[0].get("snippet", "No results found.")
+    except Exception as e:
+        cl_logger.error(f"Web search failed: {e}", exc_info=True)
+        return f"Web search failed: {str(e)}"
 
 from langgraph.prebuilt import ToolNode, ToolExecutor
 

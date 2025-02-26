@@ -36,7 +36,18 @@ from .config import (
     STORYBOARD_GENERATION_PROMPT_POSTFIX,
     AI_WRITER_PROMPT,
     CHAINLIT_STARTERS,
-    STABLE_DIFFUSION_API_URL  # Import STABLE_DIFFUSION_API_URL
+    STABLE_DIFFUSION_API_URL,
+    MAX_RETRIES,
+    RETRY_DELAY,
+    ERROR_LOG_LEVEL,
+    IMAGE_GENERATION_RATE_LIMIT,
+    API_CALLS_RATE_LIMIT,
+    MONITORING_ENABLED,
+    MONITORING_ENDPOINT,
+    MONITORING_SAMPLE_RATE,
+    CACHING_ENABLED,
+    CACHING_TTL,
+    CACHING_MAX_SIZE
 )
 from .state import ChatState
 from .state_graph import chat_workflow as graph
@@ -85,15 +96,15 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
             image_bytes = base64.b64decode(image_data)
             return image_bytes
     except httpx.RequestError as e:
-        cl_element.logger.error(f"Image generation failed: {e}")
+        cl_element.logger.error(f"Image generation failed: {e}", exc_info=True)
         raise
     except (KeyError, IndexError, ValueError) as e:
-        cl_element.logger.error(f"Error processing image data: {e}")
+        cl_element.logger.error(f"Error processing image data: {e}", exc_info=True)
         return None
 
 @retry(
-    wait=wait_exponential(multiplier=1, min=4, max=10),
-    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=RETRY_DELAY, max=RETRY_DELAY * MAX_RETRIES),
+    stop=stop_after_attempt(MAX_RETRIES),
     retry=retry_if_exception_type(httpx.RequestError)
 )
 async def generate_image_generation_prompts(
@@ -146,7 +157,7 @@ async def generate_image_generation_prompts(
             else:
                 image_gen_prompts.append(full_prompt)
     except Exception as e:
-        cl_element.logger.error(f"Image prompt generation failed: {e}")
+        cl_element.logger.error(f"Image prompt generation failed: {e}", exc_info=True)
         image_gen_prompts = []
 
     cl_element.logger.debug(f"Generated Image Generation Prompt: {image_gen_prompts}")
@@ -187,10 +198,10 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
                     ).send()
                     
             except Exception as e:
-                cl_element.logger.error(f"Failed to generate image for prompt: {prompt}. Error: {str(e)}")
+                cl_element.logger.error(f"Failed to generate image for prompt: {prompt}. Error: {str(e)}", exc_info=True)
                 
     except Exception as e:
-        cl_element.logger.error(f"Failed to process storyboard images: {str(e)}")
+        cl_element.logger.error(f"Failed to process storyboard images: {str(e)}", exc_info=True)
 
 @on_chat_start
 async def on_chat_start():
@@ -334,7 +345,7 @@ async def on_message(message: CLMessage):
         # Update session state
         cl_user_session.set("state", state)
     except Exception as e:
-        cl_element.logger.error(f"Runnable stream failed: {e}")
+        cl_element.logger.error(f"Runnable stream failed: {e}", exc_info=True)
         cl_element.logger.error(f"State metadata: {state.metadata}")  # Log the state's metadata
         await CLMessage(content="⚠️ An error occurred while generating the response. Please try again later.").send()
         return

@@ -14,8 +14,9 @@ if not os.path.exists(CONFIG_FILE):
 with open(CONFIG_FILE, "r") as f:
     config_yaml = yaml.safe_load(f)
 
-# Database configuration from environment variable
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Database configuration with fallbacks
+DATABASE_URL = os.getenv("DATABASE_URL", config_yaml.get("defaults", {}).get("db_file", "chainlit.db"))
+STABLE_DIFFUSION_API_URL = os.getenv("STABLE_DIFFUSION_API_URL", "http://localhost:7860")
 cl_logger.info(f"Database URL loaded: {DATABASE_URL}")
 
 # LLM configuration
@@ -94,7 +95,7 @@ DICE_SIDES = config_yaml.get("dice", {}).get("sides", 20)  # Default to d20
 cl_logger.info(f"Default dice sides loaded: {DICE_SIDES}")
 
 # Knowledge directory
-KNOWLEDGE_DIRECTORY = config_yaml.get("knowledge_directory", "./knowledge")
+KNOWLEDGE_DIRECTORY = config_yaml.get("paths", {}).get("knowledge", "./knowledge")
 cl_logger.info(f"Knowledge directory loaded: {KNOWLEDGE_DIRECTORY}")
 
 # LLM settings
@@ -108,10 +109,6 @@ cl_logger.info(f"LLM settings loaded: chunk_size={LLM_CHUNK_SIZE}, temperature={
 IMAGE_SETTINGS = config_yaml.get("image_settings", {})
 NUM_IMAGE_PROMPTS = IMAGE_SETTINGS.get("num_image_prompts", 1)
 cl_logger.info(f"Image settings loaded: num_image_prompts={NUM_IMAGE_PROMPTS}")
-
-# Stable Diffusion API URL
-STABLE_DIFFUSION_API_URL = os.getenv("STABLE_DIFFUSION_API_URL")
-cl_logger.info(f"Stable Diffusion API URL loaded: {STABLE_DIFFUSION_API_URL}")
 
 # OpenAI settings
 OPENAI_BASE_URL = config_yaml.get("openai", {}).get("base_url", "")
@@ -127,3 +124,45 @@ CHAINLIT_STARTERS = config_yaml.get("CHAINLIT_STARTERS", [
     "Hello! What kind of story would you like to create today?",
 ])
 cl_logger.info(f"Chainlit starters loaded: {CHAINLIT_STARTERS}")
+
+# Logging settings
+LOGGING_LEVEL = config_yaml.get("logging", {}).get("level", "INFO")
+LOGGING_FILE = config_yaml.get("logging", {}).get("file", "chainlit.log")
+cl_logger.setLevel(LOGGING_LEVEL)
+handler = logging.FileHandler(LOGGING_FILE)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+cl_logger.addHandler(handler)
+
+# Error handling settings
+MAX_RETRIES = config_yaml.get("error_handling", {}).get("max_retries", 3)
+RETRY_DELAY = config_yaml.get("error_handling", {}).get("retry_delay", 5)
+ERROR_LOG_LEVEL = config_yaml.get("error_handling", {}).get("log_level", "ERROR")
+
+# API settings
+API_BASE_URL = config_yaml.get("api", {}).get("base_url", "http://localhost:8080")
+API_TIMEOUT = config_yaml.get("api", {}).get("timeout", 30)
+API_MAX_CONNECTIONS = config_yaml.get("api", {}).get("max_connections", 10)
+
+# Feature toggles
+IMAGE_GENERATION_ENABLED = config_yaml.get("features", {}).get("image_generation", True)
+WEB_SEARCH_ENABLED = config_yaml.get("features", {}).get("web_search", False)
+DICE_ROLLING_ENABLED = config_yaml.get("features", {}).get("dice_rolling", True)
+
+# Rate limits
+IMAGE_GENERATION_RATE_LIMIT = config_yaml.get("rate_limits", {}).get("image_generation", "5/minute")
+API_CALLS_RATE_LIMIT = config_yaml.get("rate_limits", {}).get("api_calls", "60/hour")
+
+# Security settings
+SECRET_KEY = config_yaml.get("security", {}).get("secret_key", "your-secret-key-here")
+SESSION_TIMEOUT = config_yaml.get("security", {}).get("session_timeout", 3600)
+
+# Monitoring settings
+MONITORING_ENABLED = config_yaml.get("monitoring", {}).get("enabled", False)
+MONITORING_ENDPOINT = config_yaml.get("monitoring", {}).get("endpoint", "http://localhost:9411")
+MONITORING_SAMPLE_RATE = config_yaml.get("monitoring", {}).get("sample_rate", 0.1)
+
+# Caching settings
+CACHING_ENABLED = config_yaml.get("caching", {}).get("enabled", True)
+CACHING_TTL = config_yaml.get("caching", {}).get("ttl", 3600)
+CACHING_MAX_SIZE = config_yaml.get("caching", {}).get("max_size", "100MB")
