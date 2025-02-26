@@ -1,6 +1,7 @@
 import os
 import yaml
 import logging
+from logging.handlers import RotatingFileHandler
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -128,11 +129,22 @@ cl_logger.info(f"Chainlit starters loaded: {CHAINLIT_STARTERS}")
 # Logging settings
 LOGGING_LEVEL = config_yaml.get("logging", {}).get("level", "INFO")
 LOGGING_FILE = config_yaml.get("logging", {}).get("file", "chainlit.log")
+LOGGING_CONSOLE = config_yaml.get("logging", {}).get("console", True)
+LOGGING_FORMAT = config_yaml.get("logging", {}).get("format", '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+LOGGING_MAX_SIZE = config_yaml.get("logging", {}).get("max_size", "10MB")
+LOGGING_BACKUP_COUNT = config_yaml.get("logging", {}).get("backup_count", 3)
+
+# Set up logging
 cl_logger.setLevel(LOGGING_LEVEL)
-handler = logging.FileHandler(LOGGING_FILE)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter(LOGGING_FORMAT)
+handler = RotatingFileHandler(LOGGING_FILE, maxBytes=int(LOGGING_MAX_SIZE), backupCount=LOGGING_BACKUP_COUNT)
 handler.setFormatter(formatter)
 cl_logger.addHandler(handler)
+
+if LOGGING_CONSOLE:
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    cl_logger.addHandler(console_handler)
 
 # Error handling settings
 MAX_RETRIES = config_yaml.get("error_handling", {}).get("max_retries", 3)

@@ -301,6 +301,10 @@ openai:
 logging:
   level: "INFO"
   file: "chainlit.log"
+  console: true
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  max_size: 10MB
+  backup_count: 3
 
 paths:
   storage: "public/storage"
