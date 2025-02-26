@@ -12,6 +12,7 @@ from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from pydantic import BaseModel, Field
 import logging
 from src.stores import VectorStore
+from src.config import LLM_MODEL_NAME, LLM_TEMPERATURE, LLM_MAX_TOKENS, LLM_PRESENCE_PENALTY, LLM_FREQUENCY_PENALTY, LLM_TOP_P, LLM_TIMEOUT, LLM_VERBOSE
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -233,8 +234,7 @@ tool_schemas = [
                         "type": "string",
                         "description": "The search query"
                     }
-                },
-                "required": ["query"]
+                }
             }
         }
     }

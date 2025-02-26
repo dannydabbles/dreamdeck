@@ -35,7 +35,8 @@ from .config import (
     STORYBOARD_GENERATION_PROMPT_PREFIX,
     STORYBOARD_GENERATION_PROMPT_POSTFIX,
     AI_WRITER_PROMPT,
-    CHAINLIT_STARTERS
+    CHAINLIT_STARTERS,
+    STABLE_DIFFUSION_API_URL  # Import STABLE_DIFFUSION_API_URL
 )
 from .state import ChatState
 from .state_graph import chat_workflow as graph
