@@ -5,11 +5,9 @@ import base64
 import httpx
 from typing import List, Optional
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
-from chainlit import on_chat_start, on_chat_resume, on_message
-from chainlit.types import ThreadDict
-from chainlit import Message as CLMessage
+from chainlit import on_chat_start, on_chat_resume, on_message, user_session as cl_user_session, Message as CLMessage, element as cl_element, User, context
 from chainlit.element import Image as CLImage, Select
-from chainlit.types import RunnableConfig
+from chainlit.types import ThreadDict, RunnableConfig
 from chainlit import LangchainCallbackHandler
 from langgraph.func import task
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, UnstructuredMarkdownLoader
@@ -36,11 +34,12 @@ from .config import (
     REFUSAL_LIST,
     KNOWLEDGE_DIRECTORY,
     STORYBOARD_GENERATION_PROMPT_PREFIX,
-    STORYBOARD_GENERATION_PROMPT_POSTFIX
+    STORYBOARD_GENERATION_PROMPT_POSTFIX,
+    AI_WRITER_PROMPT,
+    CHAINLIT_STARTERS
 )
 from .state import ChatState
 from .state_graph import chat_workflow as graph
-from .image_generation import process_storyboard_images, generate_image_generation_prompts
 
 # Define an asynchronous range generator
 async def async_range(end):
@@ -85,10 +84,10 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
             image_bytes = base64.b64decode(image_data)
             return image_bytes
     except httpx.RequestError as e:
-        cl.logger.error(f"Image generation failed: {e}")
+        cl_element.logger.error(f"Image generation failed: {e}")
         raise
     except (KeyError, IndexError, ValueError) as e:
-        cl.logger.error(f"Error processing image data: {e}")
+        cl_element.logger.error(f"Error processing image data: {e}")
         return None
 
 @retry(
@@ -137,19 +136,19 @@ async def generate_image_generation_prompts(
             full_prompt = ", ".join(prompt_components)
             # Check refusal list
             if any(image_gen_prompt.startswith(refusal) for refusal in REFUSAL_LIST):
-                cl.logger.warning(f"LLM refused to generate image prompt. Prompt is a refusal: {full_prompt}")
+                cl_element.logger.warning(f"LLM refused to generate image prompt. Prompt is a refusal: {full_prompt}")
                 raise ValueError("LLM refused to generate image prompt.")
         
             # Check for short prompts
             if len(image_gen_prompt) < 20 or not image_gen_prompt.strip():
-                cl.logger.warning(f"Generated image prompt is too short or empty: {full_prompt}")
+                cl_element.logger.warning(f"Generated image prompt is too short or empty: {full_prompt}")
             else:
                 image_gen_prompts.append(full_prompt)
     except Exception as e:
-        cl.logger.error(f"Image prompt generation failed: {e}")
+        cl_element.logger.error(f"Image prompt generation failed: {e}")
         image_gen_prompts = []
 
-    cl.logger.debug(f"Generated Image Generation Prompt: {image_gen_prompts}")
+    cl_element.logger.debug(f"Generated Image Generation Prompt: {image_gen_prompts}")
 
     return image_gen_prompts
 
@@ -187,15 +186,15 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
                     ).send()
                     
             except Exception as e:
-                cl.logger.error(f"Failed to generate image for prompt: {prompt}. Error: {str(e)}")
+                cl_element.logger.error(f"Failed to generate image for prompt: {prompt}. Error: {str(e)}")
                 
     except Exception as e:
-        cl.logger.error(f"Failed to process storyboard images: {str(e)}")
+        cl_element.logger.error(f"Failed to process storyboard images: {str(e)}")
 
 @on_chat_start
 async def on_chat_start():
     """Initialize new chat session with Chainlit integration."""
-    settings = await cl.ChatSettings(
+    settings = await cl_element.ChatSettings(
         [
             Select(
                 id="Model",
@@ -209,19 +208,19 @@ async def on_chat_start():
     # Create initial state
     state = ChatState(
         messages=[SystemMessage(content=AI_WRITER_PROMPT)],
-        thread_id=cl.context.session.id
+        thread_id=context.session.id
     )
     
     # Initialize thread in Chainlit
     await CLMessage(content=AI_WRITER_PROMPT, author="system").send()
     
     # Store state
-    cl.user_session.set("state", state)
-    cl.user_session.set("image_generation_memory", [])
-    cl.user_session.set("ai_message_id", None)
+    cl_user_session.set("state", state)
+    cl_user_session.set("image_generation_memory", [])
+    cl_user_session.set("ai_message_id", None)
     
     # Setup runnable
-    cl.user_session.set("runnable", graph)
+    cl_user_session.set("runnable", graph)
     
     # Load knowledge documents
     await load_knowledge_documents()
@@ -237,7 +236,7 @@ async def on_chat_resume(thread: ThreadDict):
     # Set the user in the session
     user_dict = thread.get('user')
     if user_dict:
-        cl.user_session.set('user', cl.User(**user_dict))
+        cl_user_session.set('user', User(**user_dict))
 
     messages = [SystemMessage(content=AI_WRITER_PROMPT)]
     image_generation_memory = []
@@ -270,12 +269,12 @@ async def on_chat_resume(thread: ThreadDict):
     )
     
     # Store state and memories
-    cl.user_session.set("state", state)
-    cl.user_session.set("image_generation_memory", image_generation_memory)
-    cl.user_session.set("ai_message_id", None)
+    cl_user_session.set("state", state)
+    cl_user_session.set("image_generation_memory", image_generation_memory)
+    cl_user_session.set("ai_message_id", None)
     
     # Setup runnable
-    cl.user_session.set("runnable", graph)
+    cl_user_session.set("runnable", graph)
     
     # Load knowledge documents
     await load_knowledge_documents()
@@ -283,22 +282,22 @@ async def on_chat_resume(thread: ThreadDict):
 @on_message
 async def on_message(message: CLMessage):
     """Handle incoming messages."""
-    state = cl.user_session.get("state")
-    runnable = cl.user_session.get("runnable")
+    state = cl_user_session.get("state")
+    runnable = cl_user_session.get("runnable")
 
     if message.type != "user_message":
         return
 
-    config = {"configurable": {"thread_id": cl.context.session.id}}
+    config = {"configurable": {"thread_id": context.session.id}}
     cb = LangchainCallbackHandler()
 
     try:
         # Log the state before processing
-        cl.logger.debug(f"Processing message: {message.content}")
-        cl.logger.debug(f"Current state: {state}")
+        cl_element.logger.debug(f"Processing message: {message.content}")
+        cl_element.logger.debug(f"Current state: {state}")
         
         # Add user message to state
-        state = cl.user_session.get("state")
+        state = cl_user_session.get("state")
         state.messages.append(HumanMessage(content=message.content))
         
         # Format system message before generating response
@@ -327,28 +326,28 @@ async def on_message(message: CLMessage):
             ))
         
         # Update session state
-        cl.user_session.set("state", state)
+        cl_user_session.set("state", state)
     except Exception as e:
-        cl.logger.error(f"Runnable stream failed: {e}")
-        cl.logger.error(f"State metadata: {state.metadata}")  # Log the state's metadata
+        cl_element.logger.error(f"Runnable stream failed: {e}")
+        cl_element.logger.error(f"State metadata: {state.metadata}")  # Log the state's metadata
         await CLMessage(content="⚠️ An error occurred while generating the response. Please try again later.").send()
         return
 
     # Update session state
-    cl.user_session.set("state", state)
+    cl_user_session.set("state", state)
 
 async def load_knowledge_documents():
     """
     Loads documents from the knowledge directory into the vector store.
     """
     if not os.path.exists(KNOWLEDGE_DIRECTORY):
-        cl.logger.warning(f"Knowledge directory '{KNOWLEDGE_DIRECTORY}' does not exist. Skipping document loading.")
+        cl_element.logger.warning(f"Knowledge directory '{KNOWLEDGE_DIRECTORY}' does not exist. Skipping document loading.")
         return
 
-    vector_memory = cl.user_session.get("vector_memory", None)
+    vector_memory = cl_user_session.get("vector_memory", None)
 
     if not vector_memory:
-        cl.logger.error("Vector memory not initialized.")
+        cl_element.logger.error("Vector memory not initialized.")
         return
 
     documents = []
@@ -365,17 +364,17 @@ async def load_knowledge_documents():
             elif file.endswith(".md"):
                 loader = UnstructuredMarkdownLoader(file_path)
             else:
-                cl.logger.warning(f"Unsupported file type: {file}. Skipping.")
+                cl_element.logger.warning(f"Unsupported file type: {file}. Skipping.")
                 continue
             try:
                 loaded_docs = loader.load()
                 split_docs = text_splitter.split_documents(loaded_docs)
                 documents.extend(split_docs)
             except Exception as e:
-                cl.logger.error(f"Error loading document {file_path}: {e}")
+                cl_element.logger.error(f"Error loading document {file_path}: {e}")
 
     if documents:
-        cl.logger.info(f"Adding {len(documents)} documents to the vector store.")
+        cl_element.logger.info(f"Adding {len(documents)} documents to the vector store.")
         vector_memory.retriever.vectorstore.add_documents(documents)
     else:
-        cl.logger.info("No documents found to add to the vector store.")
+        cl_element.logger.info("No documents found to add to the vector store.")
