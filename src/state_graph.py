@@ -25,7 +25,9 @@ from .config import (
     REFUSAL_LIST,
     DICE_SIDES,
     CHAINLIT_STARTERS,
-    IMAGE_GENERATION_ENABLED
+    IMAGE_GENERATION_ENABLED,
+    DICE_ROLLING_ENABLED,  # Add this import
+    WEB_SEARCH_ENABLED  # Add this import
 )
 from .models import ChatState  # Update import path
 from .memory_management import save_chat_memory  # Import save_chat_memory
