@@ -1,6 +1,6 @@
 import os
 import logging
-from chainlit import on_chat_start, on_chat_resume, on_message
+from chainlit import on_chat_start, on_chat_resume, on_message, user_session as cl_user_session  # Import cl_user_session
 from chainlit.types import ThreadDict
 from chainlit import Message as CLMessage  # Import CLMessage
 from .state_graph import chat_workflow
@@ -18,9 +18,9 @@ cl_logger = logging.getLogger("chainlit")
 async def on_chat_start():
     """Initialize new chat session with Chainlit integration."""
     state = ChatState(messages=[SystemMessage(content=AI_WRITER_PROMPT)])
-    cl.user_session.set("state", state)
-    cl.user_session.set("vector_memory", VectorStore())
-    cl.user_session.set("runnable", chat_workflow)
+    cl_user_session.set("state", state)  # Use cl_user_session
+    cl_user_session.set("vector_memory", VectorStore())  # Use cl_user_session
+    cl_user_session.set("runnable", chat_workflow)  # Use cl_user_session
 
     # Send starters
     for starter in CHAINLIT_STARTERS:
@@ -30,15 +30,15 @@ async def on_chat_start():
 @on_chat_resume
 async def on_chat_resume(thread: ThreadDict):
     """Reconstruct state from Chainlit thread."""
-    state = await get_chat_memory(cl.user_session.get("vector_memory"))
-    cl.user_session.set("state", state)
-    cl.user_session.set("runnable", chat_workflow)
+    state = await get_chat_memory(cl_user_session.get("vector_memory"))  # Use cl_user_session
+    cl_user_session.set("state", state)  # Use cl_user_session
+    cl_user_session.set("runnable", chat_workflow)  # Use cl_user_session
 
 @on_message
 async def on_message(message: CLMessage):
     """Handle incoming messages."""
-    state = cl.user_session.get("state")
-    runnable = cl.user_session.get("runnable")
+    state = cl_user_session.get("state")  # Use cl_user_session
+    runnable = cl_user_session.get("runnable")  # Use cl_user_session
 
     if message.type != "user_message":
         return
@@ -48,11 +48,11 @@ async def on_message(message: CLMessage):
         state.messages.append(HumanMessage(content=message.content))
 
         # Generate AI response
-        ai_response = await runnable(state.messages, cl.user_session.get("vector_memory"), state)
+        ai_response = await runnable(state.messages, cl_user_session.get("vector_memory"), state)  # Use cl_user_session
         state.current_message_id = message.id
 
         # Save state
-        await save_chat_memory(state, cl.user_session.get("vector_memory"))
+        await save_chat_memory(state, cl_user_session.get("vector_memory"))  # Use cl_user_session
     except Exception as e:
         cl_logger.error(f"Runnable stream failed: {e}")
         await CLMessage(content="⚠️ An error occurred while generating the response. Please try again later.").send()
