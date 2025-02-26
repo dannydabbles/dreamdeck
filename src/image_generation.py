@@ -12,7 +12,7 @@ from langchain.prompts import PromptTemplate
 
 import chainlit as cl
 
-from config import (
+from .config import (
     DENOISING_STRENGTH,
     DISTILLED_CFG_SCALE,
     HR_SECOND_PASS_STEPS,
@@ -37,7 +37,6 @@ from config import (
     REFUSAL_LIST,
     STABLE_DIFFUSION_API_URL,
     LLM_TEMPERATURE,
-    LLM_TIMEOUT,
     LLM_TIMEOUT,
     
 )
@@ -79,19 +78,6 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
         "hr_second_pass_steps": HR_SECOND_PASS_STEPS,
         "seed": seed,
     }
-
-    # Stable diffsuion payload
-    # payload = {
-    #     "prompt": image_generation_prompt,
-    #     "negative_prompt": NEGATIVE_PROMPT,
-    #     "steps": STEPS,
-    #     "sampler_name": SAMPLER_NAME,
-    #     "scheduler": SCHEDULER                            ,
-    #     "cfg_scale": CFG_SCALE,
-    #     "width": WIDTH,
-    #     "height": HEIGHT,
-    #     "seed": seed,
-    # }
 
     try:
         async with httpx.AsyncClient(timeout=IMAGE_GENERATION_TIMEOUT) as client:

@@ -8,14 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
-
-class DecisionOutput(BaseModel):
-    """Schema for the decision output."""
-    action: Literal["roll", "search", "continue_story"] = Field(
-        description="The next action to take based on user input"
-    )
 import logging
 
 # Initialize logging
@@ -27,7 +20,7 @@ class DecisionOutput(BaseModel):
         description="The next action to take based on user input"
     )
 
-from config import (
+from .config import (
     DICE_SIDES,
     LLM_TEMPERATURE,
     LLM_STREAMING,
@@ -126,7 +119,7 @@ def web_search(query: str) -> str:
 from langgraph.prebuilt import ToolNode, ToolExecutor
 
 # Create a parser for the decision output
-decision_parser = PydanticOutputParser(pydantic_object=DecisionOutput)
+decision_parser = StrOutputParser()
 
 def log_decision_agent_response(response):
     """Log detailed information about the decision agent's response."""

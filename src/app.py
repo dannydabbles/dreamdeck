@@ -5,7 +5,7 @@ from chainlit.types import ThreadDict
 from chainlit import Message as CLMessage  # Import CLMessage
 from .state_graph import chat_workflow
 from .memory_management import get_chat_memory, save_chat_memory
-from .models import ChatState
+from .state import ChatState  # Update import path
 from .config import AI_WRITER_PROMPT, CHAINLIT_STARTERS
 from .stores import VectorStore
 from .tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, decision_agent
