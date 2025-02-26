@@ -2,12 +2,14 @@ import os
 import logging
 from chainlit import on_chat_start, on_chat_resume, on_message
 from chainlit.types import ThreadDict
+from chainlit import Message as CLMessage  # Import CLMessage
 from .state_graph import chat_workflow
 from .memory_management import get_chat_memory, save_chat_memory
 from .models import ChatState
 from .config import AI_WRITER_PROMPT, CHAINLIT_STARTERS
 from .stores import VectorStore
 from .tools_and_agents import writer_agent, storyboard_editor_agent, dice_roll, web_search, decision_agent
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage  # Import SystemMessage and AIMessage
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
