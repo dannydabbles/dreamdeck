@@ -12,7 +12,13 @@ from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from pydantic import BaseModel, Field
 import logging
 from src.stores import VectorStore
-from src.config import LLM_MODEL_NAME, LLM_TEMPERATURE, LLM_MAX_TOKENS, LLM_PRESENCE_PENALTY, LLM_FREQUENCY_PENALTY, LLM_TOP_P, LLM_TIMEOUT, LLM_VERBOSE
+from src.config import (
+    LLM_MODEL_NAME, LLM_TEMPERATURE, LLM_MAX_TOKENS, LLM_PRESENCE_PENALTY, LLM_FREQUENCY_PENALTY, LLM_TOP_P, LLM_TIMEOUT, LLM_VERBOSE,
+    DECISION_AGENT_TEMPERATURE, DECISION_AGENT_MAX_TOKENS, DECISION_AGENT_STREAMING, DECISION_AGENT_VERBOSE,
+    WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_AGENT_STREAMING, WRITER_AGENT_VERBOSE,
+    STORYBOARD_EDITOR_AGENT_TEMPERATURE, STORYBOARD_EDITOR_AGENT_MAX_TOKENS, STORYBOARD_EDITOR_AGENT_STREAMING, STORYBOARD_EDITOR_AGENT_VERBOSE,
+    OPENAI_BASE_URL, SERPAPI_KEY
+)
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -139,10 +145,9 @@ def web_search(query: str) -> str:
     Returns:
         str: The search result.
     """
-    serpapi_key = os.getenv("SERPAPI_KEY")
-    if not serpapi_key:
+    if not SERPAPI_KEY:
         raise ValueError("SERPAPI_KEY environment variable not set.")
-    url = f"https://serpapi.com/search.json?q={query}&api_key={serpapi_key}"
+    url = f"https://serpapi.com/search.json?q={query}&api_key={SERPAPI_KEY}"
     response = requests.get(url)
     response.raise_for_status()
     data = response.json()
@@ -167,13 +172,13 @@ def log_decision_agent_response(response):
 
 # Initialize the decision agent with proper function binding and longer timeout
 decision_agent = ChatOpenAI(
-    base_url="http://192.168.1.111:5000/v1",
-    temperature=0.2,
-    streaming=False,
+    base_url=OPENAI_BASE_URL,
+    temperature=DECISION_AGENT_TEMPERATURE,
+    streaming=DECISION_AGENT_STREAMING,
     model_name=LLM_MODEL_NAME,
     request_timeout=LLM_TIMEOUT * 2,
-    max_tokens=100,
-    verbose=LLM_VERBOSE
+    max_tokens=DECISION_AGENT_MAX_TOKENS,
+    verbose=DECISION_AGENT_VERBOSE
 ).bind(
     tools=[{
         "type": "function",
@@ -202,56 +207,18 @@ tools = [dice_roll, web_search]
 tool_executor = ToolExecutor(tools)
 tool_node = ToolNode(tools=tools)
 
-# Create tool schemas that OpenAI can understand
-tool_schemas = [
-    {
-        "type": "function",
-        "function": {
-            "name": "dice_roll",
-            "description": "Rolls a dice with a specified number of sides",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "input_str": {
-                        "type": "string",
-                        "description": "The dice specification (e.g., 'd3', '2d6'). Defaults to 'd20' if not specified."
-                    }
-                },
-                "required": ["input_str"],
-                "additionalProperties": False
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "web_search",
-            "description": "Performs a web search using SerpAPI",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query"
-                    }
-                }
-            }
-        }
-    }
-]
-
 # Initialize the writer AI agent with tools and longer timeout
 writer_agent = ChatOpenAI(
-    base_url="http://192.168.1.111:5000/v1",
+    base_url=OPENAI_BASE_URL,
     model_name=LLM_MODEL_NAME,
-    temperature=LLM_TEMPERATURE,
-    max_tokens=LLM_MAX_TOKENS,
-    streaming=True,
+    temperature=WRITER_AGENT_TEMPERATURE,
+    max_tokens=WRITER_AGENT_MAX_TOKENS,
+    streaming=WRITER_AGENT_STREAMING,
     request_timeout=LLM_TIMEOUT * 3,
     presence_penalty=LLM_PRESENCE_PENALTY,
     frequency_penalty=LLM_FREQUENCY_PENALTY,
     top_p=LLM_TOP_P,
-    verbose=LLM_VERBOSE
+    verbose=WRITER_AGENT_VERBOSE
 ).bind(
     tools=[dice_roll_schema, web_search_schema],  # Include both schemas
     tool_choice="auto"  # Allow the model to choose when to use tools
@@ -259,14 +226,14 @@ writer_agent = ChatOpenAI(
 
 # Initialize the storyboard editor agent with longer timeout
 storyboard_editor_agent = ChatOpenAI(
-    base_url="http://192.168.1.111:5000/v1",
+    base_url=OPENAI_BASE_URL,
     model_name=LLM_MODEL_NAME,
-    temperature=0.7,
-    streaming=False,
+    temperature=STORYBOARD_EDITOR_AGENT_TEMPERATURE,
+    streaming=STORYBOARD_EDITOR_AGENT_STREAMING,
     request_timeout=LLM_TIMEOUT * 2,
-    max_tokens=LLM_MAX_TOKENS,
-    presence_penalty=0.1,
-    frequency_penalty=0.1,
-    top_p=0.9,
-    verbose=LLM_VERBOSE
+    max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
+    presence_penalty=LLM_PRESENCE_PENALTY,
+    frequency_penalty=LLM_FREQUENCY_PENALTY,
+    top_p=LLM_TOP_P,
+    verbose=STORYBOARD_EDITOR_AGENT_VERBOSE
 )

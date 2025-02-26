@@ -1,5 +1,5 @@
 llm:
-  temperature: .6
+  temperature: 0.6
   max_tokens: 8000
   model_name: "gpt-3.5-turbo"
   streaming: true
@@ -216,7 +216,6 @@ prompts:
   storyboard_generation_prompt_postfix: "" #"source_anime, source_cartoon"
 
 image_generation_payload:
-  # Flux settings
   steps: 30
   sampler_name: "Euler"
   scheduler: "Simple"
@@ -230,19 +229,6 @@ image_generation_payload:
   hr_upscaler: "SwinIR 4x"
   denoising_strength: 0.6
   hr_second_pass_steps: 10
-
-  # Stable Diffusion settings
-  # negative_prompt: "3d"
-  # steps: 70
-  # sampler_name: "Euler a"
-  # scheduler: "Simple"
-  # cfg_scale: 1.5
-  # width: 1024
-  # height: 1360
-  # hr_scale: 1.5
-  # hr_upscaler: "R-ESRGAN 4x+ Anime6B"
-  # denoising_strength: 0.6
-  # hr_second_pass_steps: 15
 
 timeouts:
   image_generation_timeout: 180
@@ -283,5 +269,31 @@ knowledge_directory: "./knowledge"
 image_settings:
   num_image_prompts: 1
 
-CHAINLIT_STARTERS:
-  - "**Game Master**: Hello! What kind of story would you like to create today?"
+agents:
+  decision_agent:
+    temperature: 0.2
+    max_tokens: 100
+    streaming: true
+    verbose: true
+    tools:
+      dice_roll:
+        sides: 20
+      web_search:
+        enabled: false
+  writer_agent:
+    temperature: 0.7
+    max_tokens: 8000
+    streaming: true
+    verbose: true
+  storyboard_editor_agent:
+    temperature: 0.7
+    max_tokens: 8000
+    streaming: false
+    verbose: true
+
+search:
+  serpapi_key: ""
+
+openai:
+  base_url: "http://192.168.1.111:5000/v1"
+  api_key: ""

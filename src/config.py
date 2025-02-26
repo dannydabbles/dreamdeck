@@ -21,16 +21,29 @@ cl_logger.info(f"Database URL loaded: {DATABASE_URL}")
 # LLM configuration
 LLM_TEMPERATURE = config_yaml.get("llm", {}).get("temperature", 0.7)
 LLM_MAX_TOKENS = config_yaml.get("llm", {}).get("max_tokens", 64000)
-LLM_CHUNK_SIZE = config_yaml.get("llm", {}).get("chunk_size", 1024)
 LLM_MODEL_NAME = config_yaml.get("llm", {}).get("model_name", "gpt-3.5-turbo")
-LLM_STREAMING = bool(config_yaml.get("llm", {}).get("streaming", True))
+LLM_STREAMING = config_yaml.get("llm", {}).get("streaming", True)
 LLM_TIMEOUT = config_yaml.get("llm", {}).get("timeout", 300)
 LLM_PRESENCE_PENALTY = config_yaml.get("llm", {}).get("presence_penalty", 0.1)
 LLM_FREQUENCY_PENALTY = config_yaml.get("llm", {}).get("frequency_penalty", 0.1)
 LLM_TOP_P = config_yaml.get("llm", {}).get("top_p", 0.9)
-LLM_TOP_K = config_yaml.get("llm", {}).get("top_k", 0)
 LLM_VERBOSE = config_yaml.get("llm", {}).get("verbose", False)
-cl_logger.info(f"LLM configuration loaded: temperature={LLM_TEMPERATURE}, max_tokens={LLM_MAX_TOKENS}, chunk_size={LLM_CHUNK_SIZE}, model_name={LLM_MODEL_NAME}, streaming={LLM_STREAMING}, timeout={LLM_TIMEOUT}, presence_penalty={LLM_PRESENCE_PENALTY}, frequency_penalty={LLM_FREQUENCY_PENALTY}, top_p={LLM_TOP_P}, verbose={LLM_VERBOSE}")
+cl_logger.info(f"LLM configuration loaded: temperature={LLM_TEMPERATURE}, max_tokens={LLM_MAX_TOKENS}, model_name={LLM_MODEL_NAME}, streaming={LLM_STREAMING}, timeout={LLM_TIMEOUT}, presence_penalty={LLM_PRESENCE_PENALTY}, frequency_penalty={LLM_FREQUENCY_PENALTY}, top_p={LLM_TOP_P}, verbose={LLM_VERBOSE}")
+
+# Agents configuration
+DECISION_AGENT_TEMPERATURE = config_yaml.get("agents", {}).get("decision_agent", {}).get("temperature", 0.2)
+DECISION_AGENT_MAX_TOKENS = config_yaml.get("agents", {}).get("decision_agent", {}).get("max_tokens", 100)
+DECISION_AGENT_STREAMING = config_yaml.get("agents", {}).get("decision_agent", {}).get("streaming", True)
+DECISION_AGENT_VERBOSE = config_yaml.get("agents", {}).get("decision_agent", {}).get("verbose", True)
+WRITER_AGENT_TEMPERATURE = config_yaml.get("agents", {}).get("writer_agent", {}).get("temperature", 0.7)
+WRITER_AGENT_MAX_TOKENS = config_yaml.get("agents", {}).get("writer_agent", {}).get("max_tokens", 8000)
+WRITER_AGENT_STREAMING = config_yaml.get("agents", {}).get("writer_agent", {}).get("streaming", True)
+WRITER_AGENT_VERBOSE = config_yaml.get("agents", {}).get("writer_agent", {}).get("verbose", True)
+STORYBOARD_EDITOR_AGENT_TEMPERATURE = config_yaml.get("agents", {}).get("storyboard_editor_agent", {}).get("temperature", 0.7)
+STORYBOARD_EDITOR_AGENT_MAX_TOKENS = config_yaml.get("agents", {}).get("storyboard_editor_agent", {}).get("max_tokens", 8000)
+STORYBOARD_EDITOR_AGENT_STREAMING = config_yaml.get("agents", {}).get("storyboard_editor_agent", {}).get("streaming", False)
+STORYBOARD_EDITOR_AGENT_VERBOSE = config_yaml.get("agents", {}).get("storyboard_editor_agent", {}).get("verbose", True)
+cl_logger.info(f"Agents configuration loaded: decision_agent (temperature={DECISION_AGENT_TEMPERATURE}, max_tokens={DECISION_AGENT_MAX_TOKENS}, streaming={DECISION_AGENT_STREAMING}, verbose={DECISION_AGENT_VERBOSE}), writer_agent (temperature={WRITER_AGENT_TEMPERATURE}, max_tokens={WRITER_AGENT_MAX_TOKENS}, streaming={WRITER_AGENT_STREAMING}, verbose={WRITER_AGENT_VERBOSE}), storyboard_editor_agent (temperature={STORYBOARD_EDITOR_AGENT_TEMPERATURE}, max_tokens={STORYBOARD_EDITOR_AGENT_MAX_TOKENS}, streaming={STORYBOARD_EDITOR_AGENT_STREAMING}, verbose={STORYBOARD_EDITOR_AGENT_VERBOSE})")
 
 # Prompts
 AI_WRITER_PROMPT = config_yaml.get("prompts", {}).get("ai_writer_prompt", "")
@@ -54,7 +67,8 @@ HEIGHT = IMAGE_GENERATION_PAYLOAD.get("height", 1024)
 HR_UPSCALER = IMAGE_GENERATION_PAYLOAD.get("hr_upscaler", "RealESRGAN")
 DENOISING_STRENGTH = IMAGE_GENERATION_PAYLOAD.get("denoising_strength", 0.1)
 HR_SECOND_PASS_STEPS = IMAGE_GENERATION_PAYLOAD.get("hr_second_pass_steps", 0)
-cl_logger.info(f"Image generation payload loaded: negative_prompt={NEGATIVE_PROMPT}, steps={STEPS}, sampler_name={SAMPLER_NAME}, scheduler={SCHEDULER}, cfg_scale={CFG_SCALE}, width={WIDTH}, height={HEIGHT}")
+HR_SCALE = IMAGE_GENERATION_PAYLOAD.get("hr_scale", 1)
+cl_logger.info(f"Image generation payload loaded: negative_prompt={NEGATIVE_PROMPT}, steps={STEPS}, sampler_name={SAMPLER_NAME}, scheduler={SCHEDULER}, cfg_scale={CFG_SCALE}, width={WIDTH}, height={HEIGHT}, hr_scale={HR_SCALE}, hr_upscaler={HR_UPSCALER}, denoising_strength={DENOISING_STRENGTH}, hr_second_pass_steps={HR_SECOND_PASS_STEPS}")
 
 # Search enabled
 SEARCH_ENABLED = config_yaml.get("search_enabled", False)
@@ -76,7 +90,7 @@ DB_FILE = config_yaml.get("defaults", {}).get("db_file", "chainlit.db")
 cl_logger.info(f"Default DB file loaded: {DB_FILE}")
 
 # Dice settings
-DICE_SIDES = 20  # Default to d20
+DICE_SIDES = config_yaml.get("dice", {}).get("sides", 20)  # Default to d20
 cl_logger.info(f"Default dice sides loaded: {DICE_SIDES}")
 
 # Knowledge directory
@@ -98,6 +112,15 @@ cl_logger.info(f"Image settings loaded: num_image_prompts={NUM_IMAGE_PROMPTS}")
 # Stable Diffusion API URL
 STABLE_DIFFUSION_API_URL = os.getenv("STABLE_DIFFUSION_API_URL")
 cl_logger.info(f"Stable Diffusion API URL loaded: {STABLE_DIFFUSION_API_URL}")
+
+# OpenAI settings
+OPENAI_BASE_URL = config_yaml.get("openai", {}).get("base_url", "")
+OPENAI_API_KEY = config_yaml.get("openai", {}).get("api_key", "")
+cl_logger.info(f"OpenAI settings loaded: base_url={OPENAI_BASE_URL}, api_key={OPENAI_API_KEY}")
+
+# Search settings
+SERPAPI_KEY = config_yaml.get("search", {}).get("serpapi_key", "")
+cl_logger.info(f"Search settings loaded: serpapi_key={SERPAPI_KEY}")
 
 # Chainlit Starters
 CHAINLIT_STARTERS = config_yaml.get("CHAINLIT_STARTERS", [
