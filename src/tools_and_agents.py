@@ -10,9 +10,13 @@ from langchain.schema.output_parser import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from pydantic import BaseModel, Field
 import logging
+from src.stores import VectorStore
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
+
+# Initialize the vector store
+vector_memory = VectorStore()
 
 class DecisionOutput(BaseModel):
     """Schema for the decision output."""

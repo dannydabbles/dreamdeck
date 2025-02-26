@@ -1,69 +1,41 @@
 from langchain_core.documents import Document
 from langgraph.store.base import BaseStore
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings, Chroma
 from typing import Dict, Any, List, Optional, Sequence, Tuple
 import numpy as np
-from chainlit.types import ThreadDict
+import os
 import chainlit as cl
 import asyncio
 
 class VectorStore(BaseStore):
-    """Custom vector store implementation using Chainlit's thread history."""
+    """Custom vector store implementation using ChromaDB for persistent storage."""
     
     def __init__(self):
         self.embeddings = HuggingFaceEmbeddings(
             model_name='sentence-transformers/all-MiniLM-L6-v2'
         )
+        self.vectorstore = Chroma(
+            embedding_function=self.embeddings,
+            persist_directory="chroma_db"
+        )
         
-    def _get_thread_history(self, thread_id: str) -> Optional[ThreadDict]:
-        """Get thread history from Chainlit."""
-        return cl.user_session.get("thread")
-        
-    def _convert_to_documents(self, thread: ThreadDict) -> List[Document]:
-        """Convert thread history to documents."""
-        docs = []
-        for step in thread.get("steps", []):
-            if step.get("type") in ["user_message", "ai_message"]:
-                docs.append(Document(
-                    page_content=step["output"],
-                    metadata={
-                        "type": step["type"],
-                        "created_at": step["createdAt"],
-                        "step_id": step["id"]
-                    }
-                ))
-        return docs
-
     def get(self, key: tuple, field: str) -> List[Document]:
-        """Get relevant documents from thread history."""
+        """Get relevant documents using ChromaDB."""
         try:
             thread_id = key[0] if key else cl.context.session.id
             if not thread_id:
                 return []
                 
-            thread = self._get_thread_history(thread_id)
-            if not thread:
-                return []
-                
-            docs = self._convert_to_documents(thread)
-            if not docs:
-                return []
-                
             # Get relevant documents using embeddings
             try:
                 query_embedding = self.embeddings.embed_query(field)
-                doc_embeddings = self.embeddings.embed_documents([d.page_content for d in docs])
+                docs = self.vectorstore.similarity_search(
+                    query_embedding,
+                    k=3
+                )
+                return [Document(page_content=d.page_content, metadata=d.metadata) for d in docs]
             except Exception as e:
-                cl.logger.error(f"Embedding error: {e}")
-                return []
-                
-            # Cosine similarity search with metadata preservation
-            try:
-                similarities = [np.dot(query_embedding, doc_emb) for doc_emb in doc_embeddings]
-                most_similar = sorted(zip(similarities, docs), reverse=True)[:3]
-                return [doc for _, doc in most_similar]
-            except Exception as e:
-                cl.logger.error(f"Similarity calculation error: {e}")
+                cl.logger.error(f"Embedding or search error: {e}")
                 return []
                 
         except Exception as e:
@@ -71,25 +43,28 @@ class VectorStore(BaseStore):
             return []
     
     def put(self, key: tuple, field: str, value: Dict[str, Any]) -> None:
-        """Store new content in thread history."""
-        thread_id = key[0] if key else cl.context.session.id
-        
-        # Store as element in thread
-        if "content" in value:
-            element = cl.Element(
-                type="text",
-                content=value["content"],
-                metadata=value.get("metadata", {})
+        """Store new content in ChromaDB."""
+        try:
+            thread_id = key[0] if key else cl.context.session.id
+            content = value.get("content", "")
+            if not content:
+                return
+                
+            # Create and add document
+            doc = Document(
+                page_content=content,
+                metadata={
+                    "thread_id": thread_id,
+                    "timestamp": os.getenv("TIMESTAMP", ""),
+                    "field": field
+                }
             )
-            cl.user_session.set(f"element_{thread_id}", element)
-
-    def batch(self, operations: Sequence[Tuple[str, tuple, str, Any]]) -> None:
-        """Execute multiple operations in batch."""
-        for op, key, field, value in operations:
-            if op == "get":
-                self.get(key, field)
-            elif op == "put":
-                self.put(key, field, value)
+            self.vectorstore.add_documents([doc])
+            self.vectorstore.persist()
+            
+        except Exception as e:
+            cl.logger.error(f"Error storing document: {e}")
+            raise
 
     async def abatch(self, operations: Sequence[Tuple[str, tuple, str, Any]]) -> None:
         """Execute multiple operations in batch asynchronously."""
