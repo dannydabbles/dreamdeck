@@ -1,7 +1,8 @@
 import os
 import random
 import requests
-from typing import Optional, List, Literal
+import re
+from typing import Optional, List, Literal, Tuple
 from langgraph.prebuilt import ToolNode, ToolExecutor
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
@@ -24,34 +25,62 @@ class DecisionOutput(BaseModel):
         description="The next action to take based on user input"
     )
 
-from .config import (
-    DICE_SIDES,
-    LLM_TEMPERATURE,
-    LLM_STREAMING,
-    LLM_MODEL_NAME,
-    LLM_TIMEOUT,
-    LLM_PRESENCE_PENALTY,
-    LLM_FREQUENCY_PENALTY,
-    LLM_TOP_P,
-    LLM_VERBOSE,
-    DECISION_PROMPT,
-    AI_WRITER_PROMPT,
-    LLM_MAX_TOKENS  # Import LLM_MAX_TOKENS
-)
+def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
+    """
+    Parse dice input string into a list of (sides, count) tuples.
+    Supports formats like "d20", "2d6", "3d4", etc.
+    """
+    pattern = r"(\d*)d(\d+)"
+    matches = re.findall(pattern, input_str)
+    dice_list = []
+    
+    for match in matches:
+        count_str, sides_str = match
+        count = int(count_str) if count_str else 1
+        sides = int(sides_str)
+        dice_list.append((sides, count))
+        
+    return dice_list
 
 @tool
-def dice_roll(n: Optional[int] = None) -> str:
-    """Roll a dice with a specified number of sides.
+def dice_roll(input_str: Optional[str] = None) -> str:
+    """
+    Roll dice based on user input.
+    Supports multiple dice types and quantities (e.g., "d3", "2d6", etc.).
     
     Args:
-        n (int, optional): Number of sides on the dice. Defaults to 20 if not specified.
+        input_str (str, optional): The dice specification (e.g., "d3", "2d6").
+                                   Defaults to "d20" if not specified.
     """
     try:
-        sides = n if n is not None else 20  # Default to d20
-        result = random.randint(1, sides)
-        roll_result = f"🎲 You rolled a {result} on a {sides}-sided die."
-        cl_logger.info(f"Dice roll result: {roll_result}")
-        return roll_result
+        # Default to d20 if no input is provided
+        if not input_str:
+            sides = 20
+            count = 1
+        else:
+            # Parse the input to get dice specifications
+            dice_list = parse_dice_input(input_str)
+            if not dice_list:
+                # Fallback to d20 if parsing fails
+                sides = 20
+                count = 1
+            else:
+                # Use the first parsed dice specification
+                sides, count = dice_list[0]
+        
+        # Roll the dice
+        rolls = [random.randint(1, sides) for _ in range(count)]
+        total = sum(rolls)
+        
+        # Format the result
+        if count == 1:
+            result = f"🎲 You rolled a {total} on a {sides}-sided die."
+        else:
+            result = f"🎲 You rolled {rolls} (total: {total}) on {count}d{sides}."
+        
+        cl_logger.info(f"Dice roll result: {result}")
+        return result
+        
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}")
         return f"🎲 Error rolling dice: {str(e)}"
@@ -65,12 +94,12 @@ dice_roll_schema = {
         "parameters": {
             "type": "object",
             "properties": {
-                "n": {
-                    "type": ["integer", "null"],
-                    "description": "Number of sides on the dice. Defaults to 20 if not specified."
+                "input_str": {
+                    "type": "string",
+                    "description": "The dice specification (e.g., 'd3', '2d6'). Defaults to 'd20' if not specified."
                 }
             },
-            "required": ["n"],
+            "required": ["input_str"],
             "additionalProperties": False
         },
         "strict": True
@@ -182,12 +211,13 @@ tool_schemas = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "n": {
-                        "type": "integer",
-                        "description": "Number of sides on the dice"
+                    "input_str": {
+                        "type": "string",
+                        "description": "The dice specification (e.g., 'd3', '2d6'). Defaults to 'd20' if not specified."
                     }
                 },
-                "required": []
+                "required": ["input_str"],
+                "additionalProperties": False
             }
         }
     },

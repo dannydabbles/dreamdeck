@@ -30,7 +30,6 @@ from .config import (
     DENOISING_STRENGTH,
     HR_SECOND_PASS_STEPS,
     IMAGE_GENERATION_TIMEOUT,
-    STABLE_DIFFUSION_API_URL,
     REFUSAL_LIST,
     KNOWLEDGE_DIRECTORY,
     STORYBOARD_GENERATION_PROMPT_PREFIX,
@@ -40,6 +39,7 @@ from .config import (
 )
 from .state import ChatState
 from .state_graph import chat_workflow as graph
+from .tools_and_agents import handle_dice_roll  # Import handle_dice_roll
 
 # Define an asynchronous range generator
 async def async_range(end):
@@ -300,6 +300,11 @@ async def on_message(message: CLMessage):
         state = cl_user_session.get("state")
         state.messages.append(HumanMessage(content=message.content))
         
+        # Handle dice roll if the message contains a dice roll command
+        if "roll" in message.content.lower():
+            await handle_dice_roll(message)
+            return
+
         # Format system message before generating response
         state.format_system_message()
         

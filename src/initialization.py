@@ -1,7 +1,7 @@
 import os
 import logging
-from typing import Optional  # Import Optional
 from asyncpg.pool import Pool
+from typing import Optional
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")

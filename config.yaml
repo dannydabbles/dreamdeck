@@ -276,7 +276,7 @@ defaults:
   db_file: "chainlit.db"
 
 dice:
-  sides: 100  # Default number of sides for /roll
+  sides: 20  # Default number of sides for /roll
 
 knowledge_directory: "./knowledge"
 

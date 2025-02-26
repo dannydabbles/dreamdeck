@@ -76,8 +76,8 @@ DB_FILE = config_yaml.get("defaults", {}).get("db_file", "chainlit.db")
 cl_logger.info(f"Default DB file loaded: {DB_FILE}")
 
 # Dice settings
-DICE_SIDES = config_yaml.get("dice", {}).get("sides", 100)
-cl_logger.info(f"Dice sides loaded: {DICE_SIDES}")
+DICE_SIDES = 20  # Default to d20
+cl_logger.info(f"Default dice sides loaded: {DICE_SIDES}")
 
 # Knowledge directory
 KNOWLEDGE_DIRECTORY = config_yaml.get("knowledge_directory", "./knowledge")
