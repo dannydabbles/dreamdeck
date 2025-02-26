@@ -1,6 +1,6 @@
 import os
 import logging
-import asyncio
+from typing import Optional  # Import Optional
 from asyncpg.pool import Pool
 
 # Initialize logging
