@@ -1,28 +1,46 @@
 import os
 import asyncio
-
+import random
+import base64
+import httpx
+from typing import List, Optional
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from chainlit import on_chat_start, on_chat_resume, on_message
 from chainlit.types import ThreadDict
-
-from .memory_management import get_chat_memory, get_vector_memory
-from .state_graph import chat_workflow as graph  # Update import path
-from .state import ChatState  # Update import path
-from .image_generation import process_storyboard_images, generate_image_generation_prompts
-from .models import ChatState  # Update import path
-from .config import AI_WRITER_PROMPT, CHAINLIT_STARTERS
-
+from chainlit import Message as CLMessage
+from chainlit.element import Image as CLImage, Select
+from chainlit.types import RunnableConfig
+from chainlit import LangchainCallbackHandler
+from langgraph.func import task
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, UnstructuredMarkdownLoader
-from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
-from langchain_core.messages.tool import ToolMessage
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
-import chainlit as cl
-from chainlit import Message as CLMessage
-from chainlit.element import Image as CLImage
+from .config import (
+    NEGATIVE_PROMPT,
+    STEPS,
+    SAMPLER_NAME,
+    SCHEDULER,
+    CFG_SCALE,
+    DISTILLED_CFG_SCALE,
+    WIDTH,
+    HEIGHT,
+    HR_UPSCALER,
+    DENOISING_STRENGTH,
+    HR_SECOND_PASS_STEPS,
+    IMAGE_GENERATION_TIMEOUT,
+    STABLE_DIFFUSION_API_URL,
+    REFUSAL_LIST,
+    KNOWLEDGE_DIRECTORY,
+    STORYBOARD_GENERATION_PROMPT_PREFIX,
+    STORYBOARD_GENERATION_PROMPT_POSTFIX
+)
+from .state import ChatState
+from .state_graph import chat_workflow as graph
+from .image_generation import process_storyboard_images, generate_image_generation_prompts
 
 # Define an asynchronous range generator
 async def async_range(end):
@@ -195,7 +213,7 @@ async def on_chat_start():
     )
     
     # Initialize thread in Chainlit
-    await cl.Message(content=AI_WRITER_PROMPT, author="system").send()
+    await CLMessage(content=AI_WRITER_PROMPT, author="system").send()
     
     # Store state
     cl.user_session.set("state", state)
@@ -210,7 +228,7 @@ async def on_chat_start():
     
     # Send starters
     for starter in CHAINLIT_STARTERS:
-        msg = await cl.Message(content=starter).send()
+        msg = await CLMessage(content=starter).send()
         state.messages.append(AIMessage(content=starter, additional_kwargs={"message_id": msg.id}))
 
 @on_chat_resume
@@ -272,7 +290,7 @@ async def on_message(message: CLMessage):
         return
 
     config = {"configurable": {"thread_id": cl.context.session.id}}
-    cb = cl.LangchainCallbackHandler()
+    cb = LangchainCallbackHandler()
 
     try:
         # Log the state before processing
