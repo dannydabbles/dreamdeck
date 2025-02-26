@@ -24,7 +24,8 @@ from .config import (
     LLM_TIMEOUT,
     REFUSAL_LIST,
     DICE_SIDES,
-    CHAINLIT_STARTERS
+    CHAINLIT_STARTERS,
+    IMAGE_GENERATION_ENABLED
 )
 from .models import ChatState  # Update import path
 from .memory_management import save_chat_memory  # Import save_chat_memory
@@ -125,12 +126,12 @@ async def chat_workflow(
         }
         mapped_action = action_map.get(action, "writer")
 
-        if mapped_action == "roll":
+        if mapped_action == "roll" and DICE_ROLLING_ENABLED:
             result = await dice_roll.ainvoke({"n": DICE_SIDES})
             state.messages.append(ToolMessage(content=result, name="dice_roll"))
             await CLMessage(content=result).send()
 
-        elif mapped_action == "search":
+        elif mapped_action == "search" and WEB_SEARCH_ENABLED:
             query = last_human_message.content
             result = await web_search.ainvoke({"query": query})
             state.messages.append(ToolMessage(content=result, name="web_search"))
@@ -141,11 +142,12 @@ async def chat_workflow(
         state.messages.append(AIMessage(content=ai_response))
         await CLMessage(content=ai_response).send()
 
-        # Generate storyboard if needed
-        storyboard = await process_storyboard(state)
-        if storyboard:
-            state.metadata["storyboard"] = storyboard
-            await process_storyboard_images(storyboard, state.current_message_id)
+        # Generate storyboard if needed and image generation is enabled
+        if IMAGE_GENERATION_ENABLED:
+            storyboard = await process_storyboard(state)
+            if storyboard:
+                state.metadata["storyboard"] = storyboard
+                await process_storyboard_images(storyboard, state.current_message_id)
 
         # Save state
         await save_chat_memory(state, store)

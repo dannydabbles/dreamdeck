@@ -10,7 +10,11 @@ async def get_chat_memory(store: BaseStore) -> ChatState:
     """Get chat memory from store."""
     try:
         state = await store.get("chat_state")
-        return ChatState.parse_obj(state) if state else ChatState()
+        if state:
+            return ChatState.parse_obj(state)
+        else:
+            cl_logger.info("No chat state found, initializing new state.")
+            return ChatState()
     except Exception as e:
         cl_logger.error(f"Database error: {str(e)}")
         raise
@@ -19,6 +23,7 @@ async def save_chat_memory(state: ChatState, store: BaseStore) -> None:
     """Save chat memory to store."""
     try:
         await store.put("chat_state", state.current_message_id, state.dict())
+        cl_logger.info(f"Chat state saved: {state.current_message_id}")
     except Exception as e:
         cl_logger.error(f"Database error: {str(e)}")
         raise

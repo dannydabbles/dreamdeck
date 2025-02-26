@@ -17,7 +17,8 @@ from src.config import (
     DECISION_AGENT_TEMPERATURE, DECISION_AGENT_MAX_TOKENS, DECISION_AGENT_STREAMING, DECISION_AGENT_VERBOSE,
     WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_AGENT_STREAMING, WRITER_AGENT_VERBOSE,
     STORYBOARD_EDITOR_AGENT_TEMPERATURE, STORYBOARD_EDITOR_AGENT_MAX_TOKENS, STORYBOARD_EDITOR_AGENT_STREAMING, STORYBOARD_EDITOR_AGENT_VERBOSE,
-    OPENAI_BASE_URL, SERPAPI_KEY, DICE_SIDES, WEB_SEARCH_ENABLED, MONITORING_ENABLED, MONITORING_ENDPOINT, MONITORING_SAMPLE_RATE
+    OPENAI_BASE_URL, SERPAPI_KEY, DICE_SIDES, WEB_SEARCH_ENABLED, MONITORING_ENABLED, MONITORING_ENDPOINT, MONITORING_SAMPLE_RATE,
+    DICE_ROLLING_ENABLED
 )
 
 # Initialize logging
@@ -59,6 +60,9 @@ def dice_roll(input_str: Optional[str] = None) -> str:
         input_str (str, optional): The dice specification (e.g., "d3", "2d6").
                                    Defaults to "d20" if not specified.
     """
+    if not DICE_ROLLING_ENABLED:
+        return "Dice rolling is disabled in the configuration."
+
     try:
         # Default to d20 if no input is provided
         if not input_str:

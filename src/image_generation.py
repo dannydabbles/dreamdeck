@@ -38,7 +38,7 @@ from .config import (
     STABLE_DIFFUSION_API_URL,
     LLM_TEMPERATURE,
     LLM_TIMEOUT,
-    
+    IMAGE_GENERATION_ENABLED
 )
 
 from chainlit import Message as CLMessage
@@ -62,6 +62,10 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
     Returns:
         Optional[bytes]: The image bytes, or None if generation fails.
     """
+    if not IMAGE_GENERATION_ENABLED:
+        cl.logger.warning("Image generation is disabled in the configuration.")
+        return None
+
     # Flux payload
     payload = {
         "prompt": image_generation_prompt,
@@ -158,7 +162,7 @@ async def generate_image_generation_prompts(
 @task
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
     """Process storyboard into images and send to chat."""
-    if not storyboard:
+    if not storyboard or not IMAGE_GENERATION_ENABLED:
         return
         
     try:

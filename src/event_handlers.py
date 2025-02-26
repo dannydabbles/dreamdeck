@@ -47,7 +47,10 @@ from .config import (
     MONITORING_SAMPLE_RATE,
     CACHING_ENABLED,
     CACHING_TTL,
-    CACHING_MAX_SIZE
+    CACHING_MAX_SIZE,
+    IMAGE_GENERATION_ENABLED,
+    WEB_SEARCH_ENABLED,
+    DICE_ROLLING_ENABLED
 )
 from .state import ChatState
 from .state_graph import chat_workflow as graph
@@ -198,7 +201,7 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
                     ).send()
                     
             except Exception as e:
-                cl_element.logger.error(f"Failed to generate image for prompt: {prompt}. Error: {str(e)}", exc_info=True)
+                cl_element.logger.error(f"Failed to generate image for prompt: {prompt}. Error: {str(e)}")
                 
     except Exception as e:
         cl_element.logger.error(f"Failed to process storyboard images: {str(e)}", exc_info=True)
@@ -313,7 +316,7 @@ async def on_message(message: CLMessage):
         state.messages.append(HumanMessage(content=message.content))
         
         # Handle dice roll if the message contains a dice roll command
-        if "roll" in message.content.lower():
+        if "roll" in message.content.lower() and DICE_ROLLING_ENABLED:
             await handle_dice_roll(message)
             return
 
@@ -335,8 +338,8 @@ async def on_message(message: CLMessage):
         ai_message_id = ai_response.id
         state.metadata["current_message_id"] = ai_message_id
         
-        # Handle image generation if there's a storyboard
-        if "storyboard" in chunk:
+        # Handle image generation if there's a storyboard and image generation is enabled
+        if "storyboard" in chunk and IMAGE_GENERATION_ENABLED:
             asyncio.create_task(process_storyboard_images(
                 chunk["storyboard"],
                 ai_message_id
