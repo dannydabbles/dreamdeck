@@ -233,6 +233,126 @@ Ensure all components are well-documented and tested.
 
 ---
 
+## 6. **Useful Documentation**
+
+### Key Concepts and Documentation Snippets
+
+#### 1. **LangGraph Functional API**
+The Functional API provides decorators to define workflows with streaming and checkpointing capabilities.
+
+- **@entrypoint:** Defines the main entry point for a workflow.
+  ```python
+  @entrypoint(checkpointer=MemorySaver())
+  async def chat_workflow(
+      messages: List[BaseMessage],
+      store: BaseStore,
+      previous: Optional[ChatState] = None,
+      writer: StreamWriter = None
+  ) -> ChatState:
+      # Workflow logic here
+  ```
+
+- **@task:** Defines discrete units of work that can be executed asynchronously.
+  ```python
+  @task
+  async def process_storyboard(state: ChatState) -> Optional[str]:
+      # Task logic here
+  ```
+
+#### 2. **Custom Data Layer**
+The custom data layer extends Chainlit's BaseDataLayer for persistent storage.
+
+- **User Session Management:**
+  ```python
+  class CustomDataLayer(BaseDataLayer):
+      async def get_user_session(self, user_id: str) -> Dict[str, Any]:
+          # Retrieve user session data
+          user_session = await self.get_user(user_id)
+          return user_session.get("session_data", {})
+
+      async def save_user_session(self, user_id: str, session_data: Dict[str, Any]) -> None:
+          # Save user session data
+          user_data = await self.get_user(user_id)
+          if user_data:
+              user_data["session_data"] = session_data
+              await self.update_user(user_data)
+  ```
+
+#### 3. **Error Handling**
+Implement retries and logging for critical operations.
+
+- **Retry Decorator:**
+  ```python
+  from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+
+  @retry(
+      wait=wait_exponential(multiplier=1, min=4, max=10),
+      stop=stop_after_attempt(3),
+      retry=retry_if_exception_type(Exception)
+  )
+  async def on_message(message: CLMessage):
+      try:
+          # Message handling logic
+      except Exception as e:
+          cl_logger.error(f"Message handling failed: {e}", exc_info=True)
+          await CLMessage(content="⚠️ An error occurred while processing your message. Please try again later.").send()
+  ```
+
+#### 4. **Configuration Management**
+Validate and load configuration settings using Pydantic.
+
+- **Configuration Schema:**
+  ```python
+  from pydantic import BaseModel, ValidationError
+
+  class ConfigSchema(BaseModel):
+      llm: dict
+      prompts: dict
+      image_generation_payload: dict
+      timeouts: dict
+      refusal_list: list
+      defaults: dict
+      dice: dict
+      paths: dict
+      openai: dict
+      search: dict
+      chainlit: dict
+      logging: dict
+      error_handling: dict
+      api: dict
+      features: dict
+      rate_limits: dict
+      security: dict
+      monitoring: dict
+      caching: dict
+
+  def load_config():
+      try:
+          config = ConfigSchema(**config_yaml)
+      except ValidationError as e:
+          cl_logger.error(f"Configuration validation failed: {e}")
+          raise
+  ```
+
+#### 5. **State Management**
+Track application state using Pydantic models.
+
+- **ChatState Model:**
+  ```python
+  from pydantic import BaseModel
+  from typing import List, Optional
+  from langchain_core.messages import BaseMessage
+
+  class ChatState(BaseModel):
+      messages: List[BaseMessage] = []
+      metadata: dict = {}
+      current_message_id: Optional[str] = None
+      tool_results: List[str] = []
+      error_count: int = 0
+  ```
+
+---
+
 ## Next Steps
 
 ### Recommended Implementation Order
