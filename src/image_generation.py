@@ -91,10 +91,10 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
             image_bytes = base64.b64decode(image_data)
             return image_bytes
     except httpx.RequestError as e:
-        cl.logger.error(f"Image generation failed: {e}")
+        cl.logger.error(f"Image generation failed: {e}", exc_info=True)
         raise
     except (KeyError, IndexError, ValueError) as e:
-        cl.logger.error(f"Error processing image data: {e}")
+        cl.logger.error(f"Error processing image data: {e}", exc_info=True)
         return None
 
 @retry(
@@ -152,7 +152,7 @@ async def generate_image_generation_prompts(
             else:
                 image_gen_prompts.append(full_prompt)
     except Exception as e:
-        cl.logger.error(f"Image prompt generation failed: {e}")
+        cl.logger.error(f"Image prompt generation failed: {e}", exc_info=True)
         image_gen_prompts = []
 
     cl.logger.debug(f"Generated Image Generation Prompt: {image_gen_prompts}")

@@ -3,9 +3,17 @@ import logging
 from chainlit import cl
 from chainlit.server import app as chainlit_app
 from src.initialization import init_db, DatabasePool
-from src.stores import VectorStore
 
-# Initialize logging
+# Centralized logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('chainlit.log')
+    ]
+)
+
 cl_logger = logging.getLogger("chainlit")
 
 async def main():

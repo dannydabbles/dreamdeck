@@ -1,6 +1,7 @@
 import os
 import yaml
 import logging
+from pydantic import BaseModel, ValidationError
 from logging.handlers import RotatingFileHandler
 
 # Initialize logging
@@ -15,166 +16,194 @@ if not os.path.exists(CONFIG_FILE):
 with open(CONFIG_FILE, "r") as f:
     config_yaml = yaml.safe_load(f)
 
-# Database configuration with fallbacks
-DATABASE_URL = os.getenv("DATABASE_URL", config_yaml.get("defaults", {}).get("db_file", "chainlit.db"))
-STABLE_DIFFUSION_API_URL = os.getenv("STABLE_DIFFUSION_API_URL", "http://localhost:7860")
-cl_logger.info(f"Database URL loaded: {DATABASE_URL}")
+class ConfigSchema(BaseModel):
+    llm: dict
+    prompts: dict
+    image_generation_payload: dict
+    timeouts: dict
+    refusal_list: list
+    defaults: dict
+    dice: dict
+    paths: dict
+    openai: dict
+    search: dict
+    chainlit: dict
+    logging: dict
+    error_handling: dict
+    api: dict
+    features: dict
+    rate_limits: dict
+    security: dict
+    monitoring: dict
+    caching: dict
 
-# LLM configuration
-LLM_TEMPERATURE = config_yaml.get("llm", {}).get("temperature", 0.7)
-LLM_MAX_TOKENS = config_yaml.get("llm", {}).get("max_tokens", 64000)
-LLM_MODEL_NAME = config_yaml.get("llm", {}).get("model_name", "gpt-3.5-turbo")
-LLM_STREAMING = config_yaml.get("llm", {}).get("streaming", True)
-LLM_TIMEOUT = config_yaml.get("llm", {}).get("timeout", 300)
-LLM_PRESENCE_PENALTY = config_yaml.get("llm", {}).get("presence_penalty", 0.1)
-LLM_FREQUENCY_PENALTY = config_yaml.get("llm", {}).get("frequency_penalty", 0.1)
-LLM_TOP_P = config_yaml.get("llm", {}).get("top_p", 0.9)
-LLM_VERBOSE = config_yaml.get("llm", {}).get("verbose", False)
-cl_logger.info(f"LLM configuration loaded: temperature={LLM_TEMPERATURE}, max_tokens={LLM_MAX_TOKENS}, model_name={LLM_MODEL_NAME}, streaming={LLM_STREAMING}, timeout={LLM_TIMEOUT}, presence_penalty={LLM_PRESENCE_PENALTY}, frequency_penalty={LLM_FREQUENCY_PENALTY}, top_p={LLM_TOP_P}, verbose={LLM_VERBOSE}")
+def load_config():
+    try:
+        config = ConfigSchema(**config_yaml)
+    except ValidationError as e:
+        cl_logger.error(f"Configuration validation failed: {e}")
+        raise
 
-# Agents configuration
-DECISION_AGENT_TEMPERATURE = config_yaml.get("agents", {}).get("decision_agent", {}).get("temperature", 0.2)
-DECISION_AGENT_MAX_TOKENS = config_yaml.get("agents", {}).get("decision_agent", {}).get("max_tokens", 100)
-DECISION_AGENT_STREAMING = config_yaml.get("agents", {}).get("decision_agent", {}).get("streaming", True)
-DECISION_AGENT_VERBOSE = config_yaml.get("agents", {}).get("decision_agent", {}).get("verbose", True)
-WRITER_AGENT_TEMPERATURE = config_yaml.get("agents", {}).get("writer_agent", {}).get("temperature", 0.7)
-WRITER_AGENT_MAX_TOKENS = config_yaml.get("agents", {}).get("writer_agent", {}).get("max_tokens", 8000)
-WRITER_AGENT_STREAMING = config_yaml.get("agents", {}).get("writer_agent", {}).get("streaming", True)
-WRITER_AGENT_VERBOSE = config_yaml.get("agents", {}).get("writer_agent", {}).get("verbose", True)
-STORYBOARD_EDITOR_AGENT_TEMPERATURE = config_yaml.get("agents", {}).get("storyboard_editor_agent", {}).get("temperature", 0.7)
-STORYBOARD_EDITOR_AGENT_MAX_TOKENS = config_yaml.get("agents", {}).get("storyboard_editor_agent", {}).get("max_tokens", 8000)
-STORYBOARD_EDITOR_AGENT_STREAMING = config_yaml.get("agents", {}).get("storyboard_editor_agent", {}).get("streaming", False)
-STORYBOARD_EDITOR_AGENT_VERBOSE = config_yaml.get("agents", {}).get("storyboard_editor_agent", {}).get("verbose", True)
-cl_logger.info(f"Agents configuration loaded: decision_agent (temperature={DECISION_AGENT_TEMPERATURE}, max_tokens={DECISION_AGENT_MAX_TOKENS}, streaming={DECISION_AGENT_STREAMING}, verbose={DECISION_AGENT_VERBOSE}), writer_agent (temperature={WRITER_AGENT_TEMPERATURE}, max_tokens={WRITER_AGENT_MAX_TOKENS}, streaming={WRITER_AGENT_STREAMING}, verbose={WRITER_AGENT_VERBOSE}), storyboard_editor_agent (temperature={STORYBOARD_EDITOR_AGENT_TEMPERATURE}, max_tokens={STORYBOARD_EDITOR_AGENT_MAX_TOKENS}, streaming={STORYBOARD_EDITOR_AGENT_STREAMING}, verbose={STORYBOARD_EDITOR_AGENT_VERBOSE})")
+    # Database configuration with fallbacks
+    DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
+    STABLE_DIFFUSION_API_URL = os.getenv("STABLE_DIFFUSION_API_URL", "http://localhost:7860")
+    cl_logger.info(f"Database URL loaded: {DATABASE_URL}")
 
-# Prompts
-AI_WRITER_PROMPT = config_yaml.get("prompts", {}).get("ai_writer_prompt", "")
-STORYBOARD_GENERATION_PROMPT = config_yaml.get("prompts", {}).get("storyboard_generation_prompt", "")
-STORYBOARD_GENERATION_PROMPT_PREFIX = config_yaml.get("prompts", {}).get("storyboard_generation_prompt_prefix", "")
-STORYBOARD_GENERATION_PROMPT_POSTFIX = config_yaml.get("prompts", {}).get("storyboard_generation_prompt_postfix", "")
-DECISION_PROMPT = config_yaml.get("prompts", {}).get("decision_prompt", "")  # Load the new prompt
+    # LLM configuration
+    LLM_TEMPERATURE = config.llm.temperature
+    LLM_MAX_TOKENS = config.llm.max_tokens
+    LLM_MODEL_NAME = config.llm.model_name
+    LLM_STREAMING = config.llm.streaming
+    LLM_TIMEOUT = config.llm.timeout
+    LLM_PRESENCE_PENALTY = config.llm.presence_penalty
+    LLM_FREQUENCY_PENALTY = config.llm.frequency_penalty
+    LLM_TOP_P = config.llm.top_p
+    LLM_VERBOSE = config.llm.verbose
+    cl_logger.info(f"LLM configuration loaded: temperature={LLM_TEMPERATURE}, max_tokens={LLM_MAX_TOKENS}, model_name={LLM_MODEL_NAME}, streaming={LLM_STREAMING}, timeout={LLM_TIMEOUT}, presence_penalty={LLM_PRESENCE_PENALTY}, frequency_penalty={LLM_FREQUENCY_PENALTY}, top_p={LLM_TOP_P}, verbose={LLM_VERBOSE}")
 
-# Image generation payload
-IMAGE_GENERATION_PAYLOAD = config_yaml.get("image_generation_payload", {})
-NEGATIVE_PROMPT = IMAGE_GENERATION_PAYLOAD.get("negative_prompt", "")
-STEPS = IMAGE_GENERATION_PAYLOAD.get("steps", 40)
-SAMPLER_NAME = IMAGE_GENERATION_PAYLOAD.get("sampler_name", "Euler")
-SCHEDULER = IMAGE_GENERATION_PAYLOAD.get("scheduler", "Simple")
-CFG_SCALE = IMAGE_GENERATION_PAYLOAD.get("cfg_scale", 10)
-DISTILLED_CFG_SCALE = IMAGE_GENERATION_PAYLOAD.get("distilled_cfg_scale", 1)
-HR_CFG = IMAGE_GENERATION_PAYLOAD.get("hr_cfg", 1)
-HR_DISTILLED_CFG = IMAGE_GENERATION_PAYLOAD.get("hr_distilled_cfg", 1)
-WIDTH = IMAGE_GENERATION_PAYLOAD.get("width", 1024)
-HEIGHT = IMAGE_GENERATION_PAYLOAD.get("height", 1024)
-HR_UPSCALER = IMAGE_GENERATION_PAYLOAD.get("hr_upscaler", "RealESRGAN")
-DENOISING_STRENGTH = IMAGE_GENERATION_PAYLOAD.get("denoising_strength", 0.1)
-HR_SECOND_PASS_STEPS = IMAGE_GENERATION_PAYLOAD.get("hr_second_pass_steps", 0)
-HR_SCALE = IMAGE_GENERATION_PAYLOAD.get("hr_scale", 1)
-cl_logger.info(f"Image generation payload loaded: negative_prompt={NEGATIVE_PROMPT}, steps={STEPS}, sampler_name={SAMPLER_NAME}, scheduler={SCHEDULER}, cfg_scale={CFG_SCALE}, width={WIDTH}, height={HEIGHT}, hr_scale={HR_SCALE}, hr_upscaler={HR_UPSCALER}, denoising_strength={DENOISING_STRENGTH}, hr_second_pass_steps={HR_SECOND_PASS_STEPS}")
+    # Agents configuration
+    DECISION_AGENT_TEMPERATURE = config.agents.decision_agent.temperature
+    DECISION_AGENT_MAX_TOKENS = config.agents.decision_agent.max_tokens
+    DECISION_AGENT_STREAMING = config.agents.decision_agent.streaming
+    DECISION_AGENT_VERBOSE = config.agents.decision_agent.verbose
+    WRITER_AGENT_TEMPERATURE = config.agents.writer_agent.temperature
+    WRITER_AGENT_MAX_TOKENS = config.agents.writer_agent.max_tokens
+    WRITER_AGENT_STREAMING = config.agents.writer_agent.streaming
+    WRITER_AGENT_VERBOSE = config.agents.writer_agent.verbose
+    STORYBOARD_EDITOR_AGENT_TEMPERATURE = config.agents.storyboard_editor_agent.temperature
+    STORYBOARD_EDITOR_AGENT_MAX_TOKENS = config.agents.storyboard_editor_agent.max_tokens
+    STORYBOARD_EDITOR_AGENT_STREAMING = config.agents.storyboard_editor_agent.streaming
+    STORYBOARD_EDITOR_AGENT_VERBOSE = config.agents.storyboard_editor_agent.verbose
+    cl_logger.info(f"Agents configuration loaded: decision_agent (temperature={DECISION_AGENT_TEMPERATURE}, max_tokens={DECISION_AGENT_MAX_TOKENS}, streaming={DECISION_AGENT_STREAMING}, verbose={DECISION_AGENT_VERBOSE}), writer_agent (temperature={WRITER_AGENT_TEMPERATURE}, max_tokens={WRITER_AGENT_MAX_TOKENS}, streaming={WRITER_AGENT_STREAMING}, verbose={WRITER_AGENT_VERBOSE}), storyboard_editor_agent (temperature={STORYBOARD_EDITOR_AGENT_TEMPERATURE}, max_tokens={STORYBOARD_EDITOR_AGENT_MAX_TOKENS}, streaming={STORYBOARD_EDITOR_AGENT_STREAMING}, verbose={STORYBOARD_EDITOR_AGENT_VERBOSE})")
 
-# Search enabled
-SEARCH_ENABLED = config_yaml.get("search_enabled", False)
+    # Prompts
+    AI_WRITER_PROMPT = config.prompts.ai_writer_prompt
+    STORYBOARD_GENERATION_PROMPT = config.prompts.storyboard_generation_prompt
+    STORYBOARD_GENERATION_PROMPT_PREFIX = config.prompts.storyboard_generation_prompt_prefix
+    STORYBOARD_GENERATION_PROMPT_POSTFIX = config.prompts.storyboard_generation_prompt_postfix
+    DECISION_PROMPT = config.prompts.decision_prompt  # Load the new prompt
 
-# Timeouts
-IMAGE_GENERATION_TIMEOUT = config_yaml.get("timeouts", {}).get("image_generation_timeout", 300)
-cl_logger.info(f"Image generation timeout loaded: {IMAGE_GENERATION_TIMEOUT}")
+    # Image generation payload
+    IMAGE_GENERATION_PAYLOAD = config.image_generation_payload
+    NEGATIVE_PROMPT = IMAGE_GENERATION_PAYLOAD.negative_prompt
+    STEPS = IMAGE_GENERATION_PAYLOAD.steps
+    SAMPLER_NAME = IMAGE_GENERATION_PAYLOAD.sampler_name
+    SCHEDULER = IMAGE_GENERATION_PAYLOAD.scheduler
+    CFG_SCALE = IMAGE_GENERATION_PAYLOAD.cfg_scale
+    DISTILLED_CFG_SCALE = IMAGE_GENERATION_PAYLOAD.distilled_cfg_scale
+    HR_CFG = IMAGE_GENERATION_PAYLOAD.hr_cfg
+    HR_DISTILLED_CFG = IMAGE_GENERATION_PAYLOAD.hr_distilled_cfg
+    WIDTH = IMAGE_GENERATION_PAYLOAD.width
+    HEIGHT = IMAGE_GENERATION_PAYLOAD.height
+    HR_UPSCALER = IMAGE_GENERATION_PAYLOAD.hr_upscaler
+    DENOISING_STRENGTH = IMAGE_GENERATION_PAYLOAD.denoising_strength
+    HR_SECOND_PASS_STEPS = IMAGE_GENERATION_PAYLOAD.hr_second_pass_steps
+    HR_SCALE = IMAGE_GENERATION_PAYLOAD.hr_scale
+    cl_logger.info(f"Image generation payload loaded: negative_prompt={NEGATIVE_PROMPT}, steps={STEPS}, sampler_name={SAMPLER_NAME}, scheduler={SCHEDULER}, cfg_scale={CFG_SCALE}, width={WIDTH}, height={HEIGHT}, hr_scale={HR_SCALE}, hr_upscaler={HR_UPSCALER}, denoising_strength={DENOISING_STRENGTH}, hr_second_pass_steps={HR_SECOND_PASS_STEPS}")
 
-# Token limits
-LLM_MAX_TOKENS = config_yaml.get("llm", {}).get("max_tokens", 4000)
-cl_logger.info(f"LLM max tokens loaded: {LLM_MAX_TOKENS}")
+    # Search enabled
+    SEARCH_ENABLED = config.search_enabled
 
-# Refusal list
-REFUSAL_LIST = config_yaml.get("refusal_list", [])
-cl_logger.info(f"Refusal list loaded: {REFUSAL_LIST}")
+    # Timeouts
+    IMAGE_GENERATION_TIMEOUT = config.timeouts.image_generation_timeout
+    cl_logger.info(f"Image generation timeout loaded: {IMAGE_GENERATION_TIMEOUT}")
 
-# Defaults
-DB_FILE = config_yaml.get("defaults", {}).get("db_file", "chainlit.db")
-cl_logger.info(f"Default DB file loaded: {DB_FILE}")
+    # Token limits
+    LLM_MAX_TOKENS = config.llm.max_tokens
+    cl_logger.info(f"LLM max tokens loaded: {LLM_MAX_TOKENS}")
 
-# Dice settings
-DICE_SIDES = config_yaml.get("dice", {}).get("sides", 20)  # Default to d20
-cl_logger.info(f"Default dice sides loaded: {DICE_SIDES}")
+    # Refusal list
+    REFUSAL_LIST = config.refusal_list
+    cl_logger.info(f"Refusal list loaded: {REFUSAL_LIST}")
 
-# Knowledge directory
-KNOWLEDGE_DIRECTORY = config_yaml.get("paths", {}).get("knowledge", "./knowledge")
-cl_logger.info(f"Knowledge directory loaded: {KNOWLEDGE_DIRECTORY}")
+    # Defaults
+    DB_FILE = config.defaults.db_file
+    cl_logger.info(f"Default DB file loaded: {DB_FILE}")
 
-# LLM settings
-LLM_SETTINGS = config_yaml.get("llm_settings", {})
-LLM_CHUNK_SIZE = LLM_SETTINGS.get("chunk_size", 1024)
-LLM_TEMPERATURE = LLM_SETTINGS.get("temperature", 0.7)
-LLM_MODEL_NAME = LLM_SETTINGS.get("model_name", "gpt-3.5-turbo")
-cl_logger.info(f"LLM settings loaded: chunk_size={LLM_CHUNK_SIZE}, temperature={LLM_TEMPERATURE}, model_name={LLM_MODEL_NAME}")
+    # Dice settings
+    DICE_SIDES = config.dice.sides  # Default to d20
+    cl_logger.info(f"Default dice sides loaded: {DICE_SIDES}")
 
-# Image settings
-IMAGE_SETTINGS = config_yaml.get("image_settings", {})
-NUM_IMAGE_PROMPTS = IMAGE_SETTINGS.get("num_image_prompts", 1)
-cl_logger.info(f"Image settings loaded: num_image_prompts={NUM_IMAGE_PROMPTS}")
+    # Knowledge directory
+    KNOWLEDGE_DIRECTORY = config.paths.knowledge
+    cl_logger.info(f"Knowledge directory loaded: {KNOWLEDGE_DIRECTORY}")
 
-# OpenAI settings
-OPENAI_BASE_URL = config_yaml.get("openai", {}).get("base_url", "")
-OPENAI_API_KEY = config_yaml.get("openai", {}).get("api_key", "")
-cl_logger.info(f"OpenAI settings loaded: base_url={OPENAI_BASE_URL}, api_key={OPENAI_API_KEY}")
+    # LLM settings
+    LLM_SETTINGS = config.llm_settings
+    LLM_CHUNK_SIZE = LLM_SETTINGS.chunk_size
+    LLM_TEMPERATURE = LLM_SETTINGS.temperature
+    LLM_MODEL_NAME = LLM_SETTINGS.model_name
+    cl_logger.info(f"LLM settings loaded: chunk_size={LLM_CHUNK_SIZE}, temperature={LLM_TEMPERATURE}, model_name={LLM_MODEL_NAME}")
 
-# Search settings
-SERPAPI_KEY = config_yaml.get("search", {}).get("serpapi_key", "")
-cl_logger.info(f"Search settings loaded: serpapi_key={SERPAPI_KEY}")
+    # Image settings
+    IMAGE_SETTINGS = config.image_settings
+    NUM_IMAGE_PROMPTS = IMAGE_SETTINGS.num_image_prompts
+    cl_logger.info(f"Image settings loaded: num_image_prompts={NUM_IMAGE_PROMPTS}")
 
-# Chainlit Starters
-CHAINLIT_STARTERS = config_yaml.get("CHAINLIT_STARTERS", [
-    "Hello! What kind of story would you like to create today?",
-])
-cl_logger.info(f"Chainlit starters loaded: {CHAINLIT_STARTERS}")
+    # OpenAI settings
+    OPENAI_BASE_URL = config.openai.base_url
+    OPENAI_API_KEY = config.openai.api_key
+    cl_logger.info(f"OpenAI settings loaded: base_url={OPENAI_BASE_URL}, api_key={OPENAI_API_KEY}")
 
-# Logging settings
-LOGGING_LEVEL = config_yaml.get("logging", {}).get("level", "INFO")
-LOGGING_FILE = config_yaml.get("logging", {}).get("file", "chainlit.log")
-LOGGING_CONSOLE = config_yaml.get("logging", {}).get("console", True)
-LOGGING_FORMAT = config_yaml.get("logging", {}).get("format", '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-LOGGING_MAX_SIZE = config_yaml.get("logging", {}).get("max_size", "10MB")
-LOGGING_BACKUP_COUNT = config_yaml.get("logging", {}).get("backup_count", 3)
+    # Search settings
+    SERPAPI_KEY = config.search.serpapi_key
+    cl_logger.info(f"Search settings loaded: serpapi_key={SERPAPI_KEY}")
 
-# Set up logging
-cl_logger.setLevel(LOGGING_LEVEL)
-formatter = logging.Formatter(LOGGING_FORMAT)
-handler = RotatingFileHandler(LOGGING_FILE, maxBytes=int(LOGGING_MAX_SIZE), backupCount=LOGGING_BACKUP_COUNT)
-handler.setFormatter(formatter)
-cl_logger.addHandler(handler)
+    # Chainlit Starters
+    CHAINLIT_STARTERS = config.chainlit.starters
+    cl_logger.info(f"Chainlit starters loaded: {CHAINLIT_STARTERS}")
 
-if LOGGING_CONSOLE:
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    cl_logger.addHandler(console_handler)
+    # Logging settings
+    LOGGING_LEVEL = config.logging.level
+    LOGGING_FILE = config.logging.file
+    LOGGING_CONSOLE = config.logging.console
+    LOGGING_FORMAT = config.logging.format
+    LOGGING_MAX_SIZE = config.logging.max_size
+    LOGGING_BACKUP_COUNT = config.logging.backup_count
 
-# Error handling settings
-MAX_RETRIES = config_yaml.get("error_handling", {}).get("max_retries", 3)
-RETRY_DELAY = config_yaml.get("error_handling", {}).get("retry_delay", 5)
-ERROR_LOG_LEVEL = config_yaml.get("error_handling", {}).get("log_level", "ERROR")
+    # Set up logging
+    cl_logger.setLevel(LOGGING_LEVEL)
+    formatter = logging.Formatter(LOGGING_FORMAT)
+    handler = RotatingFileHandler(LOGGING_FILE, maxBytes=int(LOGGING_MAX_SIZE), backupCount=LOGGING_BACKUP_COUNT)
+    handler.setFormatter(formatter)
+    cl_logger.addHandler(handler)
 
-# API settings
-API_BASE_URL = config_yaml.get("api", {}).get("base_url", "http://localhost:8080")
-API_TIMEOUT = config_yaml.get("api", {}).get("timeout", 30)
-API_MAX_CONNECTIONS = config_yaml.get("api", {}).get("max_connections", 10)
+    if LOGGING_CONSOLE:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        cl_logger.addHandler(console_handler)
 
-# Feature toggles
-IMAGE_GENERATION_ENABLED = config_yaml.get("features", {}).get("image_generation", True)
-WEB_SEARCH_ENABLED = config_yaml.get("features", {}).get("web_search", False)
-DICE_ROLLING_ENABLED = config_yaml.get("features", {}).get("dice_rolling", True)
+    # Error handling settings
+    MAX_RETRIES = config.error_handling.max_retries
+    RETRY_DELAY = config.error_handling.retry_delay
+    ERROR_LOG_LEVEL = config.error_handling.log_level
 
-# Rate limits
-IMAGE_GENERATION_RATE_LIMIT = config_yaml.get("rate_limits", {}).get("image_generation", "5/minute")
-API_CALLS_RATE_LIMIT = config_yaml.get("rate_limits", {}).get("api_calls", "60/hour")
+    # API settings
+    API_BASE_URL = config.api.base_url
+    API_TIMEOUT = config.api.timeout
+    API_MAX_CONNECTIONS = config.api.max_connections
 
-# Security settings
-SECRET_KEY = config_yaml.get("security", {}).get("secret_key", "your-secret-key-here")
-SESSION_TIMEOUT = config_yaml.get("security", {}).get("session_timeout", 3600)
+    # Feature toggles
+    IMAGE_GENERATION_ENABLED = config.features.image_generation
+    WEB_SEARCH_ENABLED = config.features.web_search
+    DICE_ROLLING_ENABLED = config.features.dice_rolling
 
-# Monitoring settings
-MONITORING_ENABLED = config_yaml.get("monitoring", {}).get("enabled", False)
-MONITORING_ENDPOINT = config_yaml.get("monitoring", {}).get("endpoint", "http://localhost:9411")
-MONITORING_SAMPLE_RATE = config_yaml.get("monitoring", {}).get("sample_rate", 0.1)
+    # Rate limits
+    IMAGE_GENERATION_RATE_LIMIT = config.rate_limits.image_generation
+    API_CALLS_RATE_LIMIT = config.rate_limits.api_calls
 
-# Caching settings
-CACHING_ENABLED = config_yaml.get("caching", {}).get("enabled", True)
-CACHING_TTL = config_yaml.get("caching", {}).get("ttl", 3600)
-CACHING_MAX_SIZE = config_yaml.get("caching", {}).get("max_size", "100MB")
+    # Security settings
+    SECRET_KEY = config.security.secret_key
+    SESSION_TIMEOUT = config.security.session_timeout
+
+    # Monitoring settings
+    MONITORING_ENABLED = config.monitoring.enabled
+    MONITORING_ENDPOINT = config.monitoring.endpoint
+    MONITORING_SAMPLE_RATE = config.monitoring.sample_rate
+
+    # Caching settings
+    CACHING_ENABLED = config.caching.enabled
+    CACHING_TTL = config.caching.ttl
+    CACHING_MAX_SIZE = config.caching.max_size
+
+    return config
