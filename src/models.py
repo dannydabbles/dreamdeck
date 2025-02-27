@@ -44,6 +44,8 @@ class ChatState(BaseModel):
     tool_results: List[str] = Field(default_factory=list)
     error_count: int = Field(default=0)
     memories: List[str] = Field(default_factory=list)  # Add memories field
+    user_preferences: Dict[str, Any] = Field(default_factory=dict)  # Add user preferences
+    thread_data: Dict[str, Any] = Field(default_factory=dict)  # Add thread-specific data
 
     def get_memories_str(self) -> str:
         """Get formatted string of memories."""

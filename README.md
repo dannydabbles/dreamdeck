@@ -112,12 +112,13 @@ Dreamdeck is an AI-powered application designed to provide a Holodeck-like exper
 ### Project Structure
 
 - **`src/app.py`:** Main entry point for the Chainlit application.
-- **`src/initialization.py`:** Initialization logic for the application.
+- **`src/initialization.py`:** Initialization logic for the application, including database and data layer.
 - **`src/tools_and_agents.py`:** Contains tools and agents used in the application.
 - **`src/state_graph.py`:** Handles state and graph-related operations, including generating storyboards and images.
 - **`src/memory_management.py`:** Manages chat and vector memory.
 - **`src/image_generation.py`:** Handles image generation, including generating prompts and handling image generation requests.
 - **`src/event_handlers.py`:** Contains event handlers for the application.
+- **`src/data_layer.py`:** Custom data layer for user and thread management.
 - **`config.yaml`:** Configuration settings for the LLM, prompts, and other settings.
 - **`docker-compose.yaml`:** Docker Compose configuration for running the application and its dependencies.
 - **`pyproject.toml`:** Project dependencies and build settings.
@@ -149,10 +150,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Join our community to share your stories, get help, and contribute to the project:
 - **GitHub Issues:** Report bugs, request features, and discuss ideas.
 - **Discord:** Join our Discord server for real-time support and collaboration.
-
-### Acknowledgments
-
-Special thanks to the contributors and the open-source community for their support and contributions.
 
 ---
 

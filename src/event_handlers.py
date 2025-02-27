@@ -11,8 +11,6 @@ from chainlit.types import ThreadDict, RunnableConfig
 from chainlit import LangchainCallbackHandler
 from langgraph.func import task
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, UnstructuredMarkdownLoader
-from langchain_core.messages import SystemMessage, AIMessage, HumanMessage, ToolMessage
-from langchain_core.runnables import RunnableConfig
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -55,6 +53,7 @@ from .config import (
 from .state import ChatState
 from .state_graph import chat_workflow as graph
 from .tools_and_agents import handle_dice_roll  # Import handle_dice_roll
+from .data_layer import custom_data_layer  # Import custom data layer
 
 # Define an asynchronous range generator
 async def async_range(end):
@@ -74,6 +73,10 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
     Returns:
         Optional[bytes]: The image bytes, or None if generation fails.
     """
+    if not IMAGE_GENERATION_ENABLED:
+        cl_element.logger.warning("Image generation is disabled in the configuration.")
+        return None
+
     # Flux payload
     payload = {
         "prompt": image_generation_prompt,
@@ -220,10 +223,16 @@ async def on_chat_start():
         ]
     ).send()
     
+    # Initialize user session
+    user_id = context.session.user.id
+    user_session = await custom_data_layer.get_user(user_id) or await custom_data_layer.create_user({"id": user_id, "name": context.session.user.name})
+    cl_user_session.set("user_session", user_session)
+
     # Create initial state
     state = ChatState(
         messages=[SystemMessage(content=AI_WRITER_PROMPT)],
-        thread_id=context.session.id
+        thread_id=context.session.id,
+        user_preferences=user_session.get("preferences", {}),
     )
     
     # Initialize thread in Chainlit
@@ -280,7 +289,9 @@ async def on_chat_resume(thread: ThreadDict):
     # Create state
     state = ChatState(
         messages=messages,
-        thread_id=thread["id"]
+        thread_id=thread["id"],
+        user_preferences=cl_user_session.get("user_session", {}).get("preferences", {}),
+        thread_data=cl_user_session.get("thread_data", {})
     )
     
     # Store state and memories

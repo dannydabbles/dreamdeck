@@ -2,6 +2,7 @@ import os
 import logging
 from asyncpg.pool import Pool
 from typing import Optional
+from .data_layer import CustomDataLayer
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -40,9 +41,16 @@ class DatabasePool:
             cls._instance = None
             cls._initialized = False
 
+# Initialize the custom data layer
+custom_data_layer = CustomDataLayer()
+
 # Initialize the database pool
 async def init_db():
     await DatabasePool.initialize()
+
+# Initialize the custom data layer
+async def init_data_layer():
+    await custom_data_layer.initialize()
 
 # Initialize the storage client
 # fs_storage_client = FSStorageClient(
