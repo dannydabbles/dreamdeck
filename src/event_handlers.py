@@ -14,6 +14,7 @@ from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Unst
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage  # Import missing message types
 
 from .config import (
     NEGATIVE_PROMPT,
@@ -173,7 +174,7 @@ async def generate_image_generation_prompts(
 @task
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
     """Process storyboard into images and send to chat."""
-    if not storyboard:
+    if not storyboard or not IMAGE_GENERATION_ENABLED:
         return
         
     try:
@@ -207,7 +208,7 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
                 cl_element.logger.error(f"Failed to generate image for prompt: {prompt}. Error: {str(e)}")
                 
     except Exception as e:
-        cl_element.logger.error(f"Failed to process storyboard images: {str(e)}", exc_info=True)
+        cl_element.logger.error(f"Failed to process storyboard images: {str(e)}")
 
 @on_chat_start
 async def on_chat_start():
