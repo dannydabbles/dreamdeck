@@ -3,6 +3,7 @@ import logging
 from chainlit import cl
 from chainlit.server import app as chainlit_app
 from src.initialization import init_db, DatabasePool
+from src.stores import VectorStore  # Import VectorStore
 
 # Centralized logging configuration
 logging.basicConfig(
