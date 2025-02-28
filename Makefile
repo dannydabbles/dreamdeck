@@ -26,7 +26,7 @@ lint:
 
 black:
 	@echo "Formatting the code..."
-	@poetry run black .
+	@poetry run black --check .
 
 format: lint
 	@echo "Formatting the code..."
