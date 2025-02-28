@@ -3,34 +3,44 @@ from pydantic import BaseModel, Field, validator
 from datetime import datetime
 from enum import Enum
 import operator
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage, SystemMessage
+from langchain_core.messages import (
+    BaseMessage,
+    HumanMessage,
+    AIMessage,
+    ToolMessage,
+    SystemMessage,
+)
 from langgraph.managed import IsLastStep
 import chainlit as cl
 
+
 class MessageType(str, Enum):
     """Enum for message types in the chat."""
+
     HUMAN = "human"
     AI = "ai"
     TOOL = "tool"
     SYSTEM = "system"
 
+
 class Message(BaseModel):
     """Model for chat messages with rich metadata.
-    
+
     Attributes:
         content (str): The content of the message.
         type (MessageType): The type of the message.
         metadata (Dict[str, Any], optional): Additional metadata. Defaults to an empty dictionary.
         created_at (datetime, optional): The creation timestamp. Defaults to the current time.
     """
+
     content: str
     type: MessageType
     metadata: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=datetime.now)
-    
+
     def to_langchain_message(self) -> BaseMessage:
         """Convert to LangChain message format.
-        
+
         Returns:
             BaseMessage: The LangChain message.
         """
@@ -38,16 +48,16 @@ class Message(BaseModel):
             MessageType.HUMAN: HumanMessage,
             MessageType.AI: AIMessage,
             MessageType.TOOL: ToolMessage,
-            MessageType.SYSTEM: SystemMessage
+            MessageType.SYSTEM: SystemMessage,
         }
         return message_map[self.type](
-            content=self.content,
-            additional_kwargs=self.metadata
+            content=self.content, additional_kwargs=self.metadata
         )
+
 
 class ChatState(BaseModel):
     """Enhanced state model with Chainlit integration.
-    
+
     Attributes:
         messages (Sequence[BaseMessage]): The list of messages.
         is_last_step (IsLastStep, optional): Flag indicating if this is the last step. Defaults to False.
@@ -60,6 +70,7 @@ class ChatState(BaseModel):
         user_preferences (Dict[str, Any], optional): User preferences. Defaults to an empty dictionary.
         thread_data (Dict[str, Any], optional): Thread-specific data. Defaults to an empty dictionary.
     """
+
     messages: Annotated[Sequence[BaseMessage], operator.add]
     is_last_step: IsLastStep = Field(default_factory=lambda: IsLastStep(False))
     thread_id: str = Field(default_factory=lambda: cl.context.session.id)
@@ -68,12 +79,16 @@ class ChatState(BaseModel):
     tool_results: List[str] = Field(default_factory=list)
     error_count: int = Field(default=0)
     memories: List[str] = Field(default_factory=list)  # Add memories field
-    user_preferences: Dict[str, Any] = Field(default_factory=dict)  # Add user preferences
-    thread_data: Dict[str, Any] = Field(default_factory=dict)  # Add thread-specific data
+    user_preferences: Dict[str, Any] = Field(
+        default_factory=dict
+    )  # Add user preferences
+    thread_data: Dict[str, Any] = Field(
+        default_factory=dict
+    )  # Add thread-specific data
 
     def get_memories_str(self) -> str:
         """Get formatted string of memories.
-        
+
         Returns:
             str: The formatted string of memories.
         """
@@ -81,24 +96,27 @@ class ChatState(BaseModel):
 
     def get_recent_history_str(self) -> str:
         """Get formatted string of recent message history.
-        
+
         Returns:
             str: The formatted string of recent message history.
         """
         recent_messages = self.get_recent_history()
         filtered_messages = [
-            msg for msg in recent_messages 
-            if isinstance(msg, (HumanMessage, AIMessage)) or
-            (isinstance(msg, ToolMessage) and "roll" in msg.content.lower())
+            msg
+            for msg in recent_messages
+            if isinstance(msg, (HumanMessage, AIMessage))
+            or (isinstance(msg, ToolMessage) and "roll" in msg.content.lower())
         ]
-        return "\n".join([
-            f"{'Human' if isinstance(msg, HumanMessage) else 'GM' if isinstance(msg, AIMessage) else 'Dice'}: {msg.content}" 
-            for msg in filtered_messages
-        ])
+        return "\n".join(
+            [
+                f"{'Human' if isinstance(msg, HumanMessage) else 'GM' if isinstance(msg, AIMessage) else 'Dice'}: {msg.content}"
+                for msg in filtered_messages
+            ]
+        )
 
     def get_tool_results_str(self) -> str:
         """Get formatted string of recent tool results from message history.
-        
+
         Returns:
             str: The formatted string of recent tool results.
         """
@@ -112,7 +130,7 @@ class ChatState(BaseModel):
         """Format the system message with current context."""
         if not self.messages:
             return
-            
+
         sys_msg = self.messages[0]
         if not isinstance(sys_msg, SystemMessage):
             return
@@ -126,38 +144,38 @@ class ChatState(BaseModel):
                 memories = [doc.page_content for doc in relevant_docs]
             except Exception as e:
                 cl.logger.error(f"Failed to get memories: {e}")
-            
+
         self.messages[0] = SystemMessage(
             content=sys_msg.content.format(
                 recent_chat_history=self.get_recent_history_str(),
                 memories="\n".join(memories) if memories else "",
-                tool_results=self.get_tool_results_str()
+                tool_results=self.get_tool_results_str(),
             )
         )
 
     def get_recent_history(self, n: int = 5) -> Sequence[BaseMessage]:
         """Get n most recent messages.
-        
+
         Args:
             n (int, optional): The number of recent messages to retrieve. Defaults to 5.
-        
+
         Returns:
             Sequence[BaseMessage]: The recent messages.
         """
         return self.messages[-n:] if len(self.messages) > n else self.messages
-        
+
     def add_tool_result(self, result: str) -> None:
         """Add a tool result to the state.
-        
+
         Args:
             result (str): The tool result.
         """
         self.tool_results.append(result)
-    
+
     def clear_tool_results(self) -> None:
         """Clear tool results after processing."""
         self.tool_results = []
-    
+
     def increment_error_count(self) -> None:
         """Increment error count for retry logic."""
         self.error_count += 1

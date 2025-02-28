@@ -6,6 +6,7 @@ from .initialization import DatabasePool
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
+
 async def get_chat_memory(store: BaseStore) -> ChatState:
     """Get chat memory from store."""
     try:
@@ -18,6 +19,7 @@ async def get_chat_memory(store: BaseStore) -> ChatState:
     except Exception as e:
         cl_logger.error(f"Database error: {str(e)}")
         raise
+
 
 async def save_chat_memory(state: ChatState, store: BaseStore) -> None:
     """Save chat memory to store."""

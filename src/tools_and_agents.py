@@ -13,12 +13,34 @@ from pydantic import BaseModel, Field
 import logging
 from src.stores import VectorStore
 from src.config import (
-    LLM_MODEL_NAME, LLM_TEMPERATURE, LLM_MAX_TOKENS, LLM_PRESENCE_PENALTY, LLM_FREQUENCY_PENALTY, LLM_TOP_P, LLM_TIMEOUT, LLM_VERBOSE,
-    DECISION_AGENT_TEMPERATURE, DECISION_AGENT_MAX_TOKENS, DECISION_AGENT_STREAMING, DECISION_AGENT_VERBOSE,
-    WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_AGENT_STREAMING, WRITER_AGENT_VERBOSE,
-    STORYBOARD_EDITOR_AGENT_TEMPERATURE, STORYBOARD_EDITOR_AGENT_MAX_TOKENS, STORYBOARD_EDITOR_AGENT_STREAMING, STORYBOARD_EDITOR_AGENT_VERBOSE,
-    OPENAI_BASE_URL, SERPAPI_KEY, DICE_SIDES, WEB_SEARCH_ENABLED, MONITORING_ENABLED, MONITORING_ENDPOINT, MONITORING_SAMPLE_RATE,
-    DICE_ROLLING_ENABLED
+    LLM_MODEL_NAME,
+    LLM_TEMPERATURE,
+    LLM_MAX_TOKENS,
+    LLM_PRESENCE_PENALTY,
+    LLM_FREQUENCY_PENALTY,
+    LLM_TOP_P,
+    LLM_TIMEOUT,
+    LLM_VERBOSE,
+    DECISION_AGENT_TEMPERATURE,
+    DECISION_AGENT_MAX_TOKENS,
+    DECISION_AGENT_STREAMING,
+    DECISION_AGENT_VERBOSE,
+    WRITER_AGENT_TEMPERATURE,
+    WRITER_AGENT_MAX_TOKENS,
+    WRITER_AGENT_STREAMING,
+    WRITER_AGENT_VERBOSE,
+    STORYBOARD_EDITOR_AGENT_TEMPERATURE,
+    STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
+    STORYBOARD_EDITOR_AGENT_STREAMING,
+    STORYBOARD_EDITOR_AGENT_VERBOSE,
+    OPENAI_BASE_URL,
+    SERPAPI_KEY,
+    DICE_SIDES,
+    WEB_SEARCH_ENABLED,
+    MONITORING_ENABLED,
+    MONITORING_ENDPOINT,
+    MONITORING_SAMPLE_RATE,
+    DICE_ROLLING_ENABLED,
 )
 
 # Initialize logging
@@ -27,18 +49,21 @@ cl_logger = logging.getLogger("chainlit")
 # Initialize the vector store
 vector_memory = VectorStore()
 
+
 class DecisionOutput(BaseModel):
     """Schema for the decision output."""
+
     action: Literal["roll", "search", "continue_story"] = Field(
         description="The next action to take based on user input"
     )
+
 
 def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
     """Parse dice input string into a list of (sides, count) tuples."""
     pattern = r"(\d*)d(\d+)"
     matches = re.findall(pattern, input_str)
     dice_list = []
-    
+
     for match in matches:
         count_str, sides_str = match
         try:
@@ -50,17 +75,18 @@ def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
         except ValueError as e:
             cl_logger.error(f"Invalid dice specification: {e}")
             raise ValueError("Invalid dice specification") from e
-            
+
     return dice_list
+
 
 @tool
 def dice_roll(input_str: Optional[str] = None) -> str:
     """Roll dice based on user input.
-    
+
     Args:
         input_str (str, optional): The dice specification (e.g., "d3", "2d6").
                                  Defaults to "d20" if not specified.
-    
+
     Returns:
         str: The result of the dice roll.
     """
@@ -82,26 +108,27 @@ def dice_roll(input_str: Optional[str] = None) -> str:
             else:
                 # Use the first parsed dice specification
                 sides, count = dice_list[0]
-        
+
         # Roll the dice
         rolls = [random.randint(1, sides) for _ in range(count)]
         total = sum(rolls)
-        
+
         # Format the result
         if count == 1:
             result = f"🎲 You rolled a {total} on a {sides}-sided die."
         else:
             result = f"🎲 You rolled {rolls} (total: {total}) on {count}d{sides}."
-        
+
         cl_logger.info(f"Dice roll result: {result}")
         return result
-        
+
     except ValueError as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
         return f"🎲 Error rolling dice: {str(e)}"
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
         return f"🎲 Error rolling dice: {str(e)}"
+
 
 # Define the dice roll tool schema
 dice_roll_schema = {
@@ -114,14 +141,14 @@ dice_roll_schema = {
             "properties": {
                 "input_str": {
                     "type": "string",
-                    "description": "The dice specification (e.g., 'd3', '2d6'). Defaults to 'd20' if not specified."
+                    "description": "The dice specification (e.g., 'd3', '2d6'). Defaults to 'd20' if not specified.",
                 }
             },
             "required": ["input_str"],
-            "additionalProperties": False
+            "additionalProperties": False,
         },
-        "strict": True
-    }
+        "strict": True,
+    },
 }
 
 # Define the web search tool schema
@@ -133,25 +160,23 @@ web_search_schema = {
         "parameters": {
             "type": "object",
             "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "The search query"
-                }
+                "query": {"type": "string", "description": "The search query"}
             },
             "required": ["query"],
-            "additionalProperties": False
+            "additionalProperties": False,
         },
-        "strict": True
-    }
+        "strict": True,
+    },
 }
+
 
 @tool
 def web_search(query: str) -> str:
     """Perform a web search using SerpAPI.
-    
+
     Args:
         query (str): The search query.
-    
+
     Returns:
         str: The search result.
     """
@@ -174,24 +199,27 @@ def web_search(query: str) -> str:
         cl_logger.error(f"Web search failed: {e}", exc_info=True)
         return f"Web search failed: {str(e)}"
 
+
 from langgraph.prebuilt import ToolNode, ToolExecutor
 
 # Create a parser for the decision output
 decision_parser = StrOutputParser()
 
+
 def log_decision_agent_response(response):
     """Log detailed information about the decision agent's response.
-    
+
     Args:
         response: The response object from the decision agent.
     """
     cl_logger.debug(f"Decision agent raw response: {response}")
     cl_logger.debug(f"Response type: {type(response)}")
     cl_logger.debug(f"Response attributes: {dir(response)}")
-    if hasattr(response, 'additional_kwargs'):
+    if hasattr(response, "additional_kwargs"):
         cl_logger.debug(f"Additional kwargs: {response.additional_kwargs}")
-    if hasattr(response, 'content'):
+    if hasattr(response, "content"):
         cl_logger.debug(f"Content: {response.content}")
+
 
 # Initialize the decision agent with proper function binding and longer timeout
 decision_agent = ChatOpenAI(
@@ -201,28 +229,30 @@ decision_agent = ChatOpenAI(
     model_name=LLM_MODEL_NAME,
     request_timeout=LLM_TIMEOUT * 2,
     max_tokens=DECISION_AGENT_MAX_TOKENS,
-    verbose=DECISION_AGENT_VERBOSE
+    verbose=DECISION_AGENT_VERBOSE,
 ).bind(
-    tools=[{
-        "type": "function",
-        "function": {
-            "name": "decide_action",
-            "description": "Decide the next action based on user input. Choose 'roll' for any dice commands.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["roll", "search", "continue_story"],
-                        "description": "The action to take. Choose 'roll' for dice rolls."
-                    }
+    tools=[
+        {
+            "type": "function",
+            "function": {
+                "name": "decide_action",
+                "description": "Decide the next action based on user input. Choose 'roll' for any dice commands.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["roll", "search", "continue_story"],
+                            "description": "The action to take. Choose 'roll' for dice rolls.",
+                        }
+                    },
+                    "required": ["action"],
+                    "additionalProperties": False,
                 },
-                "required": ["action"],
-                "additionalProperties": False
+                "strict": True,
             },
-            "strict": True
         }
-    }]
+    ]
 )
 
 # Create tools list and executor
@@ -241,10 +271,10 @@ writer_agent = ChatOpenAI(
     presence_penalty=LLM_PRESENCE_PENALTY,
     frequency_penalty=LLM_FREQUENCY_PENALTY,
     top_p=LLM_TOP_P,
-    verbose=WRITER_AGENT_VERBOSE
+    verbose=WRITER_AGENT_VERBOSE,
 ).bind(
     tools=[dice_roll_schema, web_search_schema],  # Include both schemas
-    tool_choice="auto"  # Allow the model to choose when to use tools
+    tool_choice="auto",  # Allow the model to choose when to use tools
 )
 
 # Initialize the storyboard editor agent with longer timeout
@@ -258,5 +288,5 @@ storyboard_editor_agent = ChatOpenAI(
     presence_penalty=LLM_PRESENCE_PENALTY,
     frequency_penalty=LLM_FREQUENCY_PENALTY,
     top_p=LLM_TOP_P,
-    verbose=STORYBOARD_EDITOR_AGENT_VERBOSE
+    verbose=STORYBOARD_EDITOR_AGENT_VERBOSE,
 )

@@ -16,8 +16,10 @@ if not os.path.exists(CONFIG_FILE):
 with open(CONFIG_FILE, "r") as f:
     config_yaml = yaml.safe_load(f)
 
+
 class ConfigSchema(BaseModel):
     """Pydantic model for the configuration schema."""
+
     llm: dict
     prompts: dict
     image_generation_payload: dict
@@ -38,9 +40,10 @@ class ConfigSchema(BaseModel):
     monitoring: dict
     caching: dict
 
+
 def load_config() -> ConfigSchema:
     """Load and validate configuration from YAML file.
-    
+
     Returns:
         ConfigSchema: Validated configuration object
     """
@@ -52,7 +55,9 @@ def load_config() -> ConfigSchema:
 
     # Database configuration with fallbacks
     DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
-    STABLE_DIFFUSION_API_URL = os.getenv("STABLE_DIFFUSION_API_URL", "http://localhost:7860")
+    STABLE_DIFFUSION_API_URL = os.getenv(
+        "STABLE_DIFFUSION_API_URL", "http://localhost:7860"
+    )
     cl_logger.info(f"Database URL loaded: {DATABASE_URL}")
 
     # LLM configuration
@@ -65,7 +70,9 @@ def load_config() -> ConfigSchema:
     LLM_FREQUENCY_PENALTY = config.llm.frequency_penalty
     LLM_TOP_P = config.llm.top_p
     LLM_VERBOSE = config.llm.verbose
-    cl_logger.info(f"LLM configuration loaded: temperature={LLM_TEMPERATURE}, max_tokens={LLM_MAX_TOKENS}, model_name={LLM_MODEL_NAME}, streaming={LLM_STREAMING}, timeout={LLM_TIMEOUT}, presence_penalty={LLM_PRESENCE_PENALTY}, frequency_penalty={LLM_FREQUENCY_PENALTY}, top_p={LLM_TOP_P}, verbose={LLM_VERBOSE}")
+    cl_logger.info(
+        f"LLM configuration loaded: temperature={LLM_TEMPERATURE}, max_tokens={LLM_MAX_TOKENS}, model_name={LLM_MODEL_NAME}, streaming={LLM_STREAMING}, timeout={LLM_TIMEOUT}, presence_penalty={LLM_PRESENCE_PENALTY}, frequency_penalty={LLM_FREQUENCY_PENALTY}, top_p={LLM_TOP_P}, verbose={LLM_VERBOSE}"
+    )
 
     # Agents configuration
     DECISION_AGENT_TEMPERATURE = config.agents.decision_agent.temperature
@@ -76,17 +83,27 @@ def load_config() -> ConfigSchema:
     WRITER_AGENT_MAX_TOKENS = config.agents.writer_agent.max_tokens
     WRITER_AGENT_STREAMING = config.agents.writer_agent.streaming
     WRITER_AGENT_VERBOSE = config.agents.writer_agent.verbose
-    STORYBOARD_EDITOR_AGENT_TEMPERATURE = config.agents.storyboard_editor_agent.temperature
-    STORYBOARD_EDITOR_AGENT_MAX_TOKENS = config.agents.storyboard_editor_agent.max_tokens
+    STORYBOARD_EDITOR_AGENT_TEMPERATURE = (
+        config.agents.storyboard_editor_agent.temperature
+    )
+    STORYBOARD_EDITOR_AGENT_MAX_TOKENS = (
+        config.agents.storyboard_editor_agent.max_tokens
+    )
     STORYBOARD_EDITOR_AGENT_STREAMING = config.agents.storyboard_editor_agent.streaming
     STORYBOARD_EDITOR_AGENT_VERBOSE = config.agents.storyboard_editor_agent.verbose
-    cl_logger.info(f"Agents configuration loaded: decision_agent (temperature={DECISION_AGENT_TEMPERATURE}, max_tokens={DECISION_AGENT_MAX_TOKENS}, streaming={DECISION_AGENT_STREAMING}, verbose={DECISION_AGENT_VERBOSE}), writer_agent (temperature={WRITER_AGENT_TEMPERATURE}, max_tokens={WRITER_AGENT_MAX_TOKENS}, streaming={WRITER_AGENT_STREAMING}, verbose={WRITER_AGENT_VERBOSE}), storyboard_editor_agent (temperature={STORYBOARD_EDITOR_AGENT_TEMPERATURE}, max_tokens={STORYBOARD_EDITOR_AGENT_MAX_TOKENS}, streaming={STORYBOARD_EDITOR_AGENT_STREAMING}, verbose={STORYBOARD_EDITOR_AGENT_VERBOSE})")
+    cl_logger.info(
+        f"Agents configuration loaded: decision_agent (temperature={DECISION_AGENT_TEMPERATURE}, max_tokens={DECISION_AGENT_MAX_TOKENS}, streaming={DECISION_AGENT_STREAMING}, verbose={DECISION_AGENT_VERBOSE}), writer_agent (temperature={WRITER_AGENT_TEMPERATURE}, max_tokens={WRITER_AGENT_MAX_TOKENS}, streaming={WRITER_AGENT_STREAMING}, verbose={WRITER_AGENT_VERBOSE}), storyboard_editor_agent (temperature={STORYBOARD_EDITOR_AGENT_TEMPERATURE}, max_tokens={STORYBOARD_EDITOR_AGENT_MAX_TOKENS}, streaming={STORYBOARD_EDITOR_AGENT_STREAMING}, verbose={STORYBOARD_EDITOR_AGENT_VERBOSE})"
+    )
 
     # Prompts
     AI_WRITER_PROMPT = config.prompts.ai_writer_prompt
     STORYBOARD_GENERATION_PROMPT = config.prompts.storyboard_generation_prompt
-    STORYBOARD_GENERATION_PROMPT_PREFIX = config.prompts.storyboard_generation_prompt_prefix
-    STORYBOARD_GENERATION_PROMPT_POSTFIX = config.prompts.storyboard_generation_prompt_postfix
+    STORYBOARD_GENERATION_PROMPT_PREFIX = (
+        config.prompts.storyboard_generation_prompt_prefix
+    )
+    STORYBOARD_GENERATION_PROMPT_POSTFIX = (
+        config.prompts.storyboard_generation_prompt_postfix
+    )
     DECISION_PROMPT = config.prompts.decision_prompt  # Load the new prompt
 
     # Image generation payload
@@ -105,7 +122,9 @@ def load_config() -> ConfigSchema:
     DENOISING_STRENGTH = IMAGE_GENERATION_PAYLOAD.denoising_strength
     HR_SECOND_PASS_STEPS = IMAGE_GENERATION_PAYLOAD.hr_second_pass_steps
     HR_SCALE = IMAGE_GENERATION_PAYLOAD.hr_scale
-    cl_logger.info(f"Image generation payload loaded: negative_prompt={NEGATIVE_PROMPT}, steps={STEPS}, sampler_name={SAMPLER_NAME}, scheduler={SCHEDULER}, cfg_scale={CFG_SCALE}, width={WIDTH}, height={HEIGHT}, hr_scale={HR_SCALE}, hr_upscaler={HR_UPSCALER}, denoising_strength={DENOISING_STRENGTH}, hr_second_pass_steps={HR_SECOND_PASS_STEPS}")
+    cl_logger.info(
+        f"Image generation payload loaded: negative_prompt={NEGATIVE_PROMPT}, steps={STEPS}, sampler_name={SAMPLER_NAME}, scheduler={SCHEDULER}, cfg_scale={CFG_SCALE}, width={WIDTH}, height={HEIGHT}, hr_scale={HR_SCALE}, hr_upscaler={HR_UPSCALER}, denoising_strength={DENOISING_STRENGTH}, hr_second_pass_steps={HR_SECOND_PASS_STEPS}"
+    )
 
     # Search enabled
     SEARCH_ENABLED = config.search_enabled
@@ -139,7 +158,9 @@ def load_config() -> ConfigSchema:
     LLM_CHUNK_SIZE = LLM_SETTINGS.chunk_size
     LLM_TEMPERATURE = LLM_SETTINGS.temperature
     LLM_MODEL_NAME = LLM_SETTINGS.model_name
-    cl_logger.info(f"LLM settings loaded: chunk_size={LLM_CHUNK_SIZE}, temperature={LLM_TEMPERATURE}, model_name={LLM_MODEL_NAME}")
+    cl_logger.info(
+        f"LLM settings loaded: chunk_size={LLM_CHUNK_SIZE}, temperature={LLM_TEMPERATURE}, model_name={LLM_MODEL_NAME}"
+    )
 
     # Image settings
     IMAGE_SETTINGS = config.image_settings
@@ -149,7 +170,9 @@ def load_config() -> ConfigSchema:
     # OpenAI settings
     OPENAI_BASE_URL = config.openai.base_url
     OPENAI_API_KEY = config.openai.api_key
-    cl_logger.info(f"OpenAI settings loaded: base_url={OPENAI_BASE_URL}, api_key={OPENAI_API_KEY}")
+    cl_logger.info(
+        f"OpenAI settings loaded: base_url={OPENAI_BASE_URL}, api_key={OPENAI_API_KEY}"
+    )
 
     # Search settings
     SERPAPI_KEY = config.search.serpapi_key
@@ -170,7 +193,9 @@ def load_config() -> ConfigSchema:
     # Set up logging
     cl_logger.setLevel(LOGGING_LEVEL)
     formatter = logging.Formatter(LOGGING_FORMAT)
-    handler = RotatingFileHandler(LOGGING_FILE, maxBytes=int(LOGGING_MAX_SIZE), backupCount=LOGGING_BACKUP_COUNT)
+    handler = RotatingFileHandler(
+        LOGGING_FILE, maxBytes=int(LOGGING_MAX_SIZE), backupCount=LOGGING_BACKUP_COUNT
+    )
     handler.setFormatter(formatter)
     cl_logger.addHandler(handler)
 

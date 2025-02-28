@@ -5,7 +5,13 @@ from typing import List, Optional, Dict, Any
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.base import BaseStore
-from langchain_core.messages import BaseMessage, AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import (
+    BaseMessage,
+    AIMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from chainlit import Message as CLMessage
 from .state import ChatState
 from .tools_and_agents import (
@@ -14,9 +20,12 @@ from .tools_and_agents import (
     dice_roll,
     web_search,
     decision_agent,
-    log_decision_agent_response
+    log_decision_agent_response,
 )
-from .image_generation import process_storyboard_images, generate_image_generation_prompts
+from .image_generation import (
+    process_storyboard_images,
+    generate_image_generation_prompts,
+)
 from .config import (
     DECISION_PROMPT,
     SEARCH_ENABLED,
@@ -26,7 +35,7 @@ from .config import (
     CHAINLIT_STARTERS,
     IMAGE_GENERATION_ENABLED,
     DICE_ROLLING_ENABLED,
-    WEB_SEARCH_ENABLED
+    WEB_SEARCH_ENABLED,
 )
 from .models import ChatState
 from .memory_management import save_chat_memory
@@ -35,19 +44,23 @@ from .tools_and_agents import generate_story_response
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
+
 @task
 async def process_storyboard(state: ChatState) -> Optional[str]:
     """Generate storyboard prompts based on the GM's last response.
-    
+
     Args:
         state (ChatState): The current chat state.
-    
+
     Returns:
         Optional[str]: The generated storyboard or None if generation fails.
     """
     try:
         # Get the last GM response
-        last_gm_message = next((msg for msg in reversed(state.messages) if isinstance(msg, AIMessage)), None)
+        last_gm_message = next(
+            (msg for msg in reversed(state.messages) if isinstance(msg, AIMessage)),
+            None,
+        )
         if not last_gm_message:
             cl_logger.warning("No GM message found to generate storyboard from")
             return None
@@ -55,13 +68,13 @@ async def process_storyboard(state: ChatState) -> Optional[str]:
         # Format the prompt with proper context
         formatted_prompt = DECISION_PROMPT.format(
             recent_chat_history=state.get_recent_history_str(),
-            memories=state.get_memories_str()
+            memories=state.get_memories_str(),
         )
 
         # Create messages list for the storyboard generation
         messages = [
             SystemMessage(content=formatted_prompt),
-            HumanMessage(content=last_gm_message.content)
+            HumanMessage(content=last_gm_message.content),
         ]
 
         # Get storyboard prompts from the agent
@@ -81,21 +94,22 @@ async def process_storyboard(state: ChatState) -> Optional[str]:
         cl_logger.error(f"Storyboard generation failed: {str(e)}", exc_info=True)
         return None
 
+
 @entrypoint(checkpointer=MemorySaver())
 async def chat_workflow(
     messages: List[BaseMessage],
     store: BaseStore,
     previous: Optional[ChatState] = None,
-    writer: asyncio.StreamWriter = None
+    writer: asyncio.StreamWriter = None,
 ) -> ChatState:
     """Main chat workflow handling messages and state.
-    
+
     Args:
         messages (List[BaseMessage]): List of incoming messages.
         store (BaseStore): The store for chat state.
         previous (Optional[ChatState], optional): Previous chat state. Defaults to None.
         writer (asyncio.StreamWriter, optional): Stream writer for logging. Defaults to None.
-    
+
     Returns:
         ChatState: The updated chat state.
     """
@@ -107,40 +121,45 @@ async def chat_workflow(
             writer("Processing started")
 
         # Determine action
-        last_human_message = next((msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)), None)
+        last_human_message = next(
+            (msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)),
+            None,
+        )
         if not last_human_message:
             cl_logger.info("No human message found, defaulting to writer")
             action = "writer"
         else:
-            formatted_prompt = DECISION_PROMPT.format(user_input=last_human_message.content)
+            formatted_prompt = DECISION_PROMPT.format(
+                user_input=last_human_message.content
+            )
             messages = [SystemMessage(content=formatted_prompt)]
             response = await decision_agent.ainvoke(messages)
             log_decision_agent_response(response)
 
             if (
-                hasattr(response, 'additional_kwargs') 
-                and 'function_call' in response.additional_kwargs
+                hasattr(response, "additional_kwargs")
+                and "function_call" in response.additional_kwargs
             ):
-                function_call = response.additional_kwargs['function_call']
+                function_call = response.additional_kwargs["function_call"]
                 try:
-                    args = json.loads(function_call['arguments'])
-                    action = args.get('action')
+                    args = json.loads(function_call["arguments"])
+                    action = args.get("action")
                     if (
-                        "roll" in last_human_message.content.lower() or 
-                        "d20" in last_human_message.content.lower() or
-                        "dice" in last_human_message.content.lower()
+                        "roll" in last_human_message.content.lower()
+                        or "d20" in last_human_message.content.lower()
+                        or "dice" in last_human_message.content.lower()
                     ):
                         action = "roll"
                 except json.JSONDecodeError as e:
                     cl_logger.error(f"Failed to parse function arguments: {e}")
-                    action = 'continue_story'
+                    action = "continue_story"
             else:
-                action = 'continue_story'
+                action = "continue_story"
 
         action_map = {
             "roll": "roll",
             "search": "search" if SEARCH_ENABLED else "writer",
-            "continue_story": "writer"
+            "continue_story": "writer",
         }
         mapped_action = action_map.get(action, "writer")
 
@@ -173,7 +192,9 @@ async def chat_workflow(
     except Exception as e:
         cl_logger.error(f"Critical error in chat workflow: {str(e)}", exc_info=True)
         state.increment_error_count()
-        await CLMessage(content="⚠️ A critical error occurred. Please try again later or restart the session.").send()
+        await CLMessage(
+            content="⚠️ A critical error occurred. Please try again later or restart the session."
+        ).send()
         raise
 
     if writer:
