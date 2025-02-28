@@ -17,9 +17,11 @@ A. Unit Testing
   1. Implement pytest fixtures for common test setups (Completed)
   2. Add mocking for external dependencies (Completed)
   3. Write tests for key functions and edge cases using TestModel (Completed for `dice_roll`, `web_search`, and `handle_dice_roll`)
-  4. Implement pytest fixtures for configuration settings (In Progress)
+  4. Implement pytest fixtures for configuration settings (Completed)
   5. Add comprehensive test coverage for all public functions (In Progress)
   6. Refactor tests into test classes for better organization (In Progress)
+  7. Add tests for edge cases in `parse_dice_input` (Completed)
+  8. Correct web search test setup (Completed)
 
 B. Integration Testing
 - Priority: High
@@ -67,9 +69,11 @@ Phase 1: Unit Testing Framework
   2. Implement mocking for external APIs (Completed)
   3. Write unit tests for core components using TestModel (Completed for `dice_roll`, `web_search`, and `handle_dice_roll`)
   4. Add test coverage reporting
-  5. Implement pytest fixtures for configuration settings (In Progress)
+  5. Implement pytest fixtures for configuration settings (Completed)
   6. Add comprehensive test coverage for all public functions (In Progress)
   7. Refactor tests into test classes for better organization (In Progress)
+  8. Add tests for edge cases in `parse_dice_input` (Completed)
+  9. Correct web search test setup (Completed)
 
 Phase 2: Integration Testing
 - Duration: 3 weeks
@@ -114,9 +118,11 @@ The addition of comprehensive testing will significantly improve the reliability
 5. Next Steps
 
 A. Finalize Testing Framework
-   - Implement pytest fixtures for configuration settings (In Progress)
+   - Implement pytest fixtures for configuration settings (Completed)
    - Add comprehensive test coverage for all public functions (In Progress)
    - Refactor tests into test classes for better organization (In Progress)
+   - Add tests for edge cases in `parse_dice_input` (Completed)
+   - Correct web search test setup (Completed)
    - Add test coverage reporting
 
 B. Develop Integration Tests
