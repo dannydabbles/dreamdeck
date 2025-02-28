@@ -1,4 +1,4 @@
-# Enhanced Plan for Dreamdeck Application
+# Testing Plan for Dreamdeck Application
 
 ## Overview
 
@@ -9,84 +9,84 @@ This plan outlines the strategy for adding comprehensive testing to the Dreamdec
 ## 1. Testing Strategy
 
 ### A. Unit Testing
-- Priority: High
-- Description: Test individual components and functions in isolation.
-- Scope:
-  - Core logic in tools_and_agents.py, state.py, and memory_management.py
-  - Data models in models.py
-  - Configuration handling in config.py
-- Next Steps:
+- **Priority:** High
+- **Description:** Test individual components and functions in isolation using pytest and LangGraph's TestModel.
+- **Scope:**
+  - Core logic in `tools_and_agents.py`, `state.py`, and `memory_management.py`
+  - Data models in `models.py`
+  - Configuration handling in `config.py`
+- **Next Steps:**
   1. Implement pytest fixtures for common test setups
   2. Add mocking for external dependencies (e.g., API calls, database interactions)
-  3. Write tests for key functions and edge cases
+  3. Write tests for key functions and edge cases using TestModel
 
 ### B. Integration Testing
-- Priority: High
-- Description: Test interactions between components and subsystems.
-- Scope:
+- **Priority:** High
+- **Description:** Test interactions between components and subsystems using LangGraph's testing features.
+- **Scope:**
   - Chat workflows
   - Image generation pipelines
   - Database interactions
   - API endpoints
-- Next Steps:
+- **Next Steps:**
   1. Implement FastAPI test client integration
   2. Add tests for API endpoints
   3. Test core workflows (e.g., dice rolling, web search, story generation)
 
 ### C. Smoke Testing
-- Priority: Medium
-- Description: Verify basic application functionality.
-- Scope:
+- **Priority:** Medium
+- **Description:** Verify basic application functionality.
+- **Scope:**
   - Application startup
   - Basic user interactions
   - Core feature verification (e.g., story generation)
-- Next Steps:
+- **Next Steps:**
   1. Add tests to verify application startup
   2. Test basic user interactions
   3. Verify core features
 
 ### D. End-to-End (E2E) Testing
-- Priority: Low
-- Description: Simulate complete user workflows.
-- Scope:
+- **Priority:** Low
+- **Description:** Simulate complete user workflows.
+- **Scope:**
   - Full story generation
   - Complex user interactions
   - Error recovery scenarios
-- Next Steps:
+- **Next Steps:**
   1. Implement test scenarios for complete story generation
   2. Add tests for complex interactions
-  3. Test error recovery
+  3. Test error recovery scenarios
 
 ---
 
 ## 2. Implementation Plan
 
 ### Phase 1: Unit Testing Framework
-- Duration: 2 weeks
-- Tasks:
+- **Duration:** 2 weeks
+- **Tasks:**
   1. Set up pytest fixtures for common test setups
   2. Implement mocking for external APIs (e.g., SerpAPI, Stable Diffusion)
-  3. Write unit tests for core components
+  3. Write unit tests for core components using TestModel
   4. Add test coverage reporting
 
 ### Phase 2: Integration Testing
-- Duration: 3 weeks
-- Tasks:
+- **Duration:** 3 weeks
+- **Tasks:**
   1. Implement FastAPI test client integration
   2. Add tests for API endpoints
   3. Test core workflows
   4. Integrate with CI/CD pipeline
 
 ### Phase 3: Smoke Testing
-- Duration: 1 week
-- Tasks:
+- **Duration:** 1 week
+- **Tasks:**
   1. Add smoke tests for application startup
   2. Test basic user interactions
   3. Verify core features
 
 ### Phase 4: E2E Testing
-- Duration: 2 weeks
-- Tasks:
+- **Duration:** 2 weeks
+- **Tasks:**
   1. Implement complete story generation tests
   2. Add tests for complex interactions
   3. Test error recovery scenarios
@@ -96,15 +96,15 @@ This plan outlines the strategy for adding comprehensive testing to the Dreamdec
 ## 3. Resources
 
 ### Key Documentation
-1. LangGraph Testing Guide
-   - URL: https://langgraph.readthedocs.io/en/latest/testing.html
-2. Chainlit Testing Guide
+1. **Chainlit Testing Guide**
    - URL: https://chainlit.readthedocs.io/en/latest/testing.html
-3. Pydantic Testing Guide
-   - URL: https://pydantic-docs.helpmanual.io/
-4. pytest Documentation
+2. **LangGraph Testing Guide**
+   - URL: https://langgraph.readthedocs.io/en/latest/testing.html
+3. **PydanticAI Testing Guide**
+   - URL: https://pydantic-ai.readthedocs.io/en/latest/testing.html
+4. **pytest Documentation**
    - URL: https://docs.pytest.org/en/latest/
-5. FastAPI Testing Guide
+5. **FastAPI Testing Guide**
    - URL: https://fastapi.tiangolo.com/tutorial/testing/
 
 ---
@@ -117,27 +117,27 @@ The addition of comprehensive testing will significantly improve the reliability
 
 ## 5. Next Steps
 
-1. Finalize Testing Framework
+1. **Finalize Testing Framework**
    - Implement pytest fixtures
    - Add mocking for external dependencies
-   - Write initial unit tests
+   - Write initial unit tests using TestModel
 
-2. Develop Integration Tests
+2. **Develop Integration Tests**
    - Implement FastAPI test client
    - Add tests for API endpoints
    - Test core workflows
 
-3. Implement Smoke Tests
+3. **Implement Smoke Tests**
    - Add basic functionality tests
    - Verify application startup
    - Test core features
 
-4. Enhance Monitoring and Logging
+4. **Enhance Monitoring and Logging**
    - Add metrics collection
    - Implement log rotation
    - Improve error handling
 
-5. Finalize Configuration Management
+5. **Finalize Configuration Management**
    - Add validation for remaining settings
    - Implement default values
    - Improve documentation
@@ -146,16 +146,16 @@ The addition of comprehensive testing will significantly improve the reliability
 
 ## 6. Dependencies
 
-- pytest
+- **pytest**
   - Version: >=7.0
   - Purpose: Unit testing framework
-- pytest-mock
+- **pytest-mock**
   - Version: >=3.6
   - Purpose: Mocking for unit tests
-- pytest-cov
+- **pytest-cov**
   - Version: >=4.0
   - Purpose: Test coverage reporting
-- fastapi-testclient
+- **fastapi-testclient**
   - Version: >=0.2
   - Purpose: Integration testing for FastAPI
 
@@ -163,14 +163,14 @@ The addition of comprehensive testing will significantly improve the reliability
 
 ## 7. Risks and Mitigations
 
-1. Risk: Incomplete test coverage
-   - Mitigation: Regular code reviews and test coverage reporting
+1. **Risk:** Incomplete test coverage
+   - **Mitigation:** Regular code reviews and test coverage reporting
 
-2. Risk: Integration test failures
-   - Mitigation: Thorough mocking and environment setup
+2. **Risk:** Integration test failures
+   - **Mitigation:** Thorough mocking and environment setup
 
-3. Risk: Maintenance overhead
-   - Mitigation: Regular test updates and refactoring
+3. **Risk:** Maintenance overhead
+   - **Mitigation:** Regular test updates and refactoring
 
 ---
 
