@@ -1,6 +1,6 @@
 import pytest
-from src.tools_and_agents import dice_roll, parse_dice_input
-from unittest.mock import patch
+from src.tools_and_agents import dice_roll, parse_dice_input, web_search
+from unittest.mock import patch, MagicMock
 
 @pytest.fixture
 def mock_random():
@@ -72,6 +72,6 @@ async def test_web_search_api_key_missing(mock_requests):
 
 @pytest.mark.asyncio
 async def test_web_search_request_error(mock_requests):
-    mock_requests.get.side_effect = requests.exceptions.RequestException("Request failed")
+    mock_requests.get.side_effect = MagicMock(side_effect=requests.exceptions.RequestException("Request failed"))
     result = await web_search("test query")
     assert "Web search failed: Request failed" in result
