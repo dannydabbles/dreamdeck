@@ -11,6 +11,12 @@ def mock_random():
         yield mock_rand
 
 
+@pytest.fixture
+def mock_requests():
+    with patch("requests.get") as mock_get:
+        yield mock_get
+
+
 def test_parse_dice_input_single_die():
     input_str = "d20"
     result = parse_dice_input(input_str)
@@ -32,6 +38,18 @@ def test_parse_dice_input_complex():
 def test_parse_dice_input_invalid():
     input_str = "invalid"
     with pytest.raises(ValueError, match="Invalid dice specification"):
+        parse_dice_input(input_str)
+
+
+def test_parse_dice_input_zero_sides():
+    input_str = "0d6"
+    with pytest.raises(ValueError, match="Invalid dice sides"):
+        parse_dice_input(input_str)
+
+
+def test_parse_dice_input_negative_sides():
+    input_str = "-1d6"
+    with pytest.raises(ValueError, match="Invalid dice sides"):
         parse_dice_input(input_str)
 
 
@@ -61,10 +79,24 @@ async def test_dice_roll_disabled():
 
 
 @pytest.mark.asyncio
+async def test_dice_roll_zero_sides(mock_random):
+    with patch("src.tools_and_agents.parse_dice_input", return_value=[(0, 1)]):
+        result = await dice_roll("0d6")
+        assert "🎲 Error rolling dice: Invalid dice sides" in result
+
+
+@pytest.mark.asyncio
+async def test_dice_roll_negative_sides(mock_random):
+    with patch("src.tools_and_agents.parse_dice_input", return_value=[(-1, 1)]):
+        result = await dice_roll("-1d6")
+        assert "🎲 Error rolling dice: Invalid dice sides" in result
+
+
+@pytest.mark.asyncio
 async def test_web_search(mock_requests):
     query = "test query"
     mock_response = {"organic_results": [{"snippet": "Test result"}]}
-    mock_requests.get.return_value.json.return_value = mock_response
+    mock_requests.return_value.json.return_value = mock_response
 
     result = await web_search(query)
     assert "Test result" in result
@@ -86,8 +118,28 @@ async def test_web_search_api_key_missing(mock_requests):
 
 @pytest.mark.asyncio
 async def test_web_search_request_error(mock_requests):
-    mock_requests.get.side_effect = MagicMock(
+    mock_requests.side_effect = MagicMock(
         side_effect=requests.exceptions.RequestException("Request failed")
     )
     result = await web_search("test query")
     assert "Web search failed: Request failed" in result
+
+
+@pytest.mark.asyncio
+async def test_web_search_no_results(mock_requests):
+    query = "test query"
+    mock_response = {"organic_results": []}
+    mock_requests.return_value.json.return_value = mock_response
+
+    result = await web_search(query)
+    assert "No results found." in result
+
+
+@pytest.mark.asyncio
+async def test_web_search_invalid_response(mock_requests):
+    query = "test query"
+    mock_response = {"error": "Invalid query"}
+    mock_requests.return_value.json.return_value = mock_response
+
+    result = await web_search(query)
+    assert "Web search failed: Invalid query" in result
