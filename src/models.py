@@ -1,5 +1,5 @@
 from typing import List, Annotated, Sequence, Dict, Any, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
 import operator
@@ -10,7 +10,6 @@ from langchain_core.messages import (
     ToolMessage,
     SystemMessage,
 )
-from langgraph.managed import IsLastStep
 import chainlit as cl
 
 

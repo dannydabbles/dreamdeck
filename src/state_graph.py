@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import json
 from typing import List, Optional, Dict, Any
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint.memory import MemorySaver
@@ -12,12 +11,9 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
-from chainlit import Message as CLMessage
 from .state import ChatState
 from .tools_and_agents import (
-    writer_agent,
-    storyboard_editor_agent,
-    dice_roll,
+    handle_dice_roll,
     web_search,
     decision_agent,
     log_decision_agent_response,
@@ -31,15 +27,13 @@ from .config import (
     SEARCH_ENABLED,
     LLM_TIMEOUT,
     REFUSAL_LIST,
-    DICE_SIDES,
-    CHAINLIT_STARTERS,
     IMAGE_GENERATION_ENABLED,
     DICE_ROLLING_ENABLED,
     WEB_SEARCH_ENABLED,
 )
 from .models import ChatState
 from .memory_management import save_chat_memory
-from .tools_and_agents import generate_story_response
+
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -78,7 +72,7 @@ async def process_storyboard(state: ChatState) -> Optional[str]:
         ]
 
         # Get storyboard prompts from the agent
-        response = await storyboard_editor_agent.ainvoke(messages)
+        response = await decision_agent.ainvoke(messages)
 
         if not response or not response.content:
             cl_logger.warning("Empty storyboard response")
@@ -164,13 +158,13 @@ async def chat_workflow(
         mapped_action = action_map.get(action, "writer")
 
         if mapped_action == "roll" and DICE_ROLLING_ENABLED:
-            result = await dice_roll.ainvoke({"n": DICE_SIDES})
+            result = await handle_dice_roll(last_human_message)
             state.messages.append(ToolMessage(content=result, name="dice_roll"))
             await CLMessage(content=result).send()
 
         elif mapped_action == "search" and WEB_SEARCH_ENABLED:
             query = last_human_message.content
-            result = await web_search.ainvoke({"query": query})
+            result = await web_search(query)
             state.messages.append(ToolMessage(content=result, name="web_search"))
             await CLMessage(content=result).send()
 

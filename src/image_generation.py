@@ -1,7 +1,7 @@
 import base64
 import random
 import asyncio
-from typing import List, Optional, Sequence
+from typing import List, Optional
 from langgraph.func import task
 import httpx
 from tenacity import (
@@ -10,43 +10,24 @@ from tenacity import (
     stop_after_attempt,
     retry_if_exception_type,
 )
-from langchain_core.messages.base import BaseMessage
-
-from langchain_openai import ChatOpenAI
-from langchain.prompts import PromptTemplate
-
-import chainlit as cl
+from langchain_core.messages import BaseMessage
 
 from .config import (
     DENOISING_STRENGTH,
-    DISTILLED_CFG_SCALE,
+    CFG_SCALE,
     HR_SECOND_PASS_STEPS,
     HR_UPSCALER,
-    STORYBOARD_GENERATION_PROMPT,
-    STORYBOARD_GENERATION_PROMPT_POSTFIX,
-    STORYBOARD_GENERATION_PROMPT_PREFIX,
-    LLM_FREQUENCY_PENALTY,
-    LLM_MODEL_NAME,
-    LLM_PRESENCE_PENALTY,
-    LLM_TOP_P,
-    LLM_VERBOSE,
     NEGATIVE_PROMPT,
     STEPS,
     SAMPLER_NAME,
     SCHEDULER,
-    CFG_SCALE,
     WIDTH,
     HEIGHT,
     IMAGE_GENERATION_TIMEOUT,
     REFUSAL_LIST,
     STABLE_DIFFUSION_API_URL,
-    LLM_TEMPERATURE,
-    LLM_TIMEOUT,
     IMAGE_GENERATION_ENABLED,
 )
-
-from chainlit import Message as CLMessage
-from chainlit.element import Image as CLImage
 
 
 # Define an asynchronous range generator
@@ -91,7 +72,6 @@ async def generate_image_async(
         "sampler_name": SAMPLER_NAME,
         "scheduler": SCHEDULER,
         "cfg_scale": CFG_SCALE,
-        "distilled_cfg_scale": DISTILLED_CFG_SCALE,
         "width": WIDTH,
         "height": HEIGHT,
         "hr_upscaler": HR_UPSCALER,
@@ -147,14 +127,12 @@ async def generate_image_generation_prompts(storyboard: str) -> List[str]:
 
             # Apply the image generation prompt prefix
             prompt_components = []
-            prefix = STORYBOARD_GENERATION_PROMPT_PREFIX
-            if prefix.strip() != "":
-                prompt_components.append(prefix)
+            if STORYBOARD_GENERATION_PROMPT_PREFIX.strip() != "":
+                prompt_components.append(STORYBOARD_GENERATION_PROMPT_PREFIX)
             if image_gen_prompt != "":
                 prompt_components.append(image_gen_prompt)
-            postfix = STORYBOARD_GENERATION_PROMPT_POSTFIX
-            if postfix.strip() != "":
-                prompt_components.append(postfix)
+            if STORYBOARD_GENERATION_PROMPT_POSTFIX.strip() != "":
+                prompt_components.append(STORYBOARD_GENERATION_PROMPT_POSTFIX)
 
             full_prompt = ", ".join(prompt_components)
             # Check refusal list

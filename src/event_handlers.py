@@ -38,7 +38,7 @@ from langchain_core.messages import (
     AIMessage,
     SystemMessage,
     ToolMessage,
-)  # Import missing message types
+)
 
 from .config import (
     NEGATIVE_PROMPT,
@@ -46,7 +46,6 @@ from .config import (
     SAMPLER_NAME,
     SCHEDULER,
     CFG_SCALE,
-    DISTILLED_CFG_SCALE,
     WIDTH,
     HEIGHT,
     HR_UPSCALER,
@@ -118,7 +117,6 @@ async def generate_image_async(
         "sampler_name": SAMPLER_NAME,
         "scheduler": SCHEDULER,
         "cfg_scale": CFG_SCALE,
-        "distilled_cfg_scale": DISTILLED_CFG_SCALE,
         "width": WIDTH,
         "height": HEIGHT,
         "hr_upscaler": HR_UPSCALER,
