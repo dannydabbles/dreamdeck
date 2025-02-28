@@ -24,7 +24,6 @@ from .config import (
     LLM_MODEL_NAME,
     LLM_PRESENCE_PENALTY,
     LLM_TOP_P,
-    LLM_TOP_K,
     LLM_VERBOSE,
     NEGATIVE_PROMPT,
     STEPS,
@@ -51,6 +50,11 @@ async def async_range(end):
         await asyncio.sleep(.1)
         yield i
 
+@retry(
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    stop=stop_after_attempt(3),
+    retry=retry_if_exception_type(Exception)
+)
 async def generate_image_async(image_generation_prompt: str, seed: int) -> Optional[bytes]:
     """
     Generates an image asynchronously based on the image generation prompt using the Stable Diffusion API.
@@ -91,7 +95,7 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
             image_bytes = base64.b64decode(image_data)
             return image_bytes
     except httpx.RequestError as e:
-        cl.logger.error(f"Image generation failed: {e}", exc_info=True)
+        cl.logger.error(f"Image generation failed after retries: {e}", exc_info=True)
         raise
     except (KeyError, IndexError, ValueError) as e:
         cl.logger.error(f"Error processing image data: {e}", exc_info=True)
@@ -100,7 +104,7 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
 @retry(
     wait=wait_exponential(multiplier=1, min=4, max=10),
     stop=stop_after_attempt(3),
-    retry=retry_if_exception_type(httpx.RequestError)
+    retry=retry_if_exception_type(Exception)
 )
 async def generate_image_generation_prompts(
     storyboard: str

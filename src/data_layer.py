@@ -57,3 +57,17 @@ class CustomDataLayer(BaseDataLayer):
                 "UPDATE threads SET messages = $1 WHERE id = $2",
                 thread_data["messages"], thread_id
             )
+
+    async def get_user_session(self, user_id: str) -> Dict[str, Any]:
+        """Retrieve user session data."""
+        user_data = await self.get_user(user_id)
+        if user_data:
+            return user_data.get("session_data", {})
+        return {}
+
+    async def save_user_session(self, user_id: str, session_data: Dict[str, Any]) -> None:
+        """Save user session data."""
+        user_data = await self.get_user(user_id)
+        if user_data:
+            user_data["session_data"] = session_data
+            await self.update_user(user_data)

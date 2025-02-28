@@ -1,7 +1,7 @@
 import logging
 from .state import ChatState
 from langgraph.store.base import BaseStore
-from src.initialization import DatabasePool
+from .initialization import DatabasePool
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -23,7 +23,7 @@ async def save_chat_memory(state: ChatState, store: BaseStore) -> None:
     """Save chat memory to store."""
     try:
         await store.put("chat_state", state.current_message_id, state.dict())
-        cl_logger.info(f"Chat state saved: {state.current_message_id}")
+        cl_logger.info(f"Chat state saved successfully: {state.current_message_id}")
     except Exception as e:
-        cl_logger.error(f"Database error: {str(e)}")
+        cl_logger.error(f"Failed to save chat state: {str(e)}", exc_info=True)
         raise

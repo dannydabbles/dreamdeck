@@ -3,7 +3,6 @@ import logging
 import json
 from typing import List, Optional, Dict, Any
 from langgraph.func import entrypoint, task
-from langgraph.types import Command, StreamWriter
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.base import BaseStore
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage, SystemMessage, ToolMessage
@@ -155,9 +154,10 @@ async def chat_workflow(
         await save_chat_memory(state, store)
 
     except Exception as e:
-        cl_logger.error(f"Error in chat workflow: {str(e)}", exc_info=True)
+        cl_logger.error(f"Critical error in chat workflow: {str(e)}", exc_info=True)
         state.increment_error_count()
-        await CLMessage(content="⚠️ An error occurred while generating the response. Please try again later.").send()
+        await CLMessage(content="⚠️ A critical error occurred. Please try again later or restart the session.").send()
+        raise
 
     if writer:
         writer("Processing completed")
