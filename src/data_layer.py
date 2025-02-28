@@ -1,6 +1,6 @@
 from chainlit.data.base import BaseDataLayer
 from chainlit.types import ThreadDict, Feedback
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List  # Import List here
 import logging
 
 cl_logger = logging.getLogger("chainlit")

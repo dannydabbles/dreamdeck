@@ -1,6 +1,7 @@
 import os
 import logging
 from chainlit.data.base import BaseDataLayer
+from typing import Optional  # Import Optional here
 from .data_layer import CustomDataLayer
 
 # Initialize logging
