@@ -256,7 +256,8 @@ refusal_list:
   - "I am not going to"
   - "I'm not comfortable"
   - "I am not comfortable"
-  - "**Game Master**: Hello! What kind of story would you like to create today?"
+  - |
+    **Game Master**: Hello! What kind of story would you like to create today?
 
 defaults:
   db_file: "chainlit.db"
