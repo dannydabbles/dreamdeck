@@ -1,6 +1,7 @@
 import pytest
 from src.tools_and_agents import dice_roll, parse_dice_input, web_search
 from unittest.mock import patch, MagicMock
+import requests  # Import the requests module
 
 @pytest.fixture
 def mock_random():
