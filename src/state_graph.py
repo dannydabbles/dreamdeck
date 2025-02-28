@@ -79,7 +79,7 @@ async def chat_workflow(
     messages: List[BaseMessage],
     store: BaseStore,
     previous: Optional[ChatState] = None,
-    writer: StreamWriter = None
+    writer: asyncio.StreamWriter = None
 ) -> ChatState:
     """Main chat workflow handling messages and state."""
     state = previous or ChatState()
