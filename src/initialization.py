@@ -1,18 +1,17 @@
 import os
 import logging
-from chainlit.data.base import BaseDataLayer
+from chainlit.data.base import ChainlitDataLayer
 from typing import Optional  # Import Optional here
-from .data_layer import CustomDataLayer
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
 class DatabasePool:
-    _instance: Optional[BaseDataLayer] = None
+    _instance: Optional[ChainlitDataLayer] = None
     _initialized: bool = False
 
     @classmethod
-    async def get_pool(cls) -> BaseDataLayer:
+    async def get_pool(cls) -> ChainlitDataLayer:
         if not cls._initialized:
             await cls.initialize()
         return cls._instance  # type: ignore
@@ -20,8 +19,8 @@ class DatabasePool:
     @classmethod
     async def initialize(cls) -> None:
         if not cls._initialized:
-            # Initialize the custom data layer
-            cls._instance = CustomDataLayer(
+            # Initialize the Chainlit data layer
+            cls._instance = ChainlitDataLayer(
                 database_url=os.getenv("DATABASE_URL"),
                 storage_client=None
             )
@@ -34,13 +33,6 @@ class DatabasePool:
             cls._instance = None
             cls._initialized = False
 
-# Initialize the custom data layer
-custom_data_layer = CustomDataLayer()
-
 # Initialize the database pool
 async def init_db():
     await DatabasePool.initialize()
-
-# Initialize the custom data layer
-async def init_data_layer():
-    await custom_data_layer.initialize()

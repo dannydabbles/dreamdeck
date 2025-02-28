@@ -54,7 +54,7 @@ from .config import (
 from .state import ChatState
 from .state_graph import chat_workflow as graph
 from .tools_and_agents import handle_dice_roll  # Import handle_dice_roll
-from .data_layer import custom_data_layer  # Import custom data layer
+from .initialization import DatabasePool  # Import DatabasePool
 
 # Define an asynchronous range generator
 async def async_range(end):
@@ -226,7 +226,7 @@ async def on_chat_start():
     
     # Initialize user session
     user_id = context.session.user.id
-    user_session = await custom_data_layer.get_user(user_id) or await custom_data_layer.create_user({"id": user_id, "name": context.session.user.name})
+    user_session = await DatabasePool.get_pool().get_user(user_id) or await DatabasePool.get_pool().create_user({"id": user_id, "name": context.session.user.name})
     cl_user_session.set("user_session", user_session)
 
     # Create initial state
