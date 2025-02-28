@@ -58,19 +58,23 @@ from .initialization import DatabasePool  # Import DatabasePool
 
 # Define an asynchronous range generator
 async def async_range(end):
+    """Asynchronous range generator.
+    
+    Args:
+        end (int): The end value for the range.
+    """
     for i in range(0, end):
         # Sleep for a short duration to simulate asynchronous operation
         await asyncio.sleep(.1)
         yield i
 
 async def generate_image_async(image_generation_prompt: str, seed: int) -> Optional[bytes]:
-    """
-    Generates an image asynchronously based on the image generation prompt using the Stable Diffusion API.
-
+    """Generate an image asynchronously using the Stable Diffusion API.
+    
     Args:
         image_generation_prompt (str): The image generation prompt.
         seed (int): The seed for the image generation.
-
+    
     Returns:
         Optional[bytes]: The image bytes, or None if generation fails.
     """
@@ -117,15 +121,13 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
 async def generate_image_generation_prompts(
     storyboard: str
 ) -> List[str]:
-    """
-    Generates a list of image generation prompts based on the human and AI messages, including chat
-    summary, past image prompts, and recent chat history.
-
+    """Generate a list of image generation prompts based on the storyboard.
+    
     Args:
-        chat_gen (BaseMessage): Response from AI prompt generator.
-
+        storyboard (str): The storyboard content.
+    
     Returns:
-        str: The generated image generation prompt.
+        List[str]: List of generated image generation prompts.
     """
     image_gen_prompts = []
     try:
@@ -173,7 +175,12 @@ async def generate_image_generation_prompts(
 
 @task
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
-    """Process storyboard into images and send to chat."""
+    """Process storyboard into images and send to chat.
+    
+    Args:
+        storyboard (str): The storyboard content.
+        message_id (str): The message ID for the chat.
+    """
     if not storyboard or not IMAGE_GENERATION_ENABLED:
         return
         
@@ -212,7 +219,10 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
 
 @on_chat_start
 async def on_chat_start():
-    """Initialize new chat session with Chainlit integration."""
+    """Initialize new chat session with Chainlit integration.
+    
+    Sets up the user session, initializes the chat state, and sends initial messages.
+    """
     settings = await cl_element.ChatSettings(
         [
             Select(
@@ -257,7 +267,11 @@ async def on_chat_start():
 
 @on_chat_resume
 async def on_chat_resume(thread: ThreadDict):
-    """Reconstruct state from Chainlit thread."""
+    """Reconstruct state from Chainlit thread.
+    
+    Args:
+        thread (ThreadDict): The thread dictionary from Chainlit.
+    """
     # Set the user in the session
     user_dict = thread.get('user')
     if user_dict:
@@ -308,7 +322,11 @@ async def on_chat_resume(thread: ThreadDict):
 
 @on_message
 async def on_message(message: CLMessage):
-    """Handle incoming messages."""
+    """Handle incoming messages.
+    
+    Args:
+        message (CLMessage): The incoming message.
+    """
     state = cl_user_session.get("state")
     runnable = cl_user_session.get("runnable")
 
@@ -369,9 +387,7 @@ async def on_message(message: CLMessage):
     cl_user_session.set("state", state)
 
 async def load_knowledge_documents():
-    """
-    Loads documents from the knowledge directory into the vector store.
-    """
+    """Load documents from the knowledge directory into the vector store."""
     if not os.path.exists(KNOWLEDGE_DIRECTORY):
         cl_element.logger.warning(f"Knowledge directory '{KNOWLEDGE_DIRECTORY}' does not exist. Skipping document loading.")
         return

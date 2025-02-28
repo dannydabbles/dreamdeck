@@ -18,6 +18,10 @@ logging.basicConfig(
 cl_logger = logging.getLogger("chainlit")
 
 async def main():
+    """Main entry point for the application.
+    
+    Initializes the database pool, vector store, and runs the Chainlit server.
+    """
     try:
         # Initialize database pool
         await init_db()

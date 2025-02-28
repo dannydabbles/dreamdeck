@@ -8,7 +8,12 @@ import chainlit as cl
 import asyncio
 
 class VectorStore(BaseStore):
-    """Custom vector store implementation using ChromaDB for persistent storage."""
+    """Custom vector store implementation using ChromaDB for persistent storage.
+    
+    Attributes:
+        embeddings (HuggingFaceEmbeddings): The embeddings model.
+        vectorstore (Chroma): The ChromaDB vector store.
+    """
     
     def __init__(self):
         self.embeddings = HuggingFaceEmbeddings(
@@ -20,7 +25,15 @@ class VectorStore(BaseStore):
         )
         
     def get(self, key: tuple, field: str) -> List[Document]:
-        """Get relevant documents using ChromaDB."""
+        """Get relevant documents using ChromaDB.
+        
+        Args:
+            key (tuple): The key for the document.
+            field (str): The field to search.
+        
+        Returns:
+            List[Document]: The relevant documents.
+        """
         try:
             thread_id = key[0] if key else cl.context.session.id
             if not thread_id:
@@ -43,7 +56,13 @@ class VectorStore(BaseStore):
             return []
     
     def put(self, key: tuple, field: str, value: Dict[str, Any]) -> None:
-        """Store new content in ChromaDB."""
+        """Store new content in ChromaDB.
+        
+        Args:
+            key (tuple): The key for the document.
+            field (str): The field to store.
+            value (Dict[str, Any]): The content to store.
+        """
         try:
             thread_id = key[0] if key else cl.context.session.id
             content = value.get("content", "")
@@ -67,14 +86,25 @@ class VectorStore(BaseStore):
             raise
 
     async def abatch(self, operations: Sequence[Tuple[str, tuple, str, Any]]) -> None:
-        """Execute multiple operations in batch asynchronously."""
+        """Execute multiple operations in batch asynchronously.
+        
+        Args:
+            operations (Sequence[Tuple[str, tuple, str, Any]]): The operations to execute.
+        """
         await asyncio.gather(*[
             asyncio.create_task(self._async_operation(op, key, field, value))
             for op, key, field, value in operations
         ])
 
     async def _async_operation(self, op: str, key: tuple, field: str, value: Any) -> None:
-        """Helper method for async batch operations."""
+        """Helper method for async batch operations.
+        
+        Args:
+            op (str): The operation type.
+            key (tuple): The key for the document.
+            field (str): The field to operate on.
+            value (Any): The value to store.
+        """
         if op == "get":
             self.get(key, field)
         elif op == "put":

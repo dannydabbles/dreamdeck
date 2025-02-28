@@ -17,6 +17,7 @@ with open(CONFIG_FILE, "r") as f:
     config_yaml = yaml.safe_load(f)
 
 class ConfigSchema(BaseModel):
+    """Pydantic model for the configuration schema."""
     llm: dict
     prompts: dict
     image_generation_payload: dict
@@ -37,7 +38,12 @@ class ConfigSchema(BaseModel):
     monitoring: dict
     caching: dict
 
-def load_config():
+def load_config() -> ConfigSchema:
+    """Load and validate configuration from YAML file.
+    
+    Returns:
+        ConfigSchema: Validated configuration object
+    """
     try:
         config = ConfigSchema(**config_yaml)
     except ValidationError as e:

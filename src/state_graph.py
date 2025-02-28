@@ -37,7 +37,14 @@ cl_logger = logging.getLogger("chainlit")
 
 @task
 async def process_storyboard(state: ChatState) -> Optional[str]:
-    """Generate storyboard prompts based on the GM's last response."""
+    """Generate storyboard prompts based on the GM's last response.
+    
+    Args:
+        state (ChatState): The current chat state.
+    
+    Returns:
+        Optional[str]: The generated storyboard or None if generation fails.
+    """
     try:
         # Get the last GM response
         last_gm_message = next((msg for msg in reversed(state.messages) if isinstance(msg, AIMessage)), None)
@@ -81,7 +88,17 @@ async def chat_workflow(
     previous: Optional[ChatState] = None,
     writer: asyncio.StreamWriter = None
 ) -> ChatState:
-    """Main chat workflow handling messages and state."""
+    """Main chat workflow handling messages and state.
+    
+    Args:
+        messages (List[BaseMessage]): List of incoming messages.
+        store (BaseStore): The store for chat state.
+        previous (Optional[ChatState], optional): Previous chat state. Defaults to None.
+        writer (asyncio.StreamWriter, optional): Stream writer for logging. Defaults to None.
+    
+    Returns:
+        ChatState: The updated chat state.
+    """
     state = previous or ChatState()
     state.messages.extend(messages)
 

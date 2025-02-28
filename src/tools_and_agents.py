@@ -34,9 +34,13 @@ class DecisionOutput(BaseModel):
     )
 
 def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
-    """
-    Parse dice input string into a list of (sides, count) tuples.
-    Supports formats like "d20", "2d6", "3d4", etc.
+    """Parse dice input string into a list of (sides, count) tuples.
+    
+    Args:
+        input_str (str): The dice specification string
+        
+    Returns:
+        List[Tuple[int, int]]: List of (sides, count) tuples
     """
     pattern = r"(\d*)d(\d+)"
     matches = re.findall(pattern, input_str)
@@ -52,13 +56,14 @@ def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
 
 @tool
 def dice_roll(input_str: Optional[str] = None) -> str:
-    """
-    Roll dice based on user input.
-    Supports multiple dice types and quantities (e.g., "d3", "2d6", etc.).
+    """Roll dice based on user input.
     
     Args:
         input_str (str, optional): The dice specification (e.g., "d3", "2d6").
-                                   Defaults to "d20" if not specified.
+                                 Defaults to "d20" if not specified.
+    
+    Returns:
+        str: The result of the dice roll.
     """
     if not DICE_ROLLING_ENABLED:
         return "Dice rolling is disabled in the configuration."
@@ -140,12 +145,11 @@ web_search_schema = {
 
 @tool
 def web_search(query: str) -> str:
-    """
-    Performs a web search using SerpAPI.
-
+    """Perform a web search using SerpAPI.
+    
     Args:
         query (str): The search query.
-
+    
     Returns:
         str: The search result.
     """
@@ -171,7 +175,11 @@ from langgraph.prebuilt import ToolNode, ToolExecutor
 decision_parser = StrOutputParser()
 
 def log_decision_agent_response(response):
-    """Log detailed information about the decision agent's response."""
+    """Log detailed information about the decision agent's response.
+    
+    Args:
+        response: The response object from the decision agent.
+    """
     cl_logger.debug(f"Decision agent raw response: {response}")
     cl_logger.debug(f"Response type: {type(response)}")
     cl_logger.debug(f"Response attributes: {dir(response)}")

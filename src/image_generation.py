@@ -45,6 +45,11 @@ from chainlit.element import Image as CLImage
 
 # Define an asynchronous range generator
 async def async_range(end):
+    """Asynchronous range generator.
+    
+    Args:
+        end (int): The end value for the range.
+    """
     for i in range(0, end):
         # Sleep for a short duration to simulate asynchronous operation
         await asyncio.sleep(.1)
@@ -56,13 +61,12 @@ async def async_range(end):
     retry=retry_if_exception_type(Exception)
 )
 async def generate_image_async(image_generation_prompt: str, seed: int) -> Optional[bytes]:
-    """
-    Generates an image asynchronously based on the image generation prompt using the Stable Diffusion API.
-
+    """Generate an image asynchronously using the Stable Diffusion API.
+    
     Args:
         image_generation_prompt (str): The image generation prompt.
         seed (int): The seed for the image generation.
-
+    
     Returns:
         Optional[bytes]: The image bytes, or None if generation fails.
     """
@@ -109,15 +113,13 @@ async def generate_image_async(image_generation_prompt: str, seed: int) -> Optio
 async def generate_image_generation_prompts(
     storyboard: str
 ) -> List[str]:
-    """
-    Generates a list of image generation prompts based on the human and AI messages, including chat
-    summary, past image prompts, and recent chat history.
-
+    """Generate a list of image generation prompts based on the storyboard.
+    
     Args:
-        chat_gen (BaseMessage): Response from AI prompt generator.
-
+        storyboard (str): The storyboard content.
+    
     Returns:
-        str: The generated image generation prompt.
+        List[str]: List of generated image generation prompts.
     """
     image_gen_prompts = []
     try:
@@ -165,7 +167,12 @@ async def generate_image_generation_prompts(
 
 @task
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
-    """Process storyboard into images and send to chat."""
+    """Process storyboard into images and send to chat.
+    
+    Args:
+        storyboard (str): The storyboard content.
+        message_id (str): The message ID for the chat.
+    """
     if not storyboard or not IMAGE_GENERATION_ENABLED:
         return
         
