@@ -34,24 +34,23 @@ class DecisionOutput(BaseModel):
     )
 
 def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
-    """Parse dice input string into a list of (sides, count) tuples.
-    
-    Args:
-        input_str (str): The dice specification string
-        
-    Returns:
-        List[Tuple[int, int]]: List of (sides, count) tuples
-    """
+    """Parse dice input string into a list of (sides, count) tuples."""
     pattern = r"(\d*)d(\d+)"
     matches = re.findall(pattern, input_str)
     dice_list = []
     
     for match in matches:
         count_str, sides_str = match
-        count = int(count_str) if count_str else 1
-        sides = int(sides_str)
-        dice_list.append((sides, count))
-        
+        try:
+            count = int(count_str) if count_str else 1
+            sides = int(sides_str)
+            if sides < 1:
+                raise ValueError("Invalid dice sides")
+            dice_list.append((sides, count))
+        except ValueError as e:
+            cl_logger.error(f"Invalid dice specification: {e}")
+            raise ValueError("Invalid dice specification") from e
+            
     return dice_list
 
 @tool
@@ -97,6 +96,9 @@ def dice_roll(input_str: Optional[str] = None) -> str:
         cl_logger.info(f"Dice roll result: {result}")
         return result
         
+    except ValueError as e:
+        cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
+        return f"🎲 Error rolling dice: {str(e)}"
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
         return f"🎲 Error rolling dice: {str(e)}"
@@ -165,7 +167,10 @@ def web_search(query: str) -> str:
         if "error" in data:
             raise ValueError(f"Search error: {data['error']}")
         return data.get("organic_results", [{}])[0].get("snippet", "No results found.")
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
+        cl_logger.error(f"Web search failed: {e}", exc_info=True)
+        return f"Web search failed: {str(e)}"
+    except ValueError as e:
         cl_logger.error(f"Web search failed: {e}", exc_info=True)
         return f"Web search failed: {str(e)}"
 
