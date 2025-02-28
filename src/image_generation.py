@@ -2,15 +2,15 @@ import base64
 import random
 import asyncio
 from typing import List, Optional
-from langgraph.func import task
-import httpx
 from tenacity import (
     retry,
     wait_exponential,
     stop_after_attempt,
     retry_if_exception_type,
 )
-from langchain_core.messages import BaseMessage
+from langgraph.func import task
+import httpx
+from chainlit import element as cl_element
 from .config import (
     DENOISING_STRENGTH,
     CFG_SCALE,
@@ -28,7 +28,6 @@ from .config import (
     IMAGE_GENERATION_ENABLED,
     STORYBOARD_GENERATION_PROMPT_PREFIX,
     STORYBOARD_GENERATION_PROMPT_POSTFIX,
-    IMAGE_GENERATION_RATE_LIMIT,
 )
 
 
@@ -63,7 +62,7 @@ async def generate_image_async(
         Optional[bytes]: The image bytes, or None if generation fails.
     """
     if not IMAGE_GENERATION_ENABLED:
-        cl.logger.warning("Image generation is disabled in the configuration.")
+        cl_element.logger.warning("Image generation is disabled in the configuration.")
         return None
 
     # Flux payload
@@ -92,10 +91,10 @@ async def generate_image_async(
             image_bytes = base64.b64decode(image_data)
             return image_bytes
     except httpx.RequestError as e:
-        cl.logger.error(f"Image generation failed after retries: {e}", exc_info=True)
+        cl_element.logger.error(f"Image generation failed after retries: {e}", exc_info=True)
         raise
     except (KeyError, IndexError, ValueError) as e:
-        cl.logger.error(f"Error processing image data: {e}", exc_info=True)
+        cl_element.logger.error(f"Error processing image data: {e}", exc_info=True)
         return None
 
 
@@ -139,23 +138,23 @@ async def generate_image_generation_prompts(storyboard: str) -> List[str]:
             full_prompt = ", ".join(prompt_components)
             # Check refusal list
             if any(image_gen_prompt.startswith(refusal) for refusal in REFUSAL_LIST):
-                cl.logger.warning(
+                cl_element.logger.warning(
                     f"LLM refused to generate image prompt. Prompt is a refusal: {full_prompt}"
                 )
                 raise ValueError("LLM refused to generate image prompt.")
 
             # Check for short prompts
             if len(image_gen_prompt) < 20 or not image_gen_prompt.strip():
-                cl.logger.warning(
+                cl_element.logger.warning(
                     f"Generated image prompt is too short or empty: {full_prompt}"
                 )
             else:
                 image_gen_prompts.append(full_prompt)
     except Exception as e:
-        cl.logger.error(f"Image prompt generation failed: {e}", exc_info=True)
+        cl_element.logger.error(f"Image prompt generation failed: {e}", exc_info=True)
         image_gen_prompts = []
 
-    cl.logger.debug(f"Generated Image Generation Prompt: {image_gen_prompts}")
+    cl_element.logger.debug(f"Generated Image Generation Prompt: {image_gen_prompts}")
 
     return image_gen_prompts
 
@@ -199,9 +198,9 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
                     ).send()
 
             except Exception as e:
-                cl.logger.error(
+                cl_element.logger.error(
                     f"Failed to generate image for prompt: {prompt}. Error: {str(e)}"
                 )
 
     except Exception as e:
-        cl.logger.error(f"Failed to process storyboard images: {str(e)}")
+        cl_element.logger.error(f"Failed to process storyboard images: {str(e)}")

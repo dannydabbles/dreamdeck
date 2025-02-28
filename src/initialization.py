@@ -1,7 +1,6 @@
 import os
 import logging
 from chainlit.data.base import ChainlitDataLayer
-from typing import Optional  # Import Optional here
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")

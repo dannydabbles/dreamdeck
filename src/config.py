@@ -61,15 +61,15 @@ def load_config() -> ConfigSchema:
     llm_config = config.llm
     cl_logger.info(
         f"LLM configuration loaded: "
-        f"temperature={llm_config.temperature}, "
-        f"max_tokens={llm_config.max_tokens}, "
-        f"model_name={llm_config.model_name}, "
-        f"streaming={llm_config.streaming}, "
-        f"timeout={llm_config.timeout}, "
-        f"presence_penalty={llm_config.presence_penalty}, "
-        f"frequency_penalty={llm_config.frequency_penalty}, "
-        f"top_p={llm_config.top_p}, "
-        f"verbose={llm_config.verbose}"
+        f"temperature={llm_config['temperature']}, "
+        f"max_tokens={llm_config['max_tokens']}, "
+        f"model_name={llm_config['model_name']}, "
+        f"streaming={llm_config['streaming']}, "
+        f"timeout={llm_config['timeout']}, "
+        f"presence_penalty={llm_config['presence_penalty']}, "
+        f"frequency_penalty={llm_config['frequency_penalty']}, "
+        f"top_p={llm_config['top_p']}, "
+        f"verbose={llm_config['verbose']}"
     )
 
     # Agents configuration
@@ -94,16 +94,16 @@ def load_config() -> ConfigSchema:
     image_generation_payload = config.image_generation_payload
     cl_logger.info(
         f"Image generation payload loaded: "
-        f"negative_prompt={image_generation_payload.negative_prompt}, "
-        f"steps={image_generation_payload.steps}, "
-        f"sampler_name={image_generation_payload.sampler_name}, "
-        f"scheduler={image_generation_payload.scheduler}, "
-        f"cfg_scale={image_generation_payload.cfg_scale}, "
-        f"width={image_generation_payload.width}, "
-        f"height={image_generation_payload.height}, "
-        f"hr_upscaler={image_generation_payload.hr_upscaler}, "
-        f"denoising_strength={image_generation_payload.denoising_strength}, "
-        f"hr_second_pass_steps={image_generation_payload.hr_second_pass_steps}"
+        f"negative_prompt={image_generation_payload['negative_prompt']}, "
+        f"steps={image_generation_payload['steps']}, "
+        f"sampler_name={image_generation_payload['sampler_name']}, "
+        f"scheduler={image_generation_payload['scheduler']}, "
+        f"cfg_scale={image_generation_payload['cfg_scale']}, "
+        f"width={image_generation_payload['width']}, "
+        f"height={image_generation_payload['height']}, "
+        f"hr_upscaler={image_generation_payload['hr_upscaler']}, "
+        f"denoising_strength={image_generation_payload['denoising_strength']}, "
+        f"hr_second_pass_steps={image_generation_payload['hr_second_pass_steps']}"
     )
 
     # Timeouts
@@ -131,7 +131,7 @@ def load_config() -> ConfigSchema:
     cl_logger.info(f"Knowledge directory loaded: {KNOWLEDGE_DIRECTORY}")
 
     # LLM settings
-    LLM_SETTINGS = config.llm_settings
+    LLM_SETTINGS = config.llm
     LLM_CHUNK_SIZE = LLM_SETTINGS.chunk_size
     LLM_TEMPERATURE = LLM_SETTINGS.temperature
     LLM_MODEL_NAME = LLM_SETTINGS.model_name

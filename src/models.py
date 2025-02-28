@@ -2,7 +2,6 @@ from typing import List, Annotated, Sequence, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
-import operator
 from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
@@ -10,6 +9,7 @@ from langchain_core.messages import (
     ToolMessage,
     SystemMessage,
 )
+import operator
 import chainlit as cl
 
 

@@ -17,13 +17,9 @@ from chainlit import (
     user_session as cl_user_session,
     Message as CLMessage,
     element as cl_element,
-    User,
-    context,
 )
-from chainlit.element import Image as CLImage, Select
 from chainlit.types import ThreadDict, RunnableConfig
 from chainlit import LangchainCallbackHandler
-from langgraph.func import task
 from langchain_community.document_loaders import (
     PyMuPDFLoader,
     TextLoader,
@@ -50,15 +46,6 @@ from .config import (
     CHAINLIT_STARTERS,
     MAX_RETRIES,
     RETRY_DELAY,
-    ERROR_LOG_LEVEL,
-    IMAGE_GENERATION_RATE_LIMIT,
-    API_CALLS_RATE_LIMIT,
-    MONITORING_ENABLED,
-    MONITORING_ENDPOINT,
-    MONITORING_SAMPLE_RATE,
-    CACHING_ENABLED,
-    CACHING_TTL,
-    CACHING_MAX_SIZE,
     IMAGE_GENERATION_ENABLED,
     WEB_SEARCH_ENABLED,
     DICE_ROLLING_ENABLED,
@@ -161,14 +148,12 @@ async def generate_image_generation_prompts(storyboard: str) -> List[str]:
 
             # Apply the image generation prompt prefix
             prompt_components = []
-            prefix = STORYBOARD_GENERATION_PROMPT_PREFIX
-            if prefix.strip() != "":
-                prompt_components.append(prefix)
+            if STORYBOARD_GENERATION_PROMPT_PREFIX.strip() != "":
+                prompt_components.append(STORYBOARD_GENERATION_PROMPT_PREFIX)
             if image_gen_prompt != "":
                 prompt_components.append(image_gen_prompt)
-            postfix = STORYBOARD_GENERATION_PROMPT_POSTFIX
-            if postfix.strip() != "":
-                prompt_components.append(postfix)
+            if STORYBOARD_GENERATION_PROMPT_POSTFIX.strip() != "":
+                prompt_components.append(STORYBOARD_GENERATION_PROMPT_POSTFIX)
 
             full_prompt = ", ".join(prompt_components)
             # Check refusal list
@@ -194,53 +179,6 @@ async def generate_image_generation_prompts(storyboard: str) -> List[str]:
     return image_gen_prompts
 
 
-@task
-async def process_storyboard_images(storyboard: str, message_id: str) -> None:
-    """Process storyboard into images and send to chat.
-
-    Args:
-        storyboard (str): The storyboard content.
-        message_id (str): The message ID for the chat.
-    """
-    if not storyboard or not IMAGE_GENERATION_ENABLED:
-        return
-
-    try:
-        # Generate image prompts
-        image_prompts = await generate_image_generation_prompts(storyboard)
-
-        # Process each prompt in order
-        for prompt in image_prompts:
-            try:
-                # Generate image
-                seed = random.randint(0, 2**32)
-                image_bytes = await generate_image_async(prompt, seed)
-
-                if image_bytes:
-                    # Create and send image message
-                    image_element = CLImage(
-                        content=image_bytes,
-                        display="inline",
-                        size="large",
-                        alt="Generated Image",
-                        name="generated_image",
-                    )
-
-                    await CLMessage(
-                        content=f"**Image Generation Prompt:**\n{prompt}\n\n**Seed:**\n{seed}",
-                        elements=[image_element],
-                        parent_id=message_id,
-                    ).send()
-
-            except Exception as e:
-                cl_element.logger.error(
-                    f"Failed to generate image for prompt: {prompt}. Error: {str(e)}"
-                )
-
-    except Exception as e:
-        cl_element.logger.error(f"Failed to process storyboard images: {str(e)}")
-
-
 @on_chat_start
 async def on_chat_start():
     """Initialize new chat session with Chainlit integration.
@@ -248,18 +186,18 @@ async def on_chat_start():
     Sets up the user session, initializes the chat state, and sends initial messages.
     """
     # Initialize user session
-    user_id = context.session.user.id
+    user_id = cl_user_session.context.session.user.id
     user_session = await DatabasePool.get_pool().get_user(
         user_id
     ) or await DatabasePool.get_pool().create_user(
-        {"id": user_id, "name": context.session.user.name}
+        {"id": user_id, "name": cl_user_session.context.session.user.name}
     )
     cl_user_session.set("user_session", user_session)
 
     # Create initial state
     state = ChatState(
         messages=[SystemMessage(content=AI_WRITER_PROMPT)],
-        thread_id=context.session.id,
+        thread_id=cl_user_session.context.session.id,
         user_preferences=user_session.get("preferences", {}),
     )
 
@@ -277,13 +215,6 @@ async def on_chat_start():
     # Load knowledge documents
     await load_knowledge_documents()
 
-    # Send starters
-    for starter in CHAINLIT_STARTERS:
-        msg = await CLMessage(content=starter).send()
-        state.messages.append(
-            AIMessage(content=starter, additional_kwargs={"message_id": msg.id})
-        )
-
 
 @on_chat_resume
 async def on_chat_resume(thread: ThreadDict):
@@ -295,7 +226,7 @@ async def on_chat_resume(thread: ThreadDict):
     # Set the user in the session
     user_dict = thread.get("user")
     if user_dict:
-        cl_user_session.set("user", User(**user_dict))
+        cl_user_session.set("user", user_dict)
 
     messages = [SystemMessage(content=AI_WRITER_PROMPT)]
     image_generation_memory = []
@@ -360,7 +291,7 @@ async def on_message(message: CLMessage):
     if message.type != "user_message":
         return
 
-    config = {"configurable": {"thread_id": context.session.id}}
+    config = {"configurable": {"thread_id": cl_user_session.context.session.id}}
     cb = LangchainCallbackHandler()
 
     try:
