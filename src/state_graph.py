@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.base import BaseStore
@@ -24,9 +24,6 @@ from .image_generation import (
 )
 from .config import (
     DECISION_PROMPT,
-    SEARCH_ENABLED,
-    LLM_TIMEOUT,
-    REFUSAL_LIST,
     IMAGE_GENERATION_ENABLED,
     DICE_ROLLING_ENABLED,
     WEB_SEARCH_ENABLED,
@@ -151,18 +148,18 @@ async def chat_workflow(
                 action = "continue_story"
 
         action_map = {
-            "roll": "roll",
-            "search": "search" if SEARCH_ENABLED else "writer",
+            "roll": "roll" if DICE_ROLLING_ENABLED else "writer",
+            "search": "search" if WEB_SEARCH_ENABLED else "writer",
             "continue_story": "writer",
         }
         mapped_action = action_map.get(action, "writer")
 
-        if mapped_action == "roll" and DICE_ROLLING_ENABLED:
+        if mapped_action == "roll":
             result = await handle_dice_roll(last_human_message)
             state.messages.append(ToolMessage(content=result, name="dice_roll"))
             await CLMessage(content=result).send()
 
-        elif mapped_action == "search" and WEB_SEARCH_ENABLED:
+        elif mapped_action == "search":
             query = last_human_message.content
             result = await web_search(query)
             state.messages.append(ToolMessage(content=result, name="web_search"))

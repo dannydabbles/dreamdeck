@@ -11,7 +11,6 @@ from tenacity import (
     retry_if_exception_type,
 )
 from langchain_core.messages import BaseMessage
-
 from .config import (
     DENOISING_STRENGTH,
     CFG_SCALE,
@@ -27,6 +26,9 @@ from .config import (
     REFUSAL_LIST,
     STABLE_DIFFUSION_API_URL,
     IMAGE_GENERATION_ENABLED,
+    STORYBOARD_GENERATION_PROMPT_PREFIX,
+    STORYBOARD_GENERATION_PROMPT_POSTFIX,
+    IMAGE_GENERATION_RATE_LIMIT,
 )
 
 

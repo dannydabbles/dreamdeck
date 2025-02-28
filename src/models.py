@@ -59,8 +59,8 @@ class ChatState(BaseModel):
 
     Attributes:
         messages (Sequence[BaseMessage]): The list of messages.
-        is_last_step (IsLastStep, optional): Flag indicating if this is the last step. Defaults to False.
-        thread_id (str, optional): The thread ID. Defaults to the current session ID.
+        is_last_step: Flag indicating if this is the last step. Defaults to False.
+        thread_id (str): The thread ID. Defaults to the current session ID.
         metadata (Dict[str, Any], optional): Additional metadata. Defaults to an empty dictionary.
         current_message_id (Optional[str], optional): The current message ID. Defaults to None.
         tool_results (List[str], optional): List of tool results. Defaults to an empty list.
@@ -71,7 +71,7 @@ class ChatState(BaseModel):
     """
 
     messages: Annotated[Sequence[BaseMessage], operator.add]
-    is_last_step: IsLastStep = Field(default_factory=lambda: IsLastStep(False))
+    is_last_step: bool = Field(default=False)
     thread_id: str = Field(default_factory=lambda: cl.context.session.id)
     metadata: Dict[str, Any] = Field(default_factory=dict)
     current_message_id: Optional[str] = None

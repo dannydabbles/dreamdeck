@@ -149,7 +149,9 @@ def load_config() -> ConfigSchema:
     # OpenAI settings
     OPENAI_BASE_URL = config.openai.base_url
     OPENAI_API_KEY = config.openai.api_key
-    cl_logger.info(f"OpenAI settings loaded: base_url={OPENAI_BASE_URL}, api_key={OPENAI_API_KEY}")
+    cl_logger.info(
+        f"OpenAI settings loaded: base_url={OPENAI_BASE_URL}, api_key={OPENAI_API_KEY}"
+    )
 
     # Search settings
     SERPAPI_KEY = config.search.serpapi_key

@@ -1,5 +1,10 @@
 import pytest
-from src.tools_and_agents import dice_roll, parse_dice_input, web_search, handle_dice_roll
+from src.tools_and_agents import (
+    dice_roll,
+    parse_dice_input,
+    web_search,
+    handle_dice_roll,
+)
 from unittest.mock import patch, MagicMock
 import requests  # Import the requests module
 
@@ -19,11 +24,14 @@ def mock_requests():
 
 @pytest.fixture
 def mock_config():
-    with patch.dict("src.tools_and_agents.__dict__", {
-        "WEB_SEARCH_ENABLED": True,
-        "SERPAPI_KEY": "test_key",
-        "DICE_ROLLING_ENABLED": True
-    }):
+    with patch.dict(
+        "src.tools_and_agents.__dict__",
+        {
+            "WEB_SEARCH_ENABLED": True,
+            "SERPAPI_KEY": "test_key",
+            "DICE_ROLLING_ENABLED": True,
+        },
+    ):
         yield
 
 

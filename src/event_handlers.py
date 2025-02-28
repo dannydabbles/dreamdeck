@@ -30,16 +30,6 @@ from langchain_community.document_loaders import (
     UnstructuredMarkdownLoader,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_core.messages import (
-    BaseMessage,
-    HumanMessage,
-    AIMessage,
-    SystemMessage,
-    ToolMessage,
-)
-
 from .config import (
     NEGATIVE_PROMPT,
     STEPS,
@@ -58,7 +48,6 @@ from .config import (
     STORYBOARD_GENERATION_PROMPT_POSTFIX,
     AI_WRITER_PROMPT,
     CHAINLIT_STARTERS,
-    STABLE_DIFFUSION_API_URL,
     MAX_RETRIES,
     RETRY_DELAY,
     ERROR_LOG_LEVEL,
@@ -258,17 +247,6 @@ async def on_chat_start():
 
     Sets up the user session, initializes the chat state, and sends initial messages.
     """
-    settings = await cl_element.ChatSettings(
-        [
-            Select(
-                id="Model",
-                label="OpenAI - Model",
-                values=["gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-32k"],
-                initial_index=0,
-            )
-        ]
-    ).send()
-
     # Initialize user session
     user_id = context.session.user.id
     user_session = await DatabasePool.get_pool().get_user(
