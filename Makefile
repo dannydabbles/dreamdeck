@@ -22,7 +22,7 @@ build:
 	@docker-compose build
 
 test:
-	($(CONDA_ACTIVATE) dd ; poetry run pytest )
+	$(CONDA_ACTIVATE) dd ; PYTHONPATH=. poetry run pytest
 
 lint:
 	@echo "Linting the code..."
@@ -58,4 +58,3 @@ aider-dual:
 aider:
 	@echo "Running aider with local llm..."
 	@aider --multiline --architect --o1-mini --openai-api-base http://192.168.1.111:5000/v1 --timeout 500 --model-settings-file .aider.model.settings.yml
-
