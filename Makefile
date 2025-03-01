@@ -1,5 +1,10 @@
 .PHONY: install run start build test lint format restart stop log aider-sonnet aider
 
+# Need to specify bash in order for conda activate to work.
+SHELL=/bin/bash
+# Note that the extra activate is needed to ensure that the activate floats env to the front of PATH
+CONDA_ACTIVATE=source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
+
 install:
 	@echo "Installing dependencies..."
 	@poetry install
@@ -17,8 +22,7 @@ build:
 	@docker-compose build
 
 test:
-	@echo "Running tests..."
-	@poetry run pytest
+	($(CONDA_ACTIVATE) dd ; poetry run pytest )
 
 lint:
 	@echo "Linting the code..."
