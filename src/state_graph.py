@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import json
 from typing import List, Optional
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint.memory import MemorySaver
@@ -11,6 +12,7 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
+from langgraph.message import CLMessage
 from .state import ChatState
 from .tools_and_agents import (
     handle_dice_roll,
@@ -192,3 +194,14 @@ async def chat_workflow(
         writer("Processing completed")
 
     return state
+
+
+async def generate_story_response(messages: List[BaseMessage]) -> str:
+    """Generate a story response from the given messages."""
+    try:
+        # TODO: Implement actual story generation logic
+        # For now, just return a placeholder response
+        return "This is a placeholder story response."
+    except Exception as e:
+        cl_logger.error(f"Error generating story response: {str(e)}", exc_info=True)
+        return "Error generating response."
