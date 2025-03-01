@@ -10,7 +10,7 @@ from tenacity import (
 )
 from langgraph.func import task
 import httpx
-from chainlit import element as cl_element
+from chainlit.types import CLMessage, CLImage  # Import CLMessage and CLImage
 from .config import (
     DENOISING_STRENGTH,
     CFG_SCALE,
