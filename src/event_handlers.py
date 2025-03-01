@@ -18,7 +18,7 @@ from chainlit import (
     Message as CLMessage,
     element as cl_element,
 )
-from chainlit.types import ThreadDict, RunnableConfig
+from chainlit.types import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from chainlit import LangchainCallbackHandler
 from langchain_community.document_loaders import (
     PyMuPDFLoader,
@@ -49,11 +49,13 @@ from .config import (
     IMAGE_GENERATION_ENABLED,
     WEB_SEARCH_ENABLED,
     DICE_ROLLING_ENABLED,
+    STABLE_DIFFUSION_API_ENDPOINT,
 )
 from .state import ChatState
 from .state_graph import chat_workflow as graph
 from .tools_and_agents import handle_dice_roll  # Import handle_dice_roll
 from .initialization import DatabasePool  # Import DatabasePool
+from .image_generation import process_storyboard_images
 
 
 # Define an asynchronous range generator
@@ -104,7 +106,7 @@ async def generate_image_async(
     try:
         async with httpx.AsyncClient(timeout=IMAGE_GENERATION_TIMEOUT) as client:
             response = await client.post(
-                f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/txt2img", json=payload
+                f"{STABLE_DIFFUSION_API_ENDPOINT}/sdapi/v1/txt2img", json=payload
             )
             response.raise_for_status()
             image_data = response.json()["images"][0]
@@ -196,7 +198,7 @@ async def on_chat_start():
 
     # Create initial state
     state = ChatState(
-        messages=[SystemMessage(content=AI_WRITER_PROMPT)],
+        messages=[CLMessage(content=AI_WRITER_PROMPT, type="system")],
         thread_id=cl_user_session.context.session.id,
         user_preferences=user_session.get("preferences", {}),
     )
@@ -228,31 +230,30 @@ async def on_chat_resume(thread: ThreadDict):
     if user_dict:
         cl_user_session.set("user", user_dict)
 
-    messages = [SystemMessage(content=AI_WRITER_PROMPT)]
+    messages = [CLMessage(content=AI_WRITER_PROMPT, type="system")]
     image_generation_memory = []
 
     # Reconstruct messages from thread history
     for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
         if step["type"] == "user_message":
             messages.append(
-                HumanMessage(
-                    content=step["output"], additional_kwargs={"message_id": step["id"]}
+                CLMessage(
+                    content=step["output"], additional_kwargs={"message_id": step["id"]}, type="user"
                 )
             )
         elif step["type"] == "ai_message":
             messages.append(
-                AIMessage(
-                    content=step["output"], additional_kwargs={"message_id": step["id"]}
+                CLMessage(
+                    content=step["output"], additional_kwargs={"message_id": step["id"]}, type="ai"
                 )
             )
         elif step["type"] == "tool":  # Add handling for tool messages
             messages.append(
-                ToolMessage(
+                CLMessage(
                     content=step["output"],
-                    tool_call_id=step.get(
-                        "tool_call_id", f"restored_tool_{step['id']}"
-                    ),
+                    tool_call_id=step.get("tool_call_id", f"restored_tool_{step['id']}"),
                     name=step.get("name", "unknown_tool"),
+                    type="tool",
                 )
             )
         elif step["type"] == "image_generation":
@@ -301,7 +302,7 @@ async def on_message(message: CLMessage):
 
         # Add user message to state
         state = cl_user_session.get("state")
-        state.messages.append(HumanMessage(content=message.content))
+        state.messages.append(CLMessage(content=message.content, type="user"))
 
         # Handle dice roll if the message contains a dice roll command
         if "roll" in message.content.lower() and DICE_ROLLING_ENABLED:
