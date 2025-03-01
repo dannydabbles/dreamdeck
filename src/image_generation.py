@@ -8,8 +8,7 @@ from tenacity import (
     stop_after_attempt,
     retry_if_exception_type,
 )
-from langgraph.func import task
-import httpx
+from chainlit import element as cl_element  # Import cl_element
 from chainlit.types import CLMessage, CLImage  # Import CLMessage and CLImage
 from .config import (
     DENOISING_STRENGTH,
