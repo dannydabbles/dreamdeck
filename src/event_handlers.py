@@ -3,7 +3,7 @@ import asyncio
 import random
 import base64
 import httpx
-from typing import List, Optional
+from typing import List, Optional, Dict as ThreadDict
 from tenacity import (
     retry,
     wait_exponential,
@@ -26,6 +26,7 @@ from langchain_community.document_loaders import (
     UnstructuredMarkdownLoader,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.schema.runnable import RunnableConfig  # Import RunnableConfig
 from .config import (
     NEGATIVE_PROMPT,
     STEPS,
