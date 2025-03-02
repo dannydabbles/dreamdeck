@@ -3,11 +3,17 @@ import random
 import requests
 import re
 from typing import List, Optional, Tuple, Literal
-from langgraph.prebuilt.tool_node import ToolNode, ToolExecutor, tool
+from langgraph.prebuilt.tool_node import ToolNode, tool
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain.schema.output_parser import StrOutputParser
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import (
+    BaseMessage,
+    HumanMessage,
+    AIMessage,
+    ToolMessage,
+    SystemMessage,
+)
 from pydantic import BaseModel, Field
 import logging
 from .config import (
@@ -231,7 +237,6 @@ decision_agent = ChatOpenAI(
 
 # Create tools list and executor
 tools = [dice_roll, web_search]
-tool_executor = ToolExecutor(tools)
 tool_node = ToolNode(tools=tools)
 
 # Initialize the writer AI agent with tools and longer timeout
