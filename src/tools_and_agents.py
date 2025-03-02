@@ -2,8 +2,7 @@ import os
 import random
 import requests
 import re
-from typing import List, Optional, Tuple, Literal
-from langgraph.prebuilt.tool_node import ToolNode, tool
+from langgraph.prebuilt.tool_node import ToolNode
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain.schema.output_parser import StrOutputParser
@@ -80,7 +79,6 @@ def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
     return dice_list
 
 
-@tool
 def dice_roll(input_str: Optional[str] = None) -> str:
     """Roll dice based on user input.
 
@@ -171,7 +169,6 @@ web_search_schema = {
 }
 
 
-@tool
 def web_search(query: str) -> str:
     """Perform a web search using SerpAPI.
 
