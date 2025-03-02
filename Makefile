@@ -22,7 +22,7 @@ build:
 	@docker-compose build
 
 test:
-	$(CONDA_ACTIVATE) dd ; PYTHONPATH=. poetry run pytest
+	$(CONDA_ACTIVATE) dd && PYTHONPATH=. poetry run pytest
 
 lint:
 	@echo "Linting the code..."
