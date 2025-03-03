@@ -1,7 +1,7 @@
 import os
 import yaml
 import logging
-from pydantic import BaseModel, ValidationError, Field
+from pydantic import BaseModel, ValidationError
 from logging.handlers import RotatingFileHandler
 
 # Initialize logging
