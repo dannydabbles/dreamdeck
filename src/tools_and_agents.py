@@ -2,7 +2,8 @@ import os
 import random
 import requests
 import re
-from langgraph.prebuilt import ToolNode, tool
+from langgraph.prebuilt import ToolNode
+from langgraph.func import tool  # Updated import
 from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
@@ -82,7 +83,7 @@ def dice_roll(input_str: Optional[str] = None) -> str:
             dice_list = parse_dice_input(input_str)
             if not dice_list:
                 # Fallback to d20 if parsing fails
-                sides = DICE_SIDES
+                sides = DICES_SIDES  # Corrected variable name
                 count = 1
             else:
                 # Use the first parsed dice specification
