@@ -213,7 +213,7 @@ async def on_chat_start():
     cl_user_session.set("ai_message_id", None)
 
     # Setup runnable
-    cl_user_session.set("runnable", graph)
+    cl_user_session.set("runnable", chat_workflow)
 
     # Load knowledge documents
     await load_knowledge_documents()
