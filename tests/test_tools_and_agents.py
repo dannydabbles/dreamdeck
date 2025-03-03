@@ -23,9 +23,8 @@ def mock_requests():
         yield mock_get
 
 
-@pytest.fixture
-def mock_config():
-    with patch.dict(
+def mock_config(mocker):
+    mocker.patch.dict(
         "src.tools_and_agents.__dict__",
         {
             "DICE_ROLLING_ENABLED": True,
@@ -33,8 +32,7 @@ def mock_config():
             "WEB_SEARCH_ENABLED": True,
             "SERPAPI_KEY": "test_key",
         },
-    ):
-        yield
+    )
 
 
 def test_parse_dice_input_single_die() -> None:
