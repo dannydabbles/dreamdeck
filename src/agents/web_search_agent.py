@@ -37,6 +37,9 @@ def web_search(query: str) -> ToolMessage:
         cl_logger.error(f"Web search failed: {e}", exc_info=True)
         return ToolMessage(content=f"Web search failed: {str(e)}")
 
+from langchain_openai import ChatOpenAI  # Import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
+
 # Initialize the web search agent
 web_search_agent = create_react_agent(
     model=ChatOpenAI(
