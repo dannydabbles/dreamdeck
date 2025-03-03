@@ -1,5 +1,5 @@
 import pytest
-from src.tools_and_agents import (  # type: ignore
+from src.tools_and_agents import (
     dice_roll,
     parse_dice_input,
     web_search,
