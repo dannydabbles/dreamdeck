@@ -2,10 +2,9 @@ import os
 import random
 import requests
 import re
-from langgraph.prebuilt import create_react_agent
-from langgraph.func import ToolNode
-from langgraph.func import tool  # Updated import
-from langchain_core.llms import ChatOpenAI  # Corrected import
+from langgraph.prebuilt import create_react_agent, ToolNode
+from langgraph.func import tool, Agent
+from langchain_core.llms import ChatOpenAI
 from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
@@ -157,12 +156,8 @@ def web_search(query: str) -> str:
         return f"Web search failed: {str(e)}"
 
 
-# Create a ToolNode instance
-tools = [dice_roll, web_search]
-tool_node = ToolNode(tools=tools, name="custom_tools")
-
 # Initialize the decision agent with proper function binding and longer timeout
-decision_agent = create_react_agent(
+decision_agent = Agent(
     model=ChatOpenAI(
         temperature=DECISION_AGENT_TEMPERATURE,
         max_tokens=DECISION_AGENT_MAX_TOKENS,
@@ -174,8 +169,8 @@ decision_agent = create_react_agent(
     checkpointer=MemorySaver(),
 )
 
-# Initialize the writer AI agent with tools and longer timeout
-writer_agent = create_react_agent(
+# Initialize the writer AI agent
+writer_agent = Agent(
     model=ChatOpenAI(
         temperature=WRITER_AGENT_TEMPERATURE,
         max_tokens=WRITER_AGENT_MAX_TOKENS,
@@ -190,8 +185,8 @@ writer_agent = create_react_agent(
     checkpointer=MemorySaver(),
 )
 
-# Initialize the storyboard editor agent with longer timeout
-storyboard_editor_agent = create_react_agent(
+# Initialize the storyboard editor agent
+storyboard_editor_agent = Agent(
     model=ChatOpenAI(
         temperature=STORYBOARD_EDITOR_AGENT_TEMPERATURE,
         max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
