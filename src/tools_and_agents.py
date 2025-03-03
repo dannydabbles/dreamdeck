@@ -165,7 +165,7 @@ decision_agent = Agent(
         verbose=DECISION_AGENT_VERBOSE,
         request_timeout=LLM_TIMEOUT * 2,
     ),
-    tools=tools,
+    tools=[dice_roll, web_search],
     checkpointer=MemorySaver(),
 )
 
@@ -181,7 +181,7 @@ writer_agent = Agent(
         frequency_penalty=LLM_FREQUENCY_PENALTY,
         top_p=LLM_TOP_P,
     ),
-    tools=tools,
+    tools=[dice_roll, web_search],
     checkpointer=MemorySaver(),
 )
 
@@ -194,6 +194,6 @@ storyboard_editor_agent = Agent(
         verbose=STORYBOARD_EDITOR_AGENT_VERBOSE,
         request_timeout=LLM_TIMEOUT * 2,
     ),
-    tools=tools,
+    tools=[dice_roll, web_search],
     checkpointer=MemorySaver(),
 )
