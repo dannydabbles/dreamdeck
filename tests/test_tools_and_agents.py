@@ -4,7 +4,7 @@ from src.agents.writer_agent import writer_agent
 from src.agents.storyboard_editor_agent import storyboard_editor_agent
 from src.agents.dice_agent import dice_roll_agent
 from src.agents.web_search_agent import web_search_agent
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage  # Import ToolMessage
 import json
 import asyncio
 from unittest.mock import patch
