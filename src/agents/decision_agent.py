@@ -2,7 +2,7 @@ import os
 import logging
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import ToolMessage
-from .agents.dice_agent import dice_roll_agent
+from agents.dice_agent import dice_roll_agent
 from .agents.web_search_agent import web_search_agent
 from .config import (
     DECISION_AGENT_TEMPERATURE,
