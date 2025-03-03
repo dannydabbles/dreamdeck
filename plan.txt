@@ -10,18 +10,18 @@ A. Unit Testing
 - Priority: High
 - Description: Test individual components and functions in isolation using pytest and LangGraph's TestModel.
 - Scope:
-  - Core logic in `tools_and_agents.py`, `state.py`, and `memory_management.py`
+  - Core logic in `agents/decision_agent.py`, `agents/writer_agent.py`, and `agents/storyboard_editor_agent.py`
   - Data models in `models.py`
   - Configuration handling in `config.py`
 - Next Steps:
-  1. Implement pytest fixtures for common test setups (Completed)
-  2. Add mocking for external dependencies (Completed)
-  3. Write tests for key functions and edge cases using TestModel (Completed for `dice_roll`, `web_search`, and `handle_dice_roll`)
-  4. Implement pytest fixtures for configuration settings (Completed)
-  5. Add comprehensive test coverage for all public functions (In Progress)
-  6. Refactor tests into test classes for better organization (In Progress)
-  7. Add tests for edge cases in `parse_dice_input` (Completed)
-  8. Correct web search test setup (Completed)
+  1. Implement pytest fixtures for common test setups
+  2. Add mocking for external dependencies
+  3. Write tests for key functions and edge cases using TestModel
+  4. Implement pytest fixtures for configuration settings
+  5. Add comprehensive test coverage for all public functions
+  6. Refactor tests into test classes for better organization
+  7. Add tests for edge cases in `parse_dice_input`
+  8. Correct web search test setup
 
 B. Integration Testing
 - Priority: High
@@ -65,37 +65,15 @@ D. End-to-End (E2E) Testing
 Phase 1: Unit Testing Framework
 - Duration: 2 weeks
 - Tasks:
-  1. Set up pytest fixtures for common test setups (Completed)
-  2. Implement mocking for external APIs (Completed)
-  3. Write unit tests for core components using TestModel (Completed for `dice_roll`, `web_search`, and `handle_dice_roll`)
+  1. Set up pytest fixtures for common test setups
+  2. Implement mocking for external APIs
+  3. Write unit tests for core components using TestModel
   4. Add test coverage reporting
-  5. Implement pytest fixtures for configuration settings (Completed)
-  6. Add comprehensive test coverage for all public functions (In Progress)
-  7. Refactor tests into test classes for better organization (In Progress)
-  8. Add tests for edge cases in `parse_dice_input` (Completed)
-  9. Correct web search test setup (Completed)
-
-Phase 2: Integration Testing
-- Duration: 3 weeks
-- Tasks:
-  1. Implement FastAPI test client integration
-  2. Add tests for API endpoints
-  3. Test core workflows
-  4. Integrate with CI/CD pipeline
-
-Phase 3: Smoke Testing
-- Duration: 1 week
-- Tasks:
-  1. Add smoke tests for application startup
-  2. Test basic user interactions
-  3. Verify core features
-
-Phase 4: E2E Testing
-- Duration: 2 weeks
-- Tasks:
-  1. Implement complete story generation tests
-  2. Add tests for complex interactions
-  3. Test error recovery scenarios
+  5. Implement pytest fixtures for configuration settings
+  6. Add comprehensive test coverage for all public functions
+  7. Refactor tests into test classes for better organization
+  8. Add tests for edge cases in `parse_dice_input`
+  9. Correct web search test setup
 
 3. Resources
 
@@ -118,11 +96,11 @@ The addition of comprehensive testing will significantly improve the reliability
 5. Next Steps
 
 A. Finalize Testing Framework
-   - Implement pytest fixtures for configuration settings (Completed)
-   - Add comprehensive test coverage for all public functions (In Progress)
-   - Refactor tests into test classes for better organization (In Progress)
-   - Add tests for edge cases in `parse_dice_input` (Completed)
-   - Correct web search test setup (Completed)
+   - Implement pytest fixtures for configuration settings
+   - Add comprehensive test coverage for all public functions
+   - Refactor tests into test classes for better organization
+   - Add tests for edge cases in `parse_dice_input`
+   - Correct web search test setup
    - Add test coverage reporting
 
 B. Develop Integration Tests
