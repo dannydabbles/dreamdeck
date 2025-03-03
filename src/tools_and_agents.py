@@ -56,8 +56,25 @@ class DecisionOutput(BaseModel):
 
 from langgraph.prebuilt import tool  # Import tool from langgraph.prebuilt
 
-@tool
-def dice_roll(input_str: Optional[str] = None) -> str:
+from langgraph.prebuilt import create_react_agent
+from langgraph.core.agent import Agent
+from langchain_core.messages import ToolMessage
+
+# Initialize the dice roll agent
+dice_roll_agent = create_react_agent(
+    model=ChatOpenAI(
+        temperature=0.0,
+        max_tokens=100,
+        streaming=False,
+        verbose=False,
+        request_timeout=LLM_TIMEOUT,
+    ),
+    tools=[],
+    checkpointer=MemorySaver(),
+)
+
+@dice_roll_agent.tool
+def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
     """Roll dice based on user input.
 
     Args:
@@ -65,10 +82,10 @@ def dice_roll(input_str: Optional[str] = None) -> str:
                                  Defaults to "d20" if not specified.
 
     Returns:
-        str: The result of the dice roll.
+        ToolMessage: The result of the dice roll.
     """
     if not DICE_ROLLING_ENABLED:
-        return "Dice rolling is disabled in the configuration."
+        return ToolMessage(content="Dice rolling is disabled in the configuration.")
 
     try:
         # Default to d20 if no input is provided
@@ -97,14 +114,14 @@ def dice_roll(input_str: Optional[str] = None) -> str:
             result = f"🎲 You rolled {rolls} (total: {total}) on {count}d{sides}."
 
         cl_logger.info(f"Dice roll result: {result}")
-        return result
+        return ToolMessage(content=result)
 
     except ValueError as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
-        return f"🎲 Error rolling dice: {str(e)}"
+        return ToolMessage(content=f"🎲 Error rolling dice: {str(e)}")
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
-        return f"🎲 Error rolling dice: {str(e)}"  # type: ignore
+        return ToolMessage(content=f"🎲 Error rolling dice: {str(e)}")
 
 
 def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
@@ -128,20 +145,33 @@ def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
     return dice_list
 
 
-@tool
-def web_search(query: str) -> str:
+# Initialize the web search agent
+web_search_agent = create_react_agent(
+    model=ChatOpenAI(
+        temperature=0.0,
+        max_tokens=100,
+        streaming=False,
+        verbose=False,
+        request_timeout=LLM_TIMEOUT,
+    ),
+    tools=[],
+    checkpointer=MemorySaver(),
+)
+
+@web_search_agent.tool
+def web_search(query: str) -> ToolMessage:
     """Perform a web search using SerpAPI.
 
     Args:
         query (str): The search query.
 
     Returns:
-        str: The search result.
+        ToolMessage: The search result.
     """
     if not SERPAPI_KEY:
-        raise ValueError("SERPAPI_KEY environment variable not set.")
+        return ToolMessage(content="SERPAPI_KEY environment variable not set.")
     if not WEB_SEARCH_ENABLED:
-        return "Web search is disabled."
+        return ToolMessage(content="Web search is disabled.")
     url = f"https://serpapi.com/search.json?q={query}&api_key={SERPAPI_KEY}"
     try:
         response = requests.get(url)
@@ -149,17 +179,17 @@ def web_search(query: str) -> str:
         data = response.json()
         if "error" in data:
             raise ValueError(f"Search error: {data['error']}")
-        return data.get("organic_results", [{}])[0].get("snippet", "No results found.")
+        return ToolMessage(content=data.get("organic_results", [{}])[0].get("snippet", "No results found."))
     except requests.exceptions.RequestException as e:
         cl_logger.error(f"Web search failed: {e}", exc_info=True)
-        return f"Web search failed: {str(e)}"
+        return ToolMessage(content=f"Web search failed: {str(e)}")
     except ValueError as e:
         cl_logger.error(f"Web search failed: {e}", exc_info=True)
-        return f"Web search failed: {str(e)}"
+        return ToolMessage(content=f"Web search failed: {str(e)}")
 
 
-# Initialize the decision agent with proper function binding and longer timeout
-decision_agent = Agent(
+# Initialize the decision agent
+decision_agent = create_react_agent(
     model=ChatOpenAI(
         temperature=DECISION_AGENT_TEMPERATURE,
         max_tokens=DECISION_AGENT_MAX_TOKENS,
@@ -167,7 +197,7 @@ decision_agent = Agent(
         verbose=DECISION_AGENT_VERBOSE,
         request_timeout=LLM_TIMEOUT * 2,
     ),
-    tools=[dice_roll, web_search],
+    tools=[dice_roll_agent, web_search_agent],
     checkpointer=MemorySaver(),
 )
 

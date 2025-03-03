@@ -302,39 +302,17 @@ async def on_message(message: CLMessage):
         cl_element.logger.debug(f"Current state: {state}")
 
         # Add user message to state
-        state = cl_user_session.get("state")
         state.messages.append(CLMessage(content=message.content, type="user"))
-
-        # Handle dice roll if the message contains a dice roll command
-        if "roll" in message.content.lower() and DICE_ROLLING_ENABLED:
-            await handle_dice_roll(message)
-            return
 
         # Format system message before generating response
         state.format_system_message()
 
-        # Generate AI response
-        ai_response = CLMessage(content="")
-        async for chunk in runnable.astream(
-            state, config=RunnableConfig(callbacks=[cb], **config)
-        ):
-            if isinstance(chunk, dict) and chunk.get("messages"):
-                await ai_response.stream_token(chunk["messages"][-1].content)
-
-        await ai_response.send()
-
-        # Update state with the new message ID
-        ai_message_id = ai_response.id
-        state.metadata["current_message_id"] = ai_message_id
-
-        # Handle image generation if there's a storyboard and image generation is enabled
-        if "storyboard" in chunk and IMAGE_GENERATION_ENABLED:
-            asyncio.create_task(
-                process_storyboard_images(chunk["storyboard"], ai_message_id)
-            )
+        # Generate AI response using the chat workflow
+        state = await chat_workflow(state.messages, store=cl_user_session.get("vector_memory"), previous=state)
 
         # Update session state
         cl_user_session.set("state", state)
+
     except Exception as e:
         cl_element.logger.error(f"Runnable stream failed: {e}", exc_info=True)
         cl_element.logger.error(

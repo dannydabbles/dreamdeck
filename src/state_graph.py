@@ -133,12 +133,6 @@ async def chat_workflow(
                 try:
                     args = json.loads(function_call["arguments"])
                     action = args.get("action")
-                    if (
-                        "roll" in last_human_message.content.lower()
-                        or "d20" in last_human_message.content.lower()
-                        or "dice" in last_human_message.content.lower()
-                    ):
-                        action = "roll"
                 except json.JSONDecodeError as e:
                     cl_logger.error(f"Failed to parse function arguments: {e}")
                     action = "continue_story"
@@ -146,26 +140,26 @@ async def chat_workflow(
                 action = "continue_story"
 
         action_map = {
-            "roll": "roll" if DICE_ROLLING_ENABLED else "writer",
-            "search": "search" if WEB_SEARCH_ENABLED else "writer",
-            "continue_story": "writer",
+            "roll": dice_roll_agent,
+            "search": web_search_agent,
+            "continue_story": writer_agent,
         }
-        mapped_action = action_map.get(action, "writer")
+        mapped_agent = action_map.get(action, writer_agent)
 
-        if mapped_action == "roll":
-            result = await tool_node.ainvoke([HumanMessage(content=last_human_message.content)])
-            state.messages.append(ToolMessage(content=result.content, name="dice_roll"))
+        if mapped_agent == dice_roll_agent:
+            result = await dice_roll_agent.ainvoke([HumanMessage(content=last_human_message.content)])
+            state.messages.append(result)
             await CLMessage(content=result.content).send()
 
-        elif mapped_action == "search":
-            result = await tool_node.ainvoke([HumanMessage(content=last_human_message.content)])
-            state.messages.append(ToolMessage(content=result.content, name="web_search"))
+        elif mapped_agent == web_search_agent:
+            result = await web_search_agent.ainvoke([HumanMessage(content=last_human_message.content)])
+            state.messages.append(result)
             await CLMessage(content=result.content).send()
 
-        # Generate AI response
-        ai_response = await writer_agent.ainvoke(state.messages)
-        state.messages.append(AIMessage(content=ai_response.content))
-        await CLMessage(content=ai_response.content).send()
+        else:
+            ai_response = await mapped_agent.ainvoke(state.messages)
+            state.messages.append(AIMessage(content=ai_response.content))
+            await CLMessage(content=ai_response.content).send()
 
         # Generate storyboard if needed and image generation is enabled
         if IMAGE_GENERATION_ENABLED:
