@@ -18,7 +18,8 @@ from .tools_and_agents import (
     decision_agent,
     writer_agent,
     storyboard_editor_agent,
-    tool_node,
+    dice_roll_agent,
+    web_search_agent,
 )
 from .image_generation import process_storyboard_images
 from .config import (

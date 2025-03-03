@@ -53,7 +53,7 @@ from .config import (
     STABLE_DIFFUSION_API_ENDPOINT,
 )
 from .state import ChatState
-from .state_graph import chat_workflow as graph
+from .state_graph import chat_workflow
 from .tools_and_agents import handle_dice_roll  # Import handle_dice_roll
 from .initialization import DatabasePool  # Import DatabasePool
 from .image_generation import process_storyboard_images
