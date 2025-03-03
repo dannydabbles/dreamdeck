@@ -3,7 +3,7 @@ import random
 import requests
 import re
 from langgraph.prebuilt import create_react_agent
-from langgraph.types import ToolNode
+from langgraph.func import ToolNode
 from langgraph.func import tool  # Updated import
 from langchain_core.llms import ChatOpenAI  # Corrected import
 from langchain_core.messages import (
@@ -103,7 +103,7 @@ def dice_roll(input_str: Optional[str] = None) -> str:
         return f"🎲 Error rolling dice: {str(e)}"
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
-        return f"🎲 Error rolling dice: {str(e)}"
+        return f"🎲 Error rolling dice: {str(e)}"  # type: ignore
 
 
 def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
