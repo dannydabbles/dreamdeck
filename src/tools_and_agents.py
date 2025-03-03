@@ -83,7 +83,7 @@ def dice_roll(input_str: Optional[str] = None) -> str:
             dice_list = parse_dice_input(input_str)
             if not dice_list:
                 # Fallback to d20 if parsing fails
-                sides = DICES_SIDES  # Corrected variable name
+                sides = DICE_SIDES  # Corrected variable name
                 count = 1
             else:
                 # Use the first parsed dice specification
