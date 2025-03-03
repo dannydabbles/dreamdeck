@@ -31,6 +31,7 @@ def mock_config():
             "WEB_SEARCH_ENABLED": True,
             "SERPAPI_KEY": "test_key",
             "DICE_ROLLING_ENABLED": True,
+            "DICE_SIDES": 20,
         },
     ):
         yield

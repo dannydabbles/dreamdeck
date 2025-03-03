@@ -25,19 +25,26 @@ class DatabasePool:
         Returns:
             ChainlitDataLayer: The database pool instance.
         """
-        if not cls._initialized:
-            await cls.initialize()
-        return cls._instance  # type: ignore
+        try:
+            if not cls._initialized:
+                await cls.initialize()
+            return cls._instance  # type: ignore
+        except Exception as e:
+            cl_logger.error(f"Database initialization failed: {e}", exc_info=True)
+            raise
 
     @classmethod
     async def initialize(cls) -> None:
         """Initialize the database pool if not already initialized."""
-        if not cls._initialized:
-            # Initialize the Chainlit data layer
-            cls._instance = ChainlitDataLayer(
-                database_url=os.getenv("DATABASE_URL"), storage_client=None
-            )
-            cls._initialized = True
+        try:
+            if not cls._initialized:
+                cls._instance = ChainlitDataLayer(
+                    database_url=os.getenv("DATABASE_URL"), storage_client=None
+                )
+                cls._initialized = True
+        except Exception as e:
+            cl_logger.error(f"Database initialization failed: {e}", exc_info=True)
+            raise
 
     @classmethod
     async def close(cls) -> None:

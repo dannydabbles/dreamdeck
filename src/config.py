@@ -19,7 +19,6 @@ with open(CONFIG_FILE, "r") as f:
 
 class ConfigSchema(BaseModel):
     """Pydantic model for the configuration schema."""
-
     llm: dict
     prompts: dict
     image_generation_payload: dict
@@ -30,15 +29,15 @@ class ConfigSchema(BaseModel):
     paths: dict
     openai: dict
     search: dict
-    chainlit: dict
-    logging: dict
-    error_handling: dict
-    api: dict
     features: dict
-    rate_limits: dict
+    error_handling: dict
+    logging: dict
+    api: dict
     security: dict
     monitoring: dict
     caching: dict
+    agents: dict  # Add agents configuration
+    chainlit: dict  # Add chainlit configuration
 
 
 def load_config() -> ConfigSchema:
@@ -52,6 +51,20 @@ def load_config() -> ConfigSchema:
     except ValidationError as e:
         cl_logger.error(f"Configuration validation failed: {e}")
         raise
+
+    # Configure logging
+    logging.basicConfig(
+        level=config.logging.level,
+        format=config.logging.format,
+        handlers=[
+            RotatingFileHandler(
+                config.logging.file,
+                maxBytes=int(config.logging.max_size),
+                backupCount=config.logging.backup_count
+            ),
+            logging.StreamHandler() if config.logging.console else None
+        ],
+    )
 
     # Database configuration with fallbacks
     DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
@@ -132,7 +145,7 @@ def load_config() -> ConfigSchema:
 
     # LLM settings
     LLM_SETTINGS = config.llm
-    LLM_CHUNK_SIZE = LLM_SETTINGS.chunk_size
+    LLM_CHUNK_SIZE = LLM_SETTINGS.get('chunk_size', 1000)  # Default to 1000 if not set
     LLM_TEMPERATURE = LLM_SETTINGS.temperature
     LLM_MODEL_NAME = LLM_SETTINGS.model_name
     cl_logger.info(
@@ -158,29 +171,7 @@ def load_config() -> ConfigSchema:
     cl_logger.info(f"Search settings loaded: serpapi_key={SERPAPI_KEY}")
 
     # Chainlit Starters
-    CHAINLIT_STARTERS = config.chainlit.starters
+    CHAINLIT_STARTERS = config.chainlit.get('starters', [])
     cl_logger.info(f"Chainlit starters loaded: {CHAINLIT_STARTERS}")
-
-    # Logging settings
-    LOGGING_LEVEL = config.logging.level
-    LOGGING_FILE = config.logging.file
-    LOGGING_CONSOLE = config.logging.console
-    LOGGING_FORMAT = config.logging.format
-    LOGGING_MAX_SIZE = config.logging.max_size
-    LOGGING_BACKUP_COUNT = config.logging.backup_count
-
-    # Set up logging
-    cl_logger.setLevel(LOGGING_LEVEL)
-    formatter = logging.Formatter(LOGGING_FORMAT)
-    handler = RotatingFileHandler(
-        LOGGING_FILE, maxBytes=int(LOGGING_MAX_SIZE), backupCount=LOGGING_BACKUP_COUNT
-    )
-    handler.setFormatter(formatter)
-    cl_logger.addHandler(handler)
-
-    if LOGGING_CONSOLE:
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        cl_logger.addHandler(console_handler)
 
     return config

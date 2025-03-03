@@ -66,23 +66,23 @@ async def generate_image_async(
         cl_element.logger.warning("Image generation is disabled in the configuration.")
         return None
 
-    # Flux payload
-    payload = {
-        "prompt": image_generation_prompt,
-        "negative_prompt": NEGATIVE_PROMPT,
-        "steps": STEPS,
-        "sampler_name": SAMPLER_NAME,
-        "scheduler": SCHEDULER,
-        "cfg_scale": CFG_SCALE,
-        "width": WIDTH,
-        "height": HEIGHT,
-        "hr_upscaler": HR_UPSCALER,
-        "denoising_strength": DENOISING_STRENGTH,
-        "hr_second_pass_steps": HR_SECOND_PASS_STEPS,
-        "seed": seed,
-    }
-
     try:
+        # Flux payload
+        payload = {
+            "prompt": image_generation_prompt,
+            "negative_prompt": NEGATIVE_PROMPT,
+            "steps": STEPS,
+            "sampler_name": SAMPLER_NAME,
+            "scheduler": SCHEDULER,
+            "cfg_scale": CFG_SCALE,
+            "width": WIDTH,
+            "height": HEIGHT,
+            "hr_upscaler": HR_UPSCALER,
+            "denoising_strength": DENOISING_STRENGTH,
+            "hr_second_pass_steps": HR_SECOND_PASS_STEPS,
+            "seed": seed,
+        }
+
         async with httpx.AsyncClient(timeout=IMAGE_GENERATION_TIMEOUT) as client:
             response = await client.post(
                 f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/txt2img", json=payload
@@ -91,6 +91,7 @@ async def generate_image_async(
             image_data = response.json()["images"][0]
             image_bytes = base64.b64decode(image_data)
             return image_bytes
+
     except httpx.RequestError as e:
         cl_element.logger.error(f"Image generation failed after retries: {e}", exc_info=True)
         raise

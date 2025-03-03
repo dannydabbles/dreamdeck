@@ -15,7 +15,6 @@ import chainlit as cl
 
 class MessageType(str, Enum):
     """Enum for message types in the chat."""
-
     HUMAN = "human"
     AI = "ai"
     TOOL = "tool"
@@ -55,35 +54,26 @@ class Message(BaseModel):
 
 
 class ChatState(BaseModel):
-    """Enhanced state model with Chainlit integration.
-
-    Attributes:
-        messages (Sequence[BaseMessage]): The list of messages.
-        is_last_step: Flag indicating if this is the last step. Defaults to False.
-        thread_id (str): The thread ID. Defaults to the current session ID.
-        metadata (Dict[str, Any], optional): Additional metadata. Defaults to an empty dictionary.
-        current_message_id (Optional[str], optional): The current message ID. Defaults to None.
-        tool_results (List[str], optional): List of tool results. Defaults to an empty list.
-        error_count (int, optional): The error count. Defaults to 0.
-        memories (List[str], optional): List of memories. Defaults to an empty list.
-        user_preferences (Dict[str, Any], optional): User preferences. Defaults to an empty dictionary.
-        thread_data (Dict[str, Any], optional): Thread-specific data. Defaults to an empty dictionary.
-    """
-
-    messages: Annotated[Sequence[BaseMessage], operator.add]
-    is_last_step: bool = Field(default=False)
+    """Enhanced state model with Chainlit integration."""
+    messages: List[BaseMessage] = []
+    is_last_step: bool = False
     thread_id: str = Field(default_factory=lambda: cl.context.session.id)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict = {}
     current_message_id: Optional[str] = None
-    tool_results: List[str] = Field(default_factory=list)
-    error_count: int = Field(default=0)
-    memories: List[str] = Field(default_factory=list)  # Add memories field
-    user_preferences: Dict[str, Any] = Field(
-        default_factory=dict
-    )  # Add user preferences
-    thread_data: Dict[str, Any] = Field(
-        default_factory=dict
-    )  # Add thread-specific data
+    tool_results: List[str] = []
+    error_count: int = 0
+    memories: List[str] = []
+    user_preferences: dict = {}
+    thread_data: dict = {}
+
+    def add_tool_result(self, result: str) -> None:
+        self.tool_results.append(result)
+
+    def clear_tool_results(self) -> None:
+        self.tool_results = []
+
+    def increment_error_count(self) -> None:
+        self.error_count += 1
 
     def get_memories_str(self) -> str:
         """Get formatted string of memories.
@@ -162,19 +152,3 @@ class ChatState(BaseModel):
             Sequence[BaseMessage]: The recent messages.
         """
         return self.messages[-n:] if len(self.messages) > n else self.messages
-
-    def add_tool_result(self, result: str) -> None:
-        """Add a tool result to the state.
-
-        Args:
-            result (str): The tool result.
-        """
-        self.tool_results.append(result)
-
-    def clear_tool_results(self) -> None:
-        """Clear tool results after processing."""
-        self.tool_results = []
-
-    def increment_error_count(self) -> None:
-        """Increment error count for retry logic."""
-        self.error_count += 1

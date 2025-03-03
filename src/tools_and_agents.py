@@ -53,7 +53,6 @@ cl_logger = logging.getLogger("chainlit")
 
 class DecisionOutput(BaseModel):
     """Schema for the decision output."""
-
     action: Literal["roll", "search", "continue_story"] = Field(
         description="The next action to take based on user input"
     )
@@ -178,6 +177,7 @@ decision_agent = create_react_agent(
     ),
     tools=tools,
     checkpointer=MemorySaver(),
+    interrupt_before=["tools"],
 )
 
 # Initialize the writer AI agent with tools and longer timeout
@@ -196,6 +196,7 @@ writer_agent = create_react_agent(
     ),
     tools=tools,
     checkpointer=MemorySaver(),
+    interrupt_before=["tools"],
 )
 
 # Initialize the storyboard editor agent with longer timeout
@@ -214,4 +215,5 @@ storyboard_editor_agent = create_react_agent(
     ),
     tools=tools,
     checkpointer=MemorySaver(),
+    interrupt_before=["tools"],
 )
