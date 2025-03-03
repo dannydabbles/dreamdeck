@@ -1,175 +1,64 @@
 import pytest
-from src.tools_and_agents import (
-    dice_roll,
-    parse_dice_input,
-    web_search,
-    handle_dice_roll,
-)
-from unittest.mock import patch, MagicMock
-import requests
-from typing import List, Tuple
-
-
-@pytest.fixture
-def mock_random():
-    with patch("random.randint") as mock_rand:
-        mock_rand.return_value = 5
-        yield mock_rand
-
-
-@pytest.fixture
-def mock_requests():
-    with patch("requests.get") as mock_get:
-        yield mock_get
-
-
-def mock_config(mocker):
-    mocker.patch.dict(
-        "src.tools_and_agents.__dict__",
-        {
-            "DICE_ROLLING_ENABLED": True,
-            "DICE_SIDES": 20,
-            "WEB_SEARCH_ENABLED": True,
-            "SERPAPI_KEY": "test_key",
-        },
-    )
-
-
-def test_parse_dice_input_single_die() -> None:
-    input_str = "d20"
-    result: List[Tuple[int, int]] = parse_dice_input(input_str)
-    assert result == [(20, 1)]
-
-
-def test_parse_dice_input_multiple_dice() -> None:
-    input_str = "2d6"
-    result: List[Tuple[int, int]] = parse_dice_input(input_str)
-    assert result == [(6, 2)]
-
-
-def test_parse_dice_input_complex() -> None:
-    input_str = "3d4 + 1d8"
-    result: List[Tuple[int, int]] = parse_dice_input(input_str)
-    assert result == [(4, 3), (8, 1)]
-
-
-def test_parse_dice_input_invalid() -> None:
-    input_str = "invalid"
-    with pytest.raises(ValueError, match="Invalid dice specification"):
-        parse_dice_input(input_str)
-
-
-def test_parse_dice_input_zero_sides() -> None:
-    input_str = "0d6"
-    with pytest.raises(ValueError, match="Invalid dice sides"):
-        parse_dice_input(input_str)
-
-
-def test_parse_dice_input_negative_sides() -> None:
-    input_str = "-1d6"
-    with pytest.raises(ValueError, match="Invalid dice sides"):
-        parse_dice_input(input_str)
+from src.agents.decision_agent import decision_agent
+from src.agents.writer_agent import writer_agent
+from src.agents.storyboard_editor_agent import storyboard_editor_agent
+from src.agents.dice_agent import dice_roll_agent
+from src.agents.web_search_agent import web_search_agent
+from langchain_core.messages import HumanMessage, AIMessage
+import json
 
 
 @pytest.mark.asyncio
-async def test_dice_roll_single_die(mock_random: MagicMock, mock_config: None) -> None:
-    result: str = await dice_roll()
-    assert "🎲 You rolled a 5 on a 20-sided die." in result
+async def test_decision_agent_roll_action():
+    message = HumanMessage(content="roll 2d20")
+    response = await decision_agent.ainvoke([message])
+    assert isinstance(response, AIMessage)
+    assert "dice_roll" in response.content.lower()
 
 
 @pytest.mark.asyncio
-async def test_dice_roll_multiple_dice(mock_random: MagicMock, mock_config: None) -> None:
-    result: str = await dice_roll("2d6")
-    assert "🎲 You rolled [5, 5] (total: 10) on 2d6." in result
+async def test_decision_agent_search_action():
+    message = HumanMessage(content="search for information on AI")
+    response = await decision_agent.ainvoke([message])
+    assert isinstance(response, AIMessage)
+    assert "web_search" in response.content.lower()
 
 
 @pytest.mark.asyncio
-async def test_dice_roll_invalid_input(mock_config: None) -> None:
-    result: str = await dice_roll("invalid")
-    assert "🎲 Error rolling dice: Invalid dice specification" in result
+async def test_decision_agent_story_action():
+    message = HumanMessage(content="continue the story")
+    response = await decision_agent.ainvoke([message])
+    assert isinstance(response, AIMessage)
+    assert "continue_story" in response.content.lower()
 
 
 @pytest.mark.asyncio
-async def test_dice_roll_disabled(mock_config: None) -> None:
-    with patch("src.tools_and_agents.DICE_ROLLING_ENABLED", False):
-        result: str = await dice_roll()
-        assert "Dice rolling is disabled in the configuration." in result
+async def test_dice_roll_agent():
+    message = HumanMessage(content="roll 2d20")
+    response = await dice_roll_agent.ainvoke([message])
+    assert isinstance(response, AIMessage)
+    assert "🎲 You rolled" in response.content
 
 
 @pytest.mark.asyncio
-async def test_dice_roll_zero_sides(mock_random: MagicMock, mock_config: None) -> None:
-    with patch("src.tools_and_agents.parse_dice_input", return_value=[(0, 1)]):
-        result: str = await dice_roll("0d6")
-        assert "🎲 Error rolling dice: Invalid dice sides" in result
+async def test_web_search_agent():
+    message = HumanMessage(content="search for AI information")
+    response = await web_search_agent.ainvoke([message])
+    assert isinstance(response, AIMessage)
+    assert "Web search" in response.content
 
 
 @pytest.mark.asyncio
-async def test_dice_roll_negative_sides(mock_random: MagicMock, mock_config: None) -> None:
-    with patch("src.tools_and_agents.parse_dice_input", return_value=[(-1, 1)]):
-        result: str = await dice_roll("-1d6")
-        assert "🎲 Error rolling dice: Invalid dice sides" in result
+async def test_writer_agent():
+    message = HumanMessage(content="continue the story")
+    response = await writer_agent.ainvoke([message])
+    assert isinstance(response, AIMessage)
+    assert len(response.content) > 0
 
 
 @pytest.mark.asyncio
-async def test_handle_dice_roll(mock_random: MagicMock, mock_config: None) -> None:
-    query: str = "roll 2d6"
-    result: str = await handle_dice_roll(query)
-    assert "🎲 You rolled [5, 5] (total: 10) on 2d6." in result
-
-
-@pytest.mark.asyncio
-async def test_handle_dice_roll_disabled(mock_config: None) -> None:
-    with patch("src.tools_and_agents.DICE_ROLLING_ENABLED", False):
-        result: str = await handle_dice_roll("roll 2d6")
-        assert "Dice rolling is disabled in the configuration." in result
-
-
-@pytest.mark.asyncio
-async def test_web_search(mock_requests: MagicMock, mock_config: None) -> None:
-    query: str = "test query"
-    mock_response: dict = {"organic_results": [{"snippet": "Test result"}]}
-    mock_requests.return_value.json.return_value = mock_response
-
-    result: str = await web_search(query)
-    assert "Test result" in result
-
-
-@pytest.mark.asyncio
-async def test_web_search_disabled(mock_requests: MagicMock, mock_config: None) -> None:
-    with patch("src.tools_and_agents.WEB_SEARCH_ENABLED", False):
-        result: str = await web_search("test query")
-        assert "Web search is disabled." in result
-
-
-@pytest.mark.asyncio
-async def test_web_search_api_key_missing(mock_requests: MagicMock, mock_config: None) -> None:
-    with patch("src.tools_and_agents.SERPAPI_KEY", None):
-        result: str = await web_search("test query")
-        assert "SERPAPI_KEY environment variable not set." in result
-
-
-@pytest.mark.asyncio
-async def test_web_search_request_error(mock_requests: MagicMock, mock_config: None) -> None:
-    mock_requests.side_effect = requests.exceptions.RequestException("Request failed")
-    result: str = await web_search("test query")
-    assert "Web search failed: Request failed" in result
-
-
-@pytest.mark.asyncio
-async def test_web_search_no_results(mock_requests: MagicMock, mock_config: None) -> None:
-    query: str = "test query"
-    mock_response: dict = {"organic_results": []}
-    mock_requests.return_value.json.return_value = mock_response
-
-    result: str = await web_search(query)
-    assert "No results found." in result
-
-
-@pytest.mark.asyncio
-async def test_web_search_invalid_response(mock_requests: MagicMock, mock_config: None) -> None:
-    query: str = "test query"
-    mock_response: dict = {"error": "Invalid query"}
-    mock_requests.return_value.json.return_value = mock_response
-
-    result: str = await web_search(query)
-    assert "Web search failed: Invalid query" in result
+async def test_storyboard_editor_agent():
+    message = HumanMessage(content="generate a storyboard")
+    response = await storyboard_editor_agent.ainvoke([message])
+    assert isinstance(response, AIMessage)
+    assert len(response.content) > 0
