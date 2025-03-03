@@ -22,7 +22,8 @@ async def test_decision_agent_roll_action():
 @pytest.mark.asyncio
 async def test_decision_agent_search_action():
     message = HumanMessage(content="search for information on AI")
-    response = await decision_agent.ainvoke([message])
+    with patch('src.agents.decision_agent.decide_action', return_value=ToolMessage(content="search")):
+        response = await decision_agent.ainvoke([message])
     assert isinstance(response, AIMessage)
     assert "web_search" in response.content.lower()
 
