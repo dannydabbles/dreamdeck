@@ -1,14 +1,13 @@
 import os
 import requests
 import logging
-from langgraph.prebuilt import create_react_agent, tool
+from langgraph.prebuilt import create_react_agent
 from langgraph.message import ToolMessage
 from .config import SERPAPI_KEY, WEB_SEARCH_ENABLED
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-@tool
 def web_search(query: str) -> ToolMessage:
     """Perform a web search using SerpAPI.
 

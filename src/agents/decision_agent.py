@@ -1,15 +1,13 @@
 import os
 import logging
-from langgraph.prebuilt import create_react_agent, tool
+from langgraph.prebuilt import create_react_agent
 from langgraph.message import ToolMessage
-from .config import DECISION_AGENT_TEMPERATURE, DECISION_AGENT_MAX_TOKENS, DECISION_AGENT_STREAMING, DECISION_AGENT_VERBOSE, LLM_TIMEOUT
 from .agents.dice_agent import dice_roll_agent
 from .agents.web_search_agent import web_search_agent
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-@tool
 def decide_action(user_input: str) -> ToolMessage:
     """Determine the next action based on user input.
 

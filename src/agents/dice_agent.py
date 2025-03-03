@@ -1,7 +1,7 @@
 import os
 import random
 import logging
-from langgraph.prebuilt import create_react_agent, tool
+from langgraph.prebuilt import create_react_agent
 from langgraph.message import ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
 from .config import DICE_ROLLING_ENABLED, DICE_SIDES
@@ -9,7 +9,6 @@ from .config import DICE_ROLLING_ENABLED, DICE_SIDES
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-@tool
 def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
     """Roll dice based on user input.
 
