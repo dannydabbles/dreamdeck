@@ -6,7 +6,7 @@ from typing import List, Tuple, Optional  # Add Optional
 from langgraph.prebuilt import create_react_agent
 from langgraph.message import ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
-from .config import DICE_ROLLING_ENABLED, DICE_SIDES
+from ..config import DICE_ROLLING_ENABLED, DICE_SIDES
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 
 # Initialize logging

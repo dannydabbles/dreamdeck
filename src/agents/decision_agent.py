@@ -4,7 +4,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import ToolMessage
 from agents.dice_agent import dice_roll_agent
 from .agents.web_search_agent import web_search_agent
-from .config import (
+from ..config import (
     DECISION_AGENT_TEMPERATURE,
     DECISION_AGENT_MAX_TOKENS,
     DECISION_AGENT_STREAMING,

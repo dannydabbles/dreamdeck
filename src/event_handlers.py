@@ -54,7 +54,7 @@ from .config import (
 )
 from .state import ChatState
 from .state_graph import chat_workflow
-from .tools_and_agents import handle_dice_roll  # Import handle_dice_roll
+from .agents.dice_agent import handle_dice_roll  # Import handle_dice_roll
 from .initialization import DatabasePool  # Import DatabasePool
 from .image_generation import process_storyboard_images
 
