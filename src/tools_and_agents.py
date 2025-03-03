@@ -2,8 +2,7 @@ import os
 import random
 import requests
 import re
-from langgraph.prebuilt import create_react_agent, ToolNode
-from langgraph.func import Agent
+from langgraph.prebuilt import create_react_agent, ToolNode, Agent
 from langchain_core.llms import ChatOpenAI
 from langchain_core.messages import (
     BaseMessage,
