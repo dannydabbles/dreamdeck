@@ -2,9 +2,9 @@ import asyncio
 import logging
 import json
 from typing import List, Optional
+from langgraph.prebuilt import create_react_agent, ToolNode
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.store.base import BaseStore
 from langchain_core.messages import (
     BaseMessage,
     AIMessage,
@@ -15,24 +15,19 @@ from langchain_core.messages import (
 from langgraph.message import CLMessage
 from .state import ChatState
 from .tools_and_agents import (
-    handle_dice_roll,
-    web_search,
     decision_agent,
-    log_decision_agent_response,
+    writer_agent,
+    storyboard_editor_agent,
+    tool_node,
 )
-from .image_generation import (
-    process_storyboard_images,
-    generate_image_generation_prompts,
-)
+from .image_generation import process_storyboard_images
 from .config import (
-    DECISION_PROMPT,
     IMAGE_GENERATION_ENABLED,
-    DICE_ROLLING_ENABLED,
     WEB_SEARCH_ENABLED,
+    DICE_ROLLING_ENABLED,
 )
 from .models import ChatState
 from .memory_management import save_chat_memory
-
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -71,7 +66,7 @@ async def process_storyboard(state: ChatState) -> Optional[str]:
         ]
 
         # Get storyboard prompts from the agent
-        response = await decision_agent.ainvoke(messages)
+        response = await storyboard_editor_agent.ainvoke(messages)
 
         if not response or not response.content:
             cl_logger.warning("Empty storyboard response")
@@ -120,14 +115,13 @@ async def chat_workflow(
         )
         if not last_human_message:
             cl_logger.info("No human message found, defaulting to writer")
-            action = "writer"
+            action = "continue_story"
         else:
             formatted_prompt = DECISION_PROMPT.format(
                 user_input=last_human_message.content
             )
             messages = [SystemMessage(content=formatted_prompt)]
             response = await decision_agent.ainvoke(messages)
-            log_decision_agent_response(response)
 
             if (
                 hasattr(response, "additional_kwargs")
@@ -157,20 +151,19 @@ async def chat_workflow(
         mapped_action = action_map.get(action, "writer")
 
         if mapped_action == "roll":
-            result = await handle_dice_roll(last_human_message)
-            state.messages.append(ToolMessage(content=result, name="dice_roll"))
-            await CLMessage(content=result).send()
+            result = await tool_node.ainvoke([HumanMessage(content=last_human_message.content)])
+            state.messages.append(ToolMessage(content=result.content, name="dice_roll"))
+            await CLMessage(content=result.content).send()
 
         elif mapped_action == "search":
-            query = last_human_message.content
-            result = await web_search(query)
-            state.messages.append(ToolMessage(content=result, name="web_search"))
-            await CLMessage(content=result).send()
+            result = await tool_node.ainvoke([HumanMessage(content=last_human_message.content)])
+            state.messages.append(ToolMessage(content=result.content, name="web_search"))
+            await CLMessage(content=result.content).send()
 
         # Generate AI response
-        ai_response = await generate_story_response(state.messages)
-        state.messages.append(AIMessage(content=ai_response))
-        await CLMessage(content=ai_response).send()
+        ai_response = await writer_agent.ainvoke(state.messages)
+        state.messages.append(AIMessage(content=ai_response.content))
+        await CLMessage(content=ai_response.content).send()
 
         # Generate storyboard if needed and image generation is enabled
         if IMAGE_GENERATION_ENABLED:

@@ -2,10 +2,7 @@ import os
 import random
 import requests
 import re
-from langgraph.prebuilt.tool_node import ToolNode
-from langchain.prompts import PromptTemplate
-from langchain_openai import ChatOpenAI
-from langchain.schema.output_parser import StrOutputParser
+from langgraph.prebuilt import ToolNode, tool
 from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
@@ -58,27 +55,7 @@ class DecisionOutput(BaseModel):
     )
 
 
-def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
-    """Parse dice input string into a list of (sides, count) tuples."""
-    pattern = r"(\d*)d(\d+)"
-    matches = re.findall(pattern, input_str)
-    dice_list = []
-
-    for match in matches:
-        count_str, sides_str = match
-        try:
-            count = int(count_str) if count_str else 1
-            sides = int(sides_str)
-            if sides < 1:
-                raise ValueError("Invalid dice sides")
-            dice_list.append((sides, count))
-        except ValueError as e:
-            cl_logger.error(f"Invalid dice specification: {e}")
-            raise ValueError("Invalid dice specification") from e
-
-    return dice_list
-
-
+@tool
 def dice_roll(input_str: Optional[str] = None) -> str:
     """Roll dice based on user input.
 
@@ -129,46 +106,28 @@ def dice_roll(input_str: Optional[str] = None) -> str:
         return f"🎲 Error rolling dice: {str(e)}"
 
 
-# Define the dice roll tool schema
-dice_roll_schema = {
-    "type": "function",
-    "function": {
-        "name": "dice_roll",
-        "description": "Roll a dice with a specified number of sides",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "input_str": {
-                    "type": "string",
-                    "description": "The dice specification (e.g., 'd3', '2d6'). Defaults to 'd20' if not specified.",
-                }
-            },
-            "required": ["input_str"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-}
+def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
+    """Parse dice input string into a list of (sides, count) tuples."""
+    pattern = r"(\d*)d(\d+)"
+    matches = re.findall(pattern, input_str)
+    dice_list = []
 
-# Define the web search tool schema
-web_search_schema = {
-    "type": "function",
-    "function": {
-        "name": "web_search",
-        "description": "Performs a web search using SerpAPI",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "The search query"}
-            },
-            "required": ["query"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-}
+    for match in matches:
+        count_str, sides_str = match
+        try:
+            count = int(count_str) if count_str else 1
+            sides = int(sides_str)
+            if sides < 1:
+                raise ValueError("Invalid dice sides")
+            dice_list.append((sides, count))
+        except ValueError as e:
+            cl_logger.error(f"Invalid dice specification: {e}")
+            raise ValueError("Invalid dice specification") from e
+
+    return dice_list
 
 
+@tool
 def web_search(query: str) -> str:
     """Perform a web search using SerpAPI.
 
@@ -198,71 +157,57 @@ def web_search(query: str) -> str:
         return f"Web search failed: {str(e)}"
 
 
+# Create a ToolNode instance
+tools = [dice_roll, web_search]
+tool_node = ToolNode(tools=tools, name="custom_tools")
+
 # Initialize the decision agent with proper function binding and longer timeout
-decision_agent = ChatOpenAI(
-    base_url=OPENAI_BASE_URL,
-    temperature=DECISION_AGENT_TEMPERATURE,
-    streaming=DECISION_AGENT_STREAMING,
-    model_name=LLM_MODEL_NAME,
-    request_timeout=LLM_TIMEOUT * 2,
-    max_tokens=DECISION_AGENT_MAX_TOKENS,
-    verbose=DECISION_AGENT_VERBOSE,
-).bind(
-    tools=[
-        {
-            "type": "function",
-            "function": {
-                "name": "decide_action",
-                "description": "Decide the next action based on user input. Choose 'roll' for any dice commands.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "action": {
-                            "type": "string",
-                            "enum": ["roll", "search", "continue_story"],
-                            "description": "The action to take. Choose 'roll' for dice rolls.",
-                        }
-                    },
-                    "required": ["action"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        }
-    ]
+decision_agent = create_react_agent(
+    model=ChatOpenAI(
+        base_url=OPENAI_BASE_URL,
+        temperature=DECISION_AGENT_TEMPERATURE,
+        streaming=DECISION_AGENT_STREAMING,
+        model_name=LLM_MODEL_NAME,
+        request_timeout=LLM_TIMEOUT * 2,
+        max_tokens=DECISION_AGENT_MAX_TOKENS,
+        verbose=DECISION_AGENT_VERBOSE,
+    ),
+    tools=tools,
+    checkpointer=MemorySaver(),
 )
 
-# Create tools list and executor
-tools = [dice_roll, web_search]
-tool_node = ToolNode(tools=tools)
-
 # Initialize the writer AI agent with tools and longer timeout
-writer_agent = ChatOpenAI(
-    base_url=OPENAI_BASE_URL,
-    model_name=LLM_MODEL_NAME,
-    temperature=WRITER_AGENT_TEMPERATURE,
-    max_tokens=WRITER_AGENT_MAX_TOKENS,
-    streaming=WRITER_AGENT_STREAMING,
-    request_timeout=LLM_TIMEOUT * 3,
-    presence_penalty=LLM_PRESENCE_PENALTY,
-    frequency_penalty=LLM_FREQUENCY_PENALTY,
-    top_p=LLM_TOP_P,
-    verbose=WRITER_AGENT_VERBOSE,
-).bind(
-    tools=[dice_roll_schema, web_search_schema],  # Include both schemas
-    tool_choice="auto",  # Allow the model to choose when to use tools
+writer_agent = create_react_agent(
+    model=ChatOpenAI(
+        base_url=OPENAI_BASE_URL,
+        model_name=LLM_MODEL_NAME,
+        temperature=WRITER_AGENT_TEMPERATURE,
+        max_tokens=WRITER_AGENT_MAX_TOKENS,
+        streaming=WRITER_AGENT_STREAMING,
+        request_timeout=LLM_TIMEOUT * 3,
+        presence_penalty=LLM_PRESENCE_PENALTY,
+        frequency_penalty=LLM_FREQUENCY_PENALTY,
+        top_p=LLM_TOP_P,
+        verbose=WRITER_AGENT_VERBOSE,
+    ),
+    tools=tools,
+    checkpointer=MemorySaver(),
 )
 
 # Initialize the storyboard editor agent with longer timeout
-storyboard_editor_agent = ChatOpenAI(
-    base_url=OPENAI_BASE_URL,
-    model_name=LLM_MODEL_NAME,
-    temperature=STORYBOARD_EDITOR_AGENT_TEMPERATURE,
-    streaming=STORYBOARD_EDITOR_AGENT_STREAMING,
-    request_timeout=LLM_TIMEOUT * 2,
-    max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
-    presence_penalty=LLM_PRESENCE_PENALTY,
-    frequency_penalty=LLM_FREQUENCY_PENALTY,
-    top_p=LLM_TOP_P,
-    verbose=STORYBOARD_EDITOR_AGENT_VERBOSE,
+storyboard_editor_agent = create_react_agent(
+    model=ChatOpenAI(
+        base_url=OPENAI_BASE_URL,
+        model_name=LLM_MODEL_NAME,
+        temperature=STORYBOARD_EDITOR_AGENT_TEMPERATURE,
+        max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
+        streaming=STORYBOARD_EDITOR_AGENT_STREAMING,
+        request_timeout=LLM_TIMEOUT * 2,
+        presence_penalty=LLM_PRESENCE_PENALTY,
+        frequency_penalty=LLM_FREQUENCY_PENALTY,
+        top_p=LLM_TOP_P,
+        verbose=STORYBOARD_EDITOR_AGENT_VERBOSE,
+    ),
+    tools=tools,
+    checkpointer=MemorySaver(),
 )
