@@ -2,8 +2,10 @@ import os
 import random
 import requests
 import re
-from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import create_react_agent
+from langgraph.types import ToolNode
 from langgraph.func import tool  # Updated import
+from langchain_core.llms import ChatOpenAI  # Corrected import
 from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
@@ -15,14 +17,6 @@ from pydantic import BaseModel, Field, Literal  # Import Literal
 from typing import List, Tuple, Optional  # Import List and Tuple
 import logging
 from .config import (
-    LLM_MODEL_NAME,
-    LLM_TEMPERATURE,
-    LLM_MAX_TOKENS,
-    LLM_PRESENCE_PENALTY,
-    LLM_FREQUENCY_PENALTY,
-    LLM_TOP_P,
-    LLM_TIMEOUT,
-    LLM_VERBOSE,
     DECISION_AGENT_TEMPERATURE,
     DECISION_AGENT_MAX_TOKENS,
     DECISION_AGENT_STREAMING,
@@ -39,14 +33,16 @@ from .config import (
     SERPAPI_KEY,
     DICE_SIDES,
     WEB_SEARCH_ENABLED,
-    MONITORING_ENABLED,
-    MONITORING_ENDPOINT,
-    MONITORING_SAMPLE_RATE,
     DICE_ROLLING_ENABLED,
+    LLM_PRESENCE_PENALTY,
+    LLM_FREQUENCY_PENALTY,
+    LLM_TOP_P,
+    LLM_TIMEOUT,
+    LLM_VERBOSE,
+    LLM_MAX_TOKENS,
+    LLM_TEMPERATURE,
 )
-from langgraph.prebuilt import create_react_agent  # Import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
-from langchain_community.llms import ChatOpenAI  # Import ChatOpenAI
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -168,53 +164,41 @@ tool_node = ToolNode(tools=tools, name="custom_tools")
 # Initialize the decision agent with proper function binding and longer timeout
 decision_agent = create_react_agent(
     model=ChatOpenAI(
-        base_url=OPENAI_BASE_URL,
         temperature=DECISION_AGENT_TEMPERATURE,
-        streaming=DECISION_AGENT_STREAMING,
-        model_name=LLM_MODEL_NAME,
-        request_timeout=LLM_TIMEOUT * 2,
         max_tokens=DECISION_AGENT_MAX_TOKENS,
+        streaming=DECISION_AGENT_STREAMING,
         verbose=DECISION_AGENT_VERBOSE,
+        request_timeout=LLM_TIMEOUT * 2,
     ),
     tools=tools,
     checkpointer=MemorySaver(),
-    interrupt_before=["tools"],
 )
 
 # Initialize the writer AI agent with tools and longer timeout
 writer_agent = create_react_agent(
     model=ChatOpenAI(
-        base_url=OPENAI_BASE_URL,
-        model_name=LLM_MODEL_NAME,
         temperature=WRITER_AGENT_TEMPERATURE,
         max_tokens=WRITER_AGENT_MAX_TOKENS,
         streaming=WRITER_AGENT_STREAMING,
+        verbose=WRITER_AGENT_VERBOSE,
         request_timeout=LLM_TIMEOUT * 3,
         presence_penalty=LLM_PRESENCE_PENALTY,
         frequency_penalty=LLM_FREQUENCY_PENALTY,
         top_p=LLM_TOP_P,
-        verbose=WRITER_AGENT_VERBOSE,
     ),
     tools=tools,
     checkpointer=MemorySaver(),
-    interrupt_before=["tools"],
 )
 
 # Initialize the storyboard editor agent with longer timeout
 storyboard_editor_agent = create_react_agent(
     model=ChatOpenAI(
-        base_url=OPENAI_BASE_URL,
-        model_name=LLM_MODEL_NAME,
         temperature=STORYBOARD_EDITOR_AGENT_TEMPERATURE,
         max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
         streaming=STORYBOARD_EDITOR_AGENT_STREAMING,
-        request_timeout=LLM_TIMEOUT * 2,
-        presence_penalty=LLM_PRESENCE_PENALTY,
-        frequency_penalty=LLM_FREQUENCY_PENALTY,
-        top_p=LLM_TOP_P,
         verbose=STORYBOARD_EDITOR_AGENT_VERBOSE,
+        request_timeout=LLM_TIMEOUT * 2,
     ),
     tools=tools,
     checkpointer=MemorySaver(),
-    interrupt_before=["tools"],
 )

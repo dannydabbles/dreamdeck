@@ -28,10 +28,10 @@ def mock_config():
     with patch.dict(
         "src.tools_and_agents.__dict__",
         {
-            "WEB_SEARCH_ENABLED": True,
-            "SERPAPI_KEY": "test_key",
             "DICE_ROLLING_ENABLED": True,
             "DICE_SIDES": 20,
+            "WEB_SEARCH_ENABLED": True,
+            "SERPAPI_KEY": "test_key",
         },
     ):
         yield
