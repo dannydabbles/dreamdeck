@@ -54,6 +54,8 @@ class DecisionOutput(BaseModel):
     )
 
 
+from langgraph.prebuilt import tool  # Import tool from langgraph.prebuilt
+
 @tool
 def dice_roll(input_str: Optional[str] = None) -> str:
     """Roll dice based on user input.
