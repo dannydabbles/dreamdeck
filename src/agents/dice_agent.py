@@ -53,14 +53,26 @@ def dice_roll(input_str: Optional[str] = None) -> dict:
             result = f"🎲 You rolled {rolls} (total: {total}) on {count}d{sides}."
 
         cl_logger.info(f"Dice roll result: {result}")
-        return {"name": "dice_roll", "args": {"result": result}}
+        return ToolMessage(
+            content=result,
+            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
+            name="dice_roll",
+        )
 
     except ValueError as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
-        return {"name": "error", "args": {"content": f"🎲 Error rolling dice: {str(e)}"}}
+        return ToolMessage(
+            content=f"🎲 Error rolling dice: {str(e)}",
+            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
+            name="error",
+        )
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
-        return {"name": "error", "args": {"content": f"🎲 Error rolling dice: {str(e)}"}}
+        return ToolMessage(
+            content=f"🎲 Error rolling dice: {str(e)}",
+            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
+            name="error",
+        )
 
 def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
     """Parse dice input string into a list of (sides, count) tuples."""
