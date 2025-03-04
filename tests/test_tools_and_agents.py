@@ -16,7 +16,7 @@ async def test_decision_agent_roll_action():
     with patch('src.agents.decision_agent.decide_action', return_value={"name": "roll", "args": {}}):
         response = await decision_agent.ainvoke([message])
     assert isinstance(response, AIMessage)
-    assert "dice_roll" in response.content.lower()
+    assert "🎲 You rolled" in response.content
 
 
 @pytest.mark.asyncio
@@ -25,7 +25,7 @@ async def test_decision_agent_search_action():
     with patch('src.agents.decision_agent.decide_action', return_value={"name": "search", "args": {}}):
         response = await decision_agent.ainvoke([message])
     assert isinstance(response, AIMessage)
-    assert "web_search" in response.content.lower()
+    assert "Web search" in response.content
 
 
 @pytest.mark.asyncio
@@ -34,7 +34,7 @@ async def test_decision_agent_story_action():
     with patch('src.agents.decision_agent.decide_action', return_value={"name": "continue_story", "args": {}}):
         response = await decision_agent.ainvoke([message])
     assert isinstance(response, AIMessage)
-    assert "continue_story" in response.content.lower()
+    assert "continue_story" in response.content
 
 
 @pytest.mark.asyncio
