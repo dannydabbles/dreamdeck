@@ -1896,3 +1896,99 @@ call_model:
 
 Compared to San Francisco, which is sunny, Boston, MA is experiencing rainy weather.
 In the LangSmith trace, we can see that the full conversational context is retained in each model call.
+
+Message
+The Message class is designed to send, stream, update or remove messages.
+
+​
+Parameters
+​
+content
+str
+The content of the message.
+
+​
+author
+str
+The author of the message, defaults to the chatbot name defined in your config file.
+
+​
+elements
+Element[]
+Elements to attach to the message.
+
+​
+actions
+Action[]
+Actions to attach to the message.
+
+​
+language
+str
+Language of the code if the content is code. See https://react-code-blocks-rajinwonderland.vercel.app/?path=/story/codeblock—supported-languages for a list of supported languages.
+
+​
+Send a message
+Send a new message to the UI.
+
+
+Copy
+import chainlit as cl
+
+
+@cl.on_message
+async def main(message: cl.Message):
+    await cl.Message(
+        content=f"Received: {message.content}",
+    ).send()
+​
+Stream a message
+Send a message token by token to the UI.
+
+
+Copy
+import chainlit as cl
+
+token_list = ["the", "quick", "brown", "fox"]
+
+
+@cl.on_chat_start
+async def main():
+    msg = cl.Message(content="")
+    for token in token_list:
+        await msg.stream_token(token)
+
+    await msg.send()
+​
+Update a message
+Update a message that already has been sent.
+
+
+Copy
+import chainlit as cl
+
+
+@cl.on_chat_start
+async def main():
+    msg = cl.Message(content="Hello!")
+    await msg.send()
+
+    await cl.sleep(2)
+
+    msg.content = "Hello again!"
+    await msg.update()
+​
+Remove a message
+Remove a message from the UI.
+
+
+Copy
+import chainlit as cl
+
+
+@cl.on_chat_start
+async def main():
+    msg = cl.Message(content="Message 1")
+    await msg.send()
+    await cl.sleep(2)
+    await msg.remove()
