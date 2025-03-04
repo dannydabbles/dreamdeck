@@ -1,7 +1,6 @@
 import os
 import logging
 from langgraph.prebuilt import create_react_agent
-from langchain_core.messages import ToolMessage
 from .dice_agent import dice_roll_agent
 from .web_search_agent import web_search_agent
 from ..config import (
@@ -17,14 +16,14 @@ from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-def decide_action(user_input: str) -> ToolMessage:
+def decide_action(user_input: str) -> dict:
     """Determine the next action based on user input.
 
     Args:
         user_input (str): The user's input.
 
     Returns:
-        ToolMessage: The next action to take.
+        dict: The next action to take.
     """
     try:
         # Determine the action based on user input
@@ -33,7 +32,7 @@ def decide_action(user_input: str) -> ToolMessage:
         elif "search" in user_input.lower():
             return {"name": "search", "args": {}}
         else:
-            return ToolMessage(content="continue_story")
+            return {"name": "continue_story", "args": {}}
     except Exception as e:
         cl_logger.error(f"Decision failed: {e}", exc_info=True)
         return {"name": "continue_story", "args": {}}

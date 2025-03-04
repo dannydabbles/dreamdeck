@@ -12,7 +12,7 @@ from langgraph.checkpoint.memory import MemorySaver
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
+def dice_roll(input_str: Optional[str] = None) -> dict:
     """Roll dice based on user input.
 
     Args:
@@ -20,7 +20,7 @@ def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
                                  Defaults to "d20" if not specified.
 
     Returns:
-        ToolMessage: The result of the dice roll.
+        dict: The result of the dice roll.
     """
     if not DICE_ROLLING_ENABLED:
         return {"name": "error", "args": {"content": "Dice rolling is disabled in the configuration."}}
@@ -59,7 +59,7 @@ def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
         return {"name": "error", "args": {"content": f"🎲 Error rolling dice: {str(e)}"}}
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
-        return ToolMessage(content=f"🎲 Error rolling dice: {str(e)}")
+        return {"name": "error", "args": {"content": f"🎲 Error rolling dice: {str(e)}"}}
 
 def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
     """Parse dice input string into a list of (sides, count) tuples."""

@@ -10,14 +10,14 @@ from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-def web_search(query: str) -> ToolMessage:
+def web_search(query: str) -> dict:
     """Perform a web search using SerpAPI.
 
     Args:
         query (str): The search query.
 
     Returns:
-        ToolMessage: The search result.
+        dict: The search result.
     """
     if not SERPAPI_KEY:
         return {"name": "error", "args": {"content": "SERPAPI_KEY environment variable not set."}}
@@ -37,7 +37,7 @@ def web_search(query: str) -> ToolMessage:
         return {"name": "error", "args": {"content": f"Web search failed: {str(e)}"}}
     except ValueError as e:
         cl_logger.error(f"Web search failed: {e}", exc_info=True)
-        return ToolMessage(content=f"Web search failed: {str(e)}")
+        return {"name": "error", "args": {"content": f"Web search failed: {str(e)}"}}
 
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
