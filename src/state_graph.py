@@ -140,13 +140,25 @@ async def chat_workflow(
 
         if mapped_agent == dice_roll_agent:
             result = await dice_roll_agent.ainvoke([HumanMessage(content=last_human_message.content)])
-            state.messages.append(AIMessage(content=result["args"]["result"]))
-            await CLMessage(content=result["args"]["result"]).send()
+            tool_message = ToolMessage(
+                content=result["args"]["result"],
+                tool_call_id=result["id"],
+                name="dice_roll",
+            )
+            state.add_tool_message(tool_message)
+            state.messages.append(tool_message)
+            await CLMessage(content=tool_message.content).send()
 
         elif mapped_agent == web_search_agent:
             result = await web_search_agent.ainvoke([HumanMessage(content=last_human_message.content)])
-            state.messages.append(AIMessage(content=result["args"]["result"]))
-            await CLMessage(content=result["args"]["result"]).send()
+            tool_message = ToolMessage(
+                content=result["args"]["result"],
+                tool_call_id=result["id"],
+                name="web_search",
+            )
+            state.add_tool_message(tool_message)
+            state.messages.append(tool_message)
+            await CLMessage(content=tool_message.content).send()
 
         else:
             ai_response = await mapped_agent.ainvoke(state.messages)

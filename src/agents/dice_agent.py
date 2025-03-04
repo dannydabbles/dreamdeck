@@ -2,7 +2,8 @@ import os
 import random
 import logging
 import re
-from typing import List, Tuple, Optional  # Add Optional
+from typing import List, Tuple, Optional
+from uuid import uuid4  # Import uuid4
 from langgraph.prebuilt import create_react_agent
 from typing import Dict
 from ..config import DICE_ROLLING_ENABLED, DICE_SIDES

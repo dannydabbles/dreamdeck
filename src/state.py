@@ -1,13 +1,13 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, ToolMessage
 
 
 class ChatState(BaseModel):
     """Enhanced state model for the chat.
 
     Attributes:
-        messages (List[BaseMessage]): The list of messages.
+        messages (List[BaseMessage]): The list of messages, including ToolMessages.
         metadata (dict, optional): Additional metadata. Defaults to an empty dictionary.
         current_message_id (Optional[str], optional): The current message ID. Defaults to None.
         tool_results (List[str], optional): List of tool results. Defaults to an empty list.
@@ -37,6 +37,14 @@ class ChatState(BaseModel):
     def clear_tool_results(self) -> None:
         """Clear tool results after processing."""
         self.tool_results = []
+
+    def add_tool_message(self, tool_message: ToolMessage) -> None:
+        """Add a ToolMessage to the state.
+
+        Args:
+            tool_message (ToolMessage): The tool message to add.
+        """
+        self.messages.append(tool_message)
 
     def increment_error_count(self) -> None:
         """Increment error count for retry logic."""
