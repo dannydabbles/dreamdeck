@@ -9,11 +9,12 @@ from typing import Dict
 from ..config import DICE_ROLLING_ENABLED, DICE_SIDES
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.message import ToolMessage  # Import ToolMessage
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-def dice_roll(input_str: Optional[str] = None) -> dict:
+def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
     """Roll dice based on user input.
 
     Args:
