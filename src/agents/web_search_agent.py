@@ -2,7 +2,7 @@ import os
 import requests
 import logging
 from langgraph.prebuilt import create_react_agent
-from langgraph.message import ToolMessage
+from typing import Dict
 from ..config import SERPAPI_KEY, WEB_SEARCH_ENABLED
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
@@ -20,9 +20,9 @@ def web_search(query: str) -> ToolMessage:
         ToolMessage: The search result.
     """
     if not SERPAPI_KEY:
-        return ToolMessage(content="SERPAPI_KEY environment variable not set.")
+        return {"name": "error", "args": {"content": "SERPAPI_KEY environment variable not set."}}
     if not WEB_SEARCH_ENABLED:
-        return ToolMessage(content="Web search is disabled.")
+        return {"name": "error", "args": {"content": "Web search is disabled."}}
 
     url = f"https://serpapi.com/search.json?q={query}&api_key={SERPAPI_KEY}"
     try:
@@ -31,10 +31,10 @@ def web_search(query: str) -> ToolMessage:
         data = response.json()
         if "error" in data:
             raise ValueError(f"Search error: {data['error']}")
-        return ToolMessage(content=data.get("organic_results", [{}])[0].get("snippet", "No results found."))
+        return {"name": "web_search", "args": {"result": data.get("organic_results", [{}])[0].get("snippet", "No results found.")}}
     except requests.exceptions.RequestException as e:
         cl_logger.error(f"Web search failed: {e}", exc_info=True)
-        return ToolMessage(content=f"Web search failed: {str(e)}")
+        return {"name": "error", "args": {"content": f"Web search failed: {str(e)}"}}
     except ValueError as e:
         cl_logger.error(f"Web search failed: {e}", exc_info=True)
         return ToolMessage(content=f"Web search failed: {str(e)}")

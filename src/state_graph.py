@@ -123,16 +123,11 @@ async def chat_workflow(
             response = await decision_agent.ainvoke(messages)
 
             if (
-                hasattr(response, "additional_kwargs")
-                and "function_call" in response.additional_kwargs
+                isinstance(response, dict)
+                and "name" in response
+                and "args" in response
             ):
-                function_call = response.additional_kwargs["function_call"]
-                try:
-                    args = json.loads(function_call["arguments"])
-                    action = args.get("action")
-                except json.JSONDecodeError as e:
-                    cl_logger.error(f"Failed to parse function arguments: {e}")
-                    action = "continue_story"
+                action = response["args"].get("action", "continue_story")
             else:
                 action = "continue_story"
 

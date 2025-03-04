@@ -4,7 +4,7 @@ import logging
 import re
 from typing import List, Tuple, Optional  # Add Optional
 from langgraph.prebuilt import create_react_agent
-from langgraph.message import ToolMessage
+from typing import Dict
 from ..config import DICE_ROLLING_ENABLED, DICE_SIDES
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
@@ -23,7 +23,7 @@ def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
         ToolMessage: The result of the dice roll.
     """
     if not DICE_ROLLING_ENABLED:
-        return ToolMessage(content="Dice rolling is disabled in the configuration.")
+        return {"name": "error", "args": {"content": "Dice rolling is disabled in the configuration."}}
 
     try:
         # Default to d20 if no input is provided
@@ -52,11 +52,11 @@ def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
             result = f"🎲 You rolled {rolls} (total: {total}) on {count}d{sides}."
 
         cl_logger.info(f"Dice roll result: {result}")
-        return ToolMessage(content=result)
+        return {"name": "dice_roll", "args": {"result": result}}
 
     except ValueError as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
-        return ToolMessage(content=f"🎲 Error rolling dice: {str(e)}")
+        return {"name": "error", "args": {"content": f"🎲 Error rolling dice: {str(e)}"}}
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
         return ToolMessage(content=f"🎲 Error rolling dice: {str(e)}")

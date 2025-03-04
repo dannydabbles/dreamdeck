@@ -29,14 +29,14 @@ def decide_action(user_input: str) -> ToolMessage:
     try:
         # Determine the action based on user input
         if "roll" in user_input.lower():
-            return ToolMessage(content="roll")
+            return {"name": "roll", "args": {}}
         elif "search" in user_input.lower():
-            return ToolMessage(content="search")
+            return {"name": "search", "args": {}}
         else:
             return ToolMessage(content="continue_story")
     except Exception as e:
         cl_logger.error(f"Decision failed: {e}", exc_info=True)
-        return ToolMessage(content="continue_story")
+        return {"name": "continue_story", "args": {}}
 
 # Initialize the decision agent
 decision_agent = create_react_agent(

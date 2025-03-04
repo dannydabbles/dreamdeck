@@ -13,7 +13,7 @@ from unittest.mock import patch
 @pytest.mark.asyncio
 async def test_decision_agent_roll_action():
     message = HumanMessage(content="roll 2d20")
-    with patch('src.agents.decision_agent.decide_action', return_value=ToolMessage(content="roll")):
+    with patch('src.agents.decision_agent.decide_action', return_value={"name": "roll", "args": {}}):
         response = await decision_agent.ainvoke([message])
     assert isinstance(response, AIMessage)
     assert "dice_roll" in response.content.lower()
@@ -22,7 +22,7 @@ async def test_decision_agent_roll_action():
 @pytest.mark.asyncio
 async def test_decision_agent_search_action():
     message = HumanMessage(content="search for information on AI")
-    with patch('src.agents.decision_agent.decide_action', return_value=ToolMessage(content="search")):
+    with patch('src.agents.decision_agent.decide_action', return_value={"name": "search", "args": {}}):
         response = await decision_agent.ainvoke([message])
     assert isinstance(response, AIMessage)
     assert "web_search" in response.content.lower()
@@ -31,7 +31,7 @@ async def test_decision_agent_search_action():
 @pytest.mark.asyncio
 async def test_decision_agent_story_action():
     message = HumanMessage(content="continue the story")
-    with patch('src.agents.decision_agent.decide_action', return_value=ToolMessage(content="continue_story")):
+    with patch('src.agents.decision_agent.decide_action', return_value={"name": "continue_story", "args": {}}):
         response = await decision_agent.ainvoke([message])
     assert isinstance(response, AIMessage)
     assert "continue_story" in response.content.lower()
@@ -40,7 +40,7 @@ async def test_decision_agent_story_action():
 @pytest.mark.asyncio
 async def test_dice_roll_agent():
     message = HumanMessage(content="roll 2d20")
-    with patch('src.agents.dice_agent.dice_roll', return_value=ToolMessage(content="🎲 You rolled 15 on a 20-sided die.")):
+    with patch('src.agents.dice_agent.dice_roll', return_value={"name": "dice_roll", "args": {"result": "🎲 You rolled 15 on a 20-sided die."}}):
         response = await dice_roll_agent.ainvoke([message])
     assert isinstance(response, AIMessage)
     assert "🎲 You rolled" in response.content
@@ -49,7 +49,7 @@ async def test_dice_roll_agent():
 @pytest.mark.asyncio
 async def test_web_search_agent():
     message = HumanMessage(content="search for AI information")
-    with patch('src.agents.web_search_agent.web_search', return_value=ToolMessage(content="Web search result: AI is a field of computer science.")):
+    with patch('src.agents.web_search_agent.web_search', return_value={"name": "web_search", "args": {"result": "Web search result: AI is a field of computer science."}}):
         response = await web_search_agent.ainvoke([message])
     assert isinstance(response, AIMessage)
     assert "Web search" in response.content
