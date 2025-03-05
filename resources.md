@@ -1,1994 +1,864 @@
-Persistence¶
-LangGraph has a built-in persistence layer, implemented through checkpointers. When you compile graph with a checkpointer, the checkpointer saves a checkpoint of the graph state at every super-step. Those checkpoints are saved to a thread, which can be accessed after graph execution. Because threads allow access to graph's state after execution, several powerful capabilities including human-in-the-loop, memory, time travel, and fault-tolerance are all possible. See this how-to guide for an end-to-end example on how to add and use checkpointers with your graph. Below, we'll discuss each of these concepts in more detail.
+# LangGraph Functional API and Chainlit: A Practical Guide
 
-Checkpoints
+This guide covers the practical implementation of **LangGraph’s Functional API** in combination with **Chainlit** to build advanced LLM applications. We’ll explore how to design multi-agent workflows, integrate tool usage (including human-in-the-loop interactions), manage memory and state, persist conversation history in Chainlit, leverage Pydantic for structured data, write tests with pytest, and implement asynchronous workflows with streaming. Each section includes conceptual overviews **with code snippets** for clarity.
 
-Threads¶
-A thread is a unique ID or thread identifier assigned to each checkpoint saved by a checkpointer. When invoking graph with a checkpointer, you must specify a thread_id as part of the configurable portion of the config:
+## 1. LangGraph Functional API Overview (Core Concepts)
 
+LangGraph’s Functional API provides a flexible way to define AI workflows using Python functions and decorators. It introduces two key primitives: **`@entrypoint`** and **`@task`** ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=The%20Functional%20API%20consists%20of,having%20to%20restructure%20your%20code)) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=Building%20Blocks)).
 
-{"configurable": {"thread_id": "1"}}
-Checkpoints¶
-Checkpoint is a snapshot of the graph state saved at each super-step and is represented by StateSnapshot object with the following key properties:
+- **Task**: A discrete unit of work (e.g. an LLM call or a tool execution) defined as a function with `@task`. Invoking a task returns a future-like object that you can `.result()` to get the output (or await it asynchronously) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=,the%20result%20or%20resolved%20synchronously)). Tasks can be composed and even run in parallel.
+- **Entrypoint**: The top-level workflow function decorated with `@entrypoint`. It contains the main logic and can orchestrate tasks, handle control flow (loops, conditionals), manage long-running operations, and support interrupts (for human input). The entrypoint serves as the **starting point** of execution and manages persistence (state checkpointing) and possible resume of workflows ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=,the%20result%20or%20resolved%20synchronously)).
 
-config: Config associated with this checkpoint.
-metadata: Metadata associated with this checkpoint.
-values: Values of the state channels at this point in time.
-next A tuple of the node names to execute next in the graph.
-tasks: A tuple of PregelTask objects that contain information about next tasks to be executed. If the step was previously attempted, it will include error information. If a graph was interrupted dynamically from within a node, tasks will contain additional data associated with interrupts.
-Let's see what checkpoints are saved when a simple graph is invoked as follows:
+**Execution Flow**: When you call an entrypoint (via `.invoke()` or `.stream()`), it runs the workflow function. Inside, calling a task (e.g. `result = some_task(args)`) immediately returns a future. Calling `.result()` on the future will execute the task (and block until completion, unless done asynchronously). This allows writing sequential code that actually runs tasks asynchronously under the hood. You can use normal Python control flow in the entrypoint to decide which tasks to run or whether to loop, making the workflow logic very readable. The Functional API “under the hood” still builds on LangGraph’s graph runtime, so it benefits from features like persistence, memory, interrupts, and streaming without requiring explicit graph definitions ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=restructure%20your%20code)).
 
+**Basic Example**: Here’s a simple entrypoint with two tasks to illustrate the structure:
 
-from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.memory import MemorySaver
-from typing import Annotated
-from typing_extensions import TypedDict
-from operator import add
-
-class State(TypedDict):
-    foo: int
-    bar: Annotated[list[str], add]
-
-def node_a(state: State):
-    return {"foo": "a", "bar": ["a"]}
-
-def node_b(state: State):
-    return {"foo": "b", "bar": ["b"]}
-
-
-workflow = StateGraph(State)
-workflow.add_node(node_a)
-workflow.add_node(node_b)
-workflow.add_edge(START, "node_a")
-workflow.add_edge("node_a", "node_b")
-workflow.add_edge("node_b", END)
-
-checkpointer = MemorySaver()
-graph = workflow.compile(checkpointer=checkpointer)
-
-config = {"configurable": {"thread_id": "1"}}
-graph.invoke({"foo": ""}, config)
-API Reference: StateGraph | START | END | MemorySaver
-
-After we run the graph, we expect to see exactly 4 checkpoints:
-
-empty checkpoint with START as the next node to be executed
-checkpoint with the user input {'foo': '', 'bar': []} and node_a as the next node to be executed
-checkpoint with the outputs of node_a {'foo': 'a', 'bar': ['a']} and node_b as the next node to be executed
-checkpoint with the outputs of node_b {'foo': 'b', 'bar': ['a', 'b']} and no next nodes to be executed
-Note that we bar channel values contain outputs from both nodes as we have a reducer for bar channel.
-
-Get state¶
-When interacting with the saved graph state, you must specify a thread identifier. You can view the latest state of the graph by calling graph.get_state(config). This will return a StateSnapshot object that corresponds to the latest checkpoint associated with the thread ID provided in the config or a checkpoint associated with a checkpoint ID for the thread, if provided.
-
-
-# get the latest state snapshot
-config = {"configurable": {"thread_id": "1"}}
-graph.get_state(config)
-
-# get a state snapshot for a specific checkpoint_id
-config = {"configurable": {"thread_id": "1", "checkpoint_id": "1ef663ba-28fe-6528-8002-5a559208592c"}}
-graph.get_state(config)
-In our example, the output of get_state will look like this:
-
-
-StateSnapshot(
-    values={'foo': 'b', 'bar': ['a', 'b']},
-    next=(),
-    config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef663ba-28fe-6528-8002-5a559208592c'}},
-    metadata={'source': 'loop', 'writes': {'node_b': {'foo': 'b', 'bar': ['b']}}, 'step': 2},
-    created_at='2024-08-29T19:19:38.821749+00:00',
-    parent_config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef663ba-28f9-6ec4-8001-31981c2c39f8'}}, tasks=()
-)
-Get state history¶
-You can get the full history of the graph execution for a given thread by calling graph.get_state_history(config). This will return a list of StateSnapshot objects associated with the thread ID provided in the config. Importantly, the checkpoints will be ordered chronologically with the most recent checkpoint / StateSnapshot being the first in the list.
-
-
-config = {"configurable": {"thread_id": "1"}}
-list(graph.get_state_history(config))
-In our example, the output of get_state_history will look like this:
-
-
-[
-    StateSnapshot(
-        values={'foo': 'b', 'bar': ['a', 'b']},
-        next=(),
-        config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef663ba-28fe-6528-8002-5a559208592c'}},
-        metadata={'source': 'loop', 'writes': {'node_b': {'foo': 'b', 'bar': ['b']}}, 'step': 2},
-        created_at='2024-08-29T19:19:38.821749+00:00',
-        parent_config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef663ba-28f9-6ec4-8001-31981c2c39f8'}},
-        tasks=(),
-    ),
-    StateSnapshot(
-        values={'foo': 'a', 'bar': ['a']}, next=('node_b',),
-        config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef663ba-28f9-6ec4-8001-31981c2c39f8'}},
-        metadata={'source': 'loop', 'writes': {'node_a': {'foo': 'a', 'bar': ['a']}}, 'step': 1},
-        created_at='2024-08-29T19:19:38.819946+00:00',
-        parent_config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef663ba-28f4-6b4a-8000-ca575a13d36a'}},
-        tasks=(PregelTask(id='6fb7314f-f114-5413-a1f3-d37dfe98ff44', name='node_b', error=None, interrupts=()),),
-    ),
-    StateSnapshot(
-        values={'foo': '', 'bar': []},
-        next=('node_a',),
-        config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef663ba-28f4-6b4a-8000-ca575a13d36a'}},
-        metadata={'source': 'loop', 'writes': None, 'step': 0},
-        created_at='2024-08-29T19:19:38.817813+00:00',
-        parent_config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef663ba-28f0-6c66-bfff-6723431e8481'}},
-        tasks=(PregelTask(id='f1b14528-5ee5-579c-949b-23ef9bfbed58', name='node_a', error=None, interrupts=()),),
-    ),
-    StateSnapshot(
-        values={'bar': []},
-        next=('__start__',),
-        config={'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef663ba-28f0-6c66-bfff-6723431e8481'}},
-        metadata={'source': 'input', 'writes': {'foo': ''}, 'step': -1},
-        created_at='2024-08-29T19:19:38.816205+00:00',
-        parent_config=None,
-        tasks=(PregelTask(id='6d27aa2e-d72b-5504-a36f-8620e54a76dd', name='__start__', error=None, interrupts=()),),
-    )
-]
-State
-
-Replay¶
-It's also possible to play-back a prior graph execution. If we invoke a graph with a thread_id and a checkpoint_id, then we will re-play the previously executed steps before a checkpoint that corresponds to the checkpoint_id, and only execute the steps after the checkpoint.
-
-thread_id is the ID of a thread.
-checkpoint_id is an identifier that refers to a specific checkpoint within a thread.
-You must pass these when invoking the graph as part of the configurable portion of the config:
-
-
-config = {"configurable": {"thread_id": "1", "checkpoint_id": "0c62ca34-ac19-445d-bbb0-5b4984975b2a"}}
-graph.invoke(None, config=config)
-Importantly, LangGraph knows whether a particular step has been executed previously. If it has, LangGraph simply re-plays that particular step in the graph and does not re-execute the step, but only for the steps before the provided checkpoint_id. All of the steps after checkpoint_id will be executed (i.e., a new fork), even if they have been executed previously. See this how to guide on time-travel to learn more about replaying.
-
-Replay
-
-Update state¶
-In addition to re-playing the graph from specific checkpoints, we can also edit the graph state. We do this using graph.update_state(). This method accepts three different arguments:
-
-config¶
-The config should contain thread_id specifying which thread to update. When only the thread_id is passed, we update (or fork) the current state. Optionally, if we include checkpoint_id field, then we fork that selected checkpoint.
-
-values¶
-These are the values that will be used to update the state. Note that this update is treated exactly as any update from a node is treated. This means that these values will be passed to the reducer functions, if they are defined for some of the channels in the graph state. This means that update_state does NOT automatically overwrite the channel values for every channel, but only for the channels without reducers. Let's walk through an example.
-
-Let's assume you have defined the state of your graph with the following schema (see full example above):
-
-
-from typing import Annotated
-from typing_extensions import TypedDict
-from operator import add
-
-class State(TypedDict):
-    foo: int
-    bar: Annotated[list[str], add]
-Let's now assume the current state of the graph is
-
-
-{"foo": 1, "bar": ["a"]}
-If you update the state as below:
-
-
-graph.update_state(config, {"foo": 2, "bar": ["b"]})
-Then the new state of the graph will be:
-
-
-{"foo": 2, "bar": ["a", "b"]}
-The foo key (channel) is completely changed (because there is no reducer specified for that channel, so update_state overwrites it). However, there is a reducer specified for the bar key, and so it appends "b" to the state of bar.
-
-as_node¶
-The final thing you can optionally specify when calling update_state is as_node. If you provided it, the update will be applied as if it came from node as_node. If as_node is not provided, it will be set to the last node that updated the state, if not ambiguous. The reason this matters is that the next steps to execute depend on the last node to have given an update, so this can be used to control which node executes next. See this how to guide on time-travel to learn more about forking state.
-
-Update
-
-Memory Store¶
-Model of shared state
-
-A state schema specifies a set of keys that are populated as a graph is executed. As discussed above, state can be written by a checkpointer to a thread at each graph step, enabling state persistence.
-
-But, what if we want to retain some information across threads? Consider the case of a chatbot where we want to retain specific information about the user across all chat conversations (e.g., threads) with that user!
-
-With checkpointers alone, we cannot share information across threads. This motivates the need for the Store interface. As an illustration, we can define an InMemoryStore to store information about a user across threads. We simply compile our graph with a checkpointer, as before, and with our new in_memory_store variable.
-
-Basic Usage¶
-First, let's showcase this in isolation without using LangGraph.
-
-
-from langgraph.store.memory import InMemoryStore
-in_memory_store = InMemoryStore()
-Memories are namespaced by a tuple, which in this specific example will be (<user_id>, "memories"). The namespace can be any length and represent anything, does not have be user specific.
-
-
-user_id = "1"
-namespace_for_memory = (user_id, "memories")
-We use the store.put method to save memories to our namespace in the store. When we do this, we specify the namespace, as defined above, and a key-value pair for the memory: the key is simply a unique identifier for the memory (memory_id) and the value (a dictionary) is the memory itself.
-
-
-memory_id = str(uuid.uuid4())
-memory = {"food_preference" : "I like pizza"}
-in_memory_store.put(namespace_for_memory, memory_id, memory)
-We can read out memories in our namespace using the store.search method, which will return all memories for a given user as a list. The most recent memory is the last in the list.
-
-
-memories = in_memory_store.search(namespace_for_memory)
-memories[-1].dict()
-{'value': {'food_preference': 'I like pizza'},
- 'key': '07e0caf4-1631-47b7-b15f-65515d4c1843',
- 'namespace': ['1', 'memories'],
- 'created_at': '2024-10-02T17:22:31.590602+00:00',
- 'updated_at': '2024-10-02T17:22:31.590605+00:00'}
-Each memory type is a Python class (Item) with certain attributes. We can access it as a dictionary by converting via .dict as above. The attributes it has are:
-
-value: The value (itself a dictionary) of this memory
-key: A unique key for this memory in this namespace
-namespace: A list of strings, the namespace of this memory type
-created_at: Timestamp for when this memory was created
-updated_at: Timestamp for when this memory was updated
-Semantic Search¶
-Beyond simple retrieval, the store also supports semantic search, allowing you to find memories based on meaning rather than exact matches. To enable this, configure the store with an embedding model:
-
-
-from langchain.embeddings import init_embeddings
-
-store = InMemoryStore(
-    index={
-        "embed": init_embeddings("openai:text-embedding-3-small"),  # Embedding provider
-        "dims": 1536,                              # Embedding dimensions
-        "fields": ["food_preference", "$"]              # Fields to embed
-    }
-)
-API Reference: init_embeddings
-
-Now when searching, you can use natural language queries to find relevant memories:
-
-
-# Find memories about food preferences
-# (This can be done after putting memories into the store)
-memories = store.search(
-    namespace_for_memory,
-    query="What does the user like to eat?",
-    limit=3  # Return top 3 matches
-)
-You can control which parts of your memories get embedded by configuring the fields parameter or by specifying the index parameter when storing memories:
-
-
-# Store with specific fields to embed
-store.put(
-    namespace_for_memory,
-    str(uuid.uuid4()),
-    {
-        "food_preference": "I love Italian cuisine",
-        "context": "Discussing dinner plans"
-    },
-    index=["food_preference"]  # Only embed "food_preferences" field
-)
-
-# Store without embedding (still retrievable, but not searchable)
-store.put(
-    namespace_for_memory,
-    str(uuid.uuid4()),
-    {"system_info": "Last updated: 2024-01-01"},
-    index=False
-)
-Using in LangGraph¶
-With this all in place, we use the in_memory_store in LangGraph. The in_memory_store works hand-in-hand with the checkpointer: the checkpointer saves state to threads, as discussed above, and the in_memory_store allows us to store arbitrary information for access across threads. We compile the graph with both the checkpointer and the in_memory_store as follows.
-
-
-from langgraph.checkpoint.memory import MemorySaver
-
-# We need this because we want to enable threads (conversations)
-checkpointer = MemorySaver()
-
-# ... Define the graph ...
-
-# Compile the graph with the checkpointer and store
-graph = graph.compile(checkpointer=checkpointer, store=in_memory_store)
-API Reference: MemorySaver
-
-We invoke the graph with a thread_id, as before, and also with a user_id, which we'll use to namespace our memories to this particular user as we showed above.
-
-
-# Invoke the graph
-user_id = "1"
-config = {"configurable": {"thread_id": "1", "user_id": user_id}}
-
-# First let's just say hi to the AI
-for update in graph.stream(
-    {"messages": [{"role": "user", "content": "hi"}]}, config, stream_mode="updates"
-):
-    print(update)
-We can access the in_memory_store and the user_id in any node by passing store: BaseStore and config: RunnableConfig as node arguments. Here's how we might use semantic search in a node to find relevant memories:
-
-
-def update_memory(state: MessagesState, config: RunnableConfig, *, store: BaseStore):
-
-    # Get the user id from the config
-    user_id = config["configurable"]["user_id"]
-
-    # Namespace the memory
-    namespace = (user_id, "memories")
-
-    # ... Analyze conversation and create a new memory
-
-    # Create a new memory ID
-    memory_id = str(uuid.uuid4())
-
-    # We create a new memory
-    store.put(namespace, memory_id, {"memory": memory})
-As we showed above, we can also access the store in any node and use the store.search method to get memories. Recall the the memories are returned as a list of objects that can be converted to a dictionary.
-
-
-memories[-1].dict()
-{'value': {'food_preference': 'I like pizza'},
- 'key': '07e0caf4-1631-47b7-b15f-65515d4c1843',
- 'namespace': ['1', 'memories'],
- 'created_at': '2024-10-02T17:22:31.590602+00:00',
- 'updated_at': '2024-10-02T17:22:31.590605+00:00'}
-We can access the memories and use them in our model call.
-
-
-def call_model(state: MessagesState, config: RunnableConfig, *, store: BaseStore):
-    # Get the user id from the config
-    user_id = config["configurable"]["user_id"]
-
-    # Search based on the most recent message
-    memories = store.search(
-        namespace,
-        query=state["messages"][-1].content,
-        limit=3
-    )
-    info = "\n".join([d.value["memory"] for d in memories])
-
-    # ... Use memories in the model call
-If we create a new thread, we can still access the same memories so long as the user_id is the same.
-
-
-# Invoke the graph
-config = {"configurable": {"thread_id": "2", "user_id": "1"}}
-
-# Let's say hi again
-for update in graph.stream(
-    {"messages": [{"role": "user", "content": "hi, tell me about my memories"}]}, config, stream_mode="updates"
-):
-    print(update)
-When we use the LangGraph Platform, either locally (e.g., in LangGraph Studio) or with LangGraph Cloud, the base store is available to use by default and does not need to be specified during graph compilation. To enable semantic search, however, you do need to configure the indexing settings in your langgraph.json file. For example:
-
-
-{
-    ...
-    "store": {
-        "index": {
-            "embed": "openai:text-embeddings-3-small",
-            "dims": 1536,
-            "fields": ["$"]
-        }
-    }
-}
-See the deployment guide for more details and configuration options.
-
-Checkpointer libraries¶
-Under the hood, checkpointing is powered by checkpointer objects that conform to BaseCheckpointSaver interface. LangGraph provides several checkpointer implementations, all implemented via standalone, installable libraries:
-
-langgraph-checkpoint: The base interface for checkpointer savers (BaseCheckpointSaver) and serialization/deserialization interface (SerializerProtocol). Includes in-memory checkpointer implementation (InMemorySaver) for experimentation. LangGraph comes with langgraph-checkpoint included.
-langgraph-checkpoint-sqlite: An implementation of LangGraph checkpointer that uses SQLite database (SqliteSaver / AsyncSqliteSaver). Ideal for experimentation and local workflows. Needs to be installed separately.
-langgraph-checkpoint-postgres: An advanced checkpointer that uses Postgres database (PostgresSaver / AsyncPostgresSaver), used in LangGraph Cloud. Ideal for using in production. Needs to be installed separately.
-Checkpointer interface¶
-Each checkpointer conforms to BaseCheckpointSaver interface and implements the following methods:
-
-.put - Store a checkpoint with its configuration and metadata.
-.put_writes - Store intermediate writes linked to a checkpoint (i.e. pending writes).
-.get_tuple - Fetch a checkpoint tuple using for a given configuration (thread_id and checkpoint_id). This is used to populate StateSnapshot in graph.get_state().
-.list - List checkpoints that match a given configuration and filter criteria. This is used to populate state history in graph.get_state_history()
-If the checkpointer is used with asynchronous graph execution (i.e. executing the graph via .ainvoke, .astream, .abatch), asynchronous versions of the above methods will be used (.aput, .aput_writes, .aget_tuple, .alist).
-
-Note
-
-For running your graph asynchronously, you can use MemorySaver, or async versions of Sqlite/Postgres checkpointers -- AsyncSqliteSaver / AsyncPostgresSaver checkpointers.
-
-Serializer¶
-When checkpointers save the graph state, they need to serialize the channel values in the state. This is done using serializer objects. langgraph_checkpoint defines protocol for implementing serializers provides a default implementation (JsonPlusSerializer) that handles a wide variety of types, including LangChain and LangGraph primitives, datetimes, enums and more.
-
-Capabilities¶
-Human-in-the-loop¶
-First, checkpointers facilitate human-in-the-loop workflows workflows by allowing humans to inspect, interrupt, and approve graph steps. Checkpointers are needed for these workflows as the human has to be able to view the state of a graph at any point in time, and the graph has to be to resume execution after the human has made any updates to the state. See these how-to guides for concrete examples.
-
-Memory¶
-Second, checkpointers allow for "memory" between interactions. In the case of repeated human interactions (like conversations) any follow up messages can be sent to that thread, which will retain its memory of previous ones. See this how-to guide for an end-to-end example on how to add and manage conversation memory using checkpointers.
-
-Time Travel¶
-Third, checkpointers allow for "time travel", allowing users to replay prior graph executions to review and / or debug specific graph steps. In addition, checkpointers make it possible to fork the graph state at arbitrary checkpoints to explore alternative trajectories.
-
-Fault-tolerance¶
-Lastly, checkpointing also provides fault-tolerance and error recovery: if one or more nodes fail at a given superstep, you can restart your graph from the last successful step. Additionally, when a graph node fails mid-execution at a given superstep, LangGraph stores pending checkpoint writes from any other nodes that completed successfully at that superstep, so that whenever we resume graph execution from that superstep we don't re-run the successful nodes.
-
-Pending writes¶
-Additionally, when a graph node fails mid-execution at a given superstep, LangGraph stores pending checkpoint writes from any other nodes that completed successfully at that superstep, so that whenever we resume graph execution from that superstep we don't re-run the successful nodes.
-
-Functional API¶
-Overview¶
-The Functional API allows you to add LangGraph's key features -- persistence, memory, human-in-the-loop, and streaming — to your applications with minimal changes to your existing code.
-
-It is designed to integrate these features into existing code that may use standard language primitives for branching and control flow, such as if statements, for loops, and function calls. Unlike many data orchestration frameworks that require restructuring code into an explicit pipeline or DAG, the Functional API allows you to incorporate these capabilities without enforcing a rigid execution model.
-
-The Functional API uses two key building blocks:
-
-@entrypoint – Marks a function as the starting point of a workflow, encapsulating logic and managing execution flow, including handling long-running tasks and interrupts.
-@task – Represents a discrete unit of work, such as an API call or data processing step, that can be executed asynchronously within an entrypoint. Tasks return a future-like object that can be awaited or resolved synchronously.
-This provides a minimal abstraction for building workflows with state management and streaming.
-
-Tip
-
-For users who prefer a more declarative approach, LangGraph's Graph API allows you to define workflows using a Graph paradigm. Both APIs share the same underlying runtime, so you can use them together in the same application. Please see the Functional API vs. Graph API section for a comparison of the two paradigms.
-
-Example¶
-Below we demonstrate a simple application that writes an essay and interrupts to request human review.
-
-
+```python
 from langgraph.func import entrypoint, task
-from langgraph.types import interrupt
 
 @task
-def write_essay(topic: str) -> str:
-    """Write an essay about the given topic."""
-    time.sleep(1) # A placeholder for a long-running task.
-    return f"An essay about topic: {topic}"
-
-@entrypoint(checkpointer=MemorySaver())
-def workflow(topic: str) -> dict:
-    """A simple workflow that writes an essay and asks for a review."""
-    essay = write_essay("cat").result()
-    is_approved = interrupt({
-        # Any json-serializable payload provided to interrupt as argument.
-        # It will be surfaced on the client side as an Interrupt when streaming data
-        # from the workflow.
-        "essay": essay, # The essay we want reviewed.
-        # We can add any additional information that we need.
-        # For example, introduce a key called "action" with some instructions.
-        "action": "Please approve/reject the essay",
-    })
-
-    return {
-        "essay": essay, # The essay that was generated
-        "is_approved": is_approved, # Response from HIL
-    }
-API Reference: entrypoint | task | interrupt
-
-Detailed Explanation
-Entrypoint¶
-The @entrypoint decorator can be used to create a workflow from a function. It encapsulates workflow logic and manages execution flow, including handling long-running tasks and interrupts.
-
-Definition¶
-An entrypoint is defined by decorating a function with the @entrypoint decorator.
-
-The function must accept a single positional argument, which serves as the workflow input. If you need to pass multiple pieces of data, use a dictionary as the input type for the first argument.
-
-Decorating a function with an entrypoint produces a Pregel instance which helps to manage the execution of the workflow (e.g., handles streaming, resumption, and checkpointing).
-
-You will usually want to pass a checkpointer to the @entrypoint decorator to enable persistence and use features like human-in-the-loop.
-
-
-Sync
-Async
-
-from langgraph.func import entrypoint
-
-@entrypoint(checkpointer=checkpointer)
-def my_workflow(some_input: dict) -> int:
-    # some logic that may involve long-running tasks like API calls,
-    # and may be interrupted for human-in-the-loop.
-    ...
-    return result
-
-Serialization
-
-The inputs and outputs of entrypoints must be JSON-serializable to support checkpointing. Please see the serialization section for more details.
-
-Injectable Parameters¶
-When declaring an entrypoint, you can request access to additional parameters that will be injected automatically at run time. These parameters include:
-
-Parameter	Description
-previous	Access the the state associated with the previous checkpoint for the given thread. See state management.
-store	An instance of BaseStore. Useful for long-term memory.
-writer	For streaming custom data, to write custom data to the custom stream. Useful for streaming custom data.
-config	For accessing run time configuration. See RunnableConfig for information.
-Important
-
-Declare the parameters with the appropriate name and type annotation.
-
-Requesting Injectable Parameters
-Executing¶
-Using the @entrypoint yields a Pregel object that can be executed using the invoke, ainvoke, stream, and astream methods.
-
-
-Invoke
-Async Invoke
-Stream
-Async Stream
-
-config = {
-    "configurable": {
-        "thread_id": "some_thread_id"
-    }
-}
-my_workflow.invoke(some_input, config)  # Wait for the result synchronously
-
-Resuming¶
-Resuming an execution after an interrupt can be done by passing a resume value to the Command primitive.
-
-
-Invoke
-Async Invoke
-Stream
-Async Stream
-
-from langgraph.types import Command
-
-config = {
-    "configurable": {
-        "thread_id": "some_thread_id"
-    }
-}
-
-my_workflow.invoke(Command(resume=some_resume_value), config)
-
-Resuming after an error
-
-To resume after an error, run the entrypoint with a None and the same thread id (config).
-
-This assumes that the underlying error has been resolved and execution can proceed successfully.
-
-
-Invoke
-Async Invoke
-Stream
-Async Stream
-
-config = {
-    "configurable": {
-        "thread_id": "some_thread_id"
-    }
-}
-
-my_workflow.invoke(None, config)
-
-State Management¶
-When an entrypoint is defined with a checkpointer, it stores information between successive invocations on the same thread id in checkpoints.
-
-This allows accessing the state from the previous invocation using the previous parameter.
-
-By default, the previous parameter is the return value of the previous invocation.
-
-
-@entrypoint(checkpointer=checkpointer)
-def my_workflow(number: int, *, previous: Any = None) -> int:
-    previous = previous or 0
-    return number + previous
-
-config = {
-    "configurable": {
-        "thread_id": "some_thread_id"
-    }
-}
-
-my_workflow.invoke(1, config)  # 1 (previous was None)
-my_workflow.invoke(2, config)  # 3 (previous was 1 from the previous invocation)
-entrypoint.final¶
-entrypoint.final is a special primitive that can be returned from an entrypoint and allows decoupling the value that is saved in the checkpoint from the return value of the entrypoint.
-
-The first value is the return value of the entrypoint, and the second value is the value that will be saved in the checkpoint. The type annotation is entrypoint.final[return_type, save_type].
-
-
-@entrypoint(checkpointer=checkpointer)
-def my_workflow(number: int, *, previous: Any = None) -> entrypoint.final[int, int]:
-    previous = previous or 0
-    # This will return the previous value to the caller, saving
-    # 2 * number to the checkpoint, which will be used in the next invocation 
-    # for the `previous` parameter.
-    return entrypoint.final(value=previous, save=2 * number)
-
-config = {
-    "configurable": {
-        "thread_id": "1"
-    }
-}
-
-my_workflow.invoke(3, config)  # 0 (previous was None)
-my_workflow.invoke(1, config)  # 6 (previous was 3 * 2 from the previous invocation)
-Task¶
-A task represents a discrete unit of work, such as an API call or data processing step. It has two key characteristics:
-
-Asynchronous Execution: Tasks are designed to be executed asynchronously, allowing multiple operations to run concurrently without blocking.
-Checkpointing: Task results are saved to a checkpoint, enabling resumption of the workflow from the last saved state. (See persistence for more details).
-Definition¶
-Tasks are defined using the @task decorator, which wraps a regular Python function.
-
-
-from langgraph.func import task
-
-@task()
-def slow_computation(input_value):
-    # Simulate a long-running operation
-    ...
-    return result
-API Reference: task
-
-Serialization
-
-The outputs of tasks must be JSON-serializable to support checkpointing.
-
-Execution¶
-Tasks can only be called from within an entrypoint, another task, or a state graph node.
-
-Tasks cannot be called directly from the main application code.
-
-When you call a task, it returns immediately with a future object. A future is a placeholder for a result that will be available later.
-
-To obtain the result of a task, you can either wait for it synchronously (using result()) or await it asynchronously (using await).
-
-
-Synchronous Invocation
-Asynchronous Invocation
-
-@entrypoint(checkpointer=checkpointer)
-def my_workflow(some_input: int) -> int:
-    future = slow_computation(some_input)
-    return future.result()  # Wait for the result synchronously
-
-When to use a task¶
-Tasks are useful in the following scenarios:
-
-Checkpointing: When you need to save the result of a long-running operation to a checkpoint, so you don't need to recompute it when resuming the workflow.
-Human-in-the-loop: If you're building a workflow that requires human intervention, you MUST use tasks to encapsulate any randomness (e.g., API calls) to ensure that the workflow can be resumed correctly. See the determinism section for more details.
-Parallel Execution: For I/O-bound tasks, tasks enable parallel execution, allowing multiple operations to run concurrently without blocking (e.g., calling multiple APIs).
-Observability: Wrapping operations in tasks provides a way to track the progress of the workflow and monitor the execution of individual operations using LangSmith.
-Retryable Work: When work needs to be retried to handle failures or inconsistencies, tasks provide a way to encapsulate and manage the retry logic.
-Serialization¶
-There are two key aspects to serialization in LangGraph:
-
-@entrypoint inputs and outputs must be JSON-serializable.
-@task outputs must be JSON-serializable.
-These requirements are necessary for enabling checkpointing and workflow resumption. Use python primitives like dictionaries, lists, strings, numbers, and booleans to ensure that your inputs and outputs are serializable.
-
-Serialization ensures that workflow state, such as task results and intermediate values, can be reliably saved and restored. This is critical for enabling human-in-the-loop interactions, fault tolerance, and parallel execution.
-
-Providing non-serializable inputs or outputs will result in a runtime error when a workflow is configured with a checkpointer.
-
-Determinism¶
-To utilize features like human-in-the-loop, any randomness should be encapsulated inside of tasks. This guarantees that when execution is halted (e.g., for human in the loop) and then resumed, it will follow the same sequence of steps, even if task results are non-deterministic.
-
-LangGraph achieves this behavior by persisting task and subgraph results as they execute. A well-designed workflow ensures that resuming execution follows the same sequence of steps, allowing previously computed results to be retrieved correctly without having to re-execute them. This is particularly useful for long-running tasks or tasks with non-deterministic results, as it avoids repeating previously done work and allows resuming from essentially the same
-
-While different runs of a workflow can produce different results, resuming a specific run should always follow the same sequence of recorded steps. This allows LangGraph to efficiently look up task and subgraph results that were executed prior to the graph being interrupted and avoid recomputing them.
-
-Idempotency¶
-Idempotency ensures that running the same operation multiple times produces the same result. This helps prevent duplicate API calls and redundant processing if a step is rerun due to a failure. Always place API calls inside tasks functions for checkpointing, and design them to be idempotent in case of re-execution. Re-execution can occur if a task starts, but does not complete successfully. Then, if the workflow is resumed, the task will run again. Use idempotency keys or verify existing results to avoid duplication.
-
-Functional API vs. Graph API¶
-The Functional API and the Graph APIs (StateGraph) provide two different paradigms to create applications with LangGraph. Here are some key differences:
-
-Control flow: The Functional API does not require thinking about graph structure. You can use standard Python constructs to define workflows. This will usually trim the amount of code you need to write.
-State management: The GraphAPI requires declaring a State and may require defining reducers to manage updates to the graph state. @entrypoint and @tasks do not require explicit state management as their state is scoped to the function and is not shared across functions.
-Checkpointing: Both APIs generate and use checkpoints. In the Graph API a new checkpoint is generated after every superstep. In the Functional API, when tasks are executed, their results are saved to an existing checkpoint associated with the given entrypoint instead of creating a new checkpoint.
-Visualization: The Graph API makes it easy to visualize the workflow as a graph which can be useful for debugging, understanding the workflow, and sharing with others. The Functional API does not support visualization as the graph is dynamically generated during runtime.
-Common Pitfalls¶
-Handling side effects¶
-Encapsulate side effects (e.g., writing to a file, sending an email) in tasks to ensure they are not executed multiple times when resuming a workflow.
-
-
-Incorrect
-Correct
-In this example, a side effect (writing to a file) is directly included in the workflow, so it will be executed a second time when resuming the workflow.
-
-
-@entrypoint(checkpointer=checkpointer)
-def my_workflow(inputs: dict) -> int:
-    # This code will be executed a second time when resuming the workflow.
-    # Which is likely not what you want.
-    with open("output.txt", "w") as f:
-        f.write("Side effect executed")
-    value = interrupt("question")
-    return value
-
-Non-deterministic control flow¶
-Operations that might give different results each time (like getting current time or random numbers) should be encapsulated in tasks to ensure that on resume, the same result is returned.
-
-In a task: Get random number (5) → interrupt → resume → (returns 5 again) → ...
-Not in a task: Get random number (5) → interrupt → resume → get new random number (7) → ...
-This is especially important when using human-in-the-loop workflows with multiple interrupts calls. LangGraph keeps a list of resume values for each task/entrypoint. When an interrupt is encountered, it's matched with the corresponding resume value. This matching is strictly index-based, so the order of the resume values should match the order of the interrupts.
-
-If order of execution is not maintained when resuming, one interrupt call may be matched with the wrong resume value, leading to incorrect results.
-
-Please read the section on determinism for more details.
-
-
-Incorrect
-Correct
-In this example, the workflow uses the current time to determine which task to execute. This is non-deterministic because the result of the workflow depends on the time at which it is executed.
-
-
-from langgraph.func import entrypoint
-
-@entrypoint(checkpointer=checkpointer)
-def my_workflow(inputs: dict) -> int:
-    t0 = inputs["t0"]
-    t1 = time.time()
-
-    delta_t = t1 - t0
-
-    if delta_t > 1:
-        result = slow_task(1).result()
-        value = interrupt("question")
-    else:
-        result = slow_task(2).result()
-        value = interrupt("question")
-
-    return {
-        "result": result,
-        "value": value
-    }
-
-Patterns¶
-Below are a few simple patterns that show examples of how to use the Functional API.
-
-When defining an entrypoint, input is restricted to the first argument of the function. To pass multiple inputs, you can use a dictionary.
-
-
-@entrypoint(checkpointer=checkpointer)
-def my_workflow(inputs: dict) -> int:
-    value = inputs["value"]
-    another_value = inputs["another_value"]
-    ...
-
-my_workflow.invoke({"value": 1, "another_value": 2})  
-Parallel execution¶
-Tasks can be executed in parallel by invoking them concurrently and waiting for the results. This is useful for improving performance in IO bound tasks (e.g., calling APIs for LLMs).
-
+def add(x: int, y: int) -> int:
+    return x + y
 
 @task
-def add_one(number: int) -> int:
-    return number + 1
-
-@entrypoint(checkpointer=checkpointer)
-def graph(numbers: list[int]) -> list[str]:
-    futures = [add_one(i) for i in numbers]
-    return [f.result() for f in futures]
-Calling subgraphs¶
-The Functional API and the Graph API can be used together in the same application as they share the same underlying runtime.
-
-
-from langgraph.func import entrypoint
-from langgraph.graph import StateGraph
-
-builder = StateGraph()
-...
-some_graph = builder.compile()
+def double(z: int) -> int:
+    return 2 * z
 
 @entrypoint()
-def some_workflow(some_input: dict) -> int:
-    # Call a graph defined using the graph API
-    result_1 = some_graph.invoke(...)
-    # Call another graph defined using the graph API
-    result_2 = another_graph.invoke(...)
-    return {
-        "result_1": result_1,
-        "result_2": result_2
-    }
-API Reference: entrypoint | StateGraph
+def workflow(values: dict) -> int:
+    # values is a dict with keys "a" and "b"
+    total = add(values["a"], values["b"])         # returns a future
+    summed = total.result()                       # get actual result
+    doubled = double(summed).result()             # call second task
+    return doubled  # final result of workflow
+```
 
-Calling other entrypoints¶
-You can call other entrypoints from within an entrypoint or a task.
+This workflow adds two numbers and then doubles the sum. The key is that each `@task` can run independently. We could even parallelize tasks if needed (see the Async section). In a real scenario, tasks might call LLM APIs or other services.
 
+**LangGraph Entrypoint Behavior**: An entrypoint can take arguments normally, but only the first positional argument is considered the workflow input (for multiple inputs, pass a dictionary or use keyword args) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=When%20defining%20an%20,you%20can%20use%20a%20dictionary)). It can also accept special parameters like `previous` or `store` (discussed later for memory). When the entrypoint completes, you typically return the final result. If using persistence features, you might return using `entrypoint.final(...)` which lets you separate the value to output vs the value to save as state.
 
-@entrypoint() # Will automatically use the checkpointer from the parent entrypoint
-def some_other_workflow(inputs: dict) -> int:
-    return inputs["value"]
+**Human-in-the-Loop and Interrupts**: The Functional API supports pausing execution to get human input via the `interrupt()` function and resuming with a `Command`. We’ll cover this in detail in the Tool Calling section. In essence, calling `interrupt(prompt)` inside a task will **halt the workflow** and yield control (so you can ask the user `prompt` via the UI). When the user provides input, you resume the workflow by calling the entrypoint again with a `Command(resume=...)` containing the response ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=)) ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=,n)). This mechanism, combined with automatic state persistence, makes implementing human-in-the-loop flows straightforward.
 
-@entrypoint(checkpointer=checkpointer)
-def my_workflow(inputs: dict) -> int:
-    value = some_other_workflow.invoke({"value": 1})
-    return value
-Streaming custom data¶
-You can stream custom data from an entrypoint by using the StreamWriter type. This allows you to write custom data to the custom stream.
+**Summary**: The Functional API lets you write LangChain/LangGraph workflows in a natural style – using Python functions for tasks and workflows – while still getting LangGraph’s powerful features like parallel task execution, state checkpointing, and human intervention. We’ll leverage these features in the following sections.
 
+## 2. Multi-Agent Workflows with LangGraph Functional API
 
-from langgraph.checkpoint.memory import MemorySaver
+One powerful use of LangGraph is to coordinate **multiple agents** (LLM-powered actors) working together. In a multi-agent workflow, each agent can have its own role or expertise, and they can exchange information or delegate tasks to each other. LangGraph makes this possible by treating each agent as a task or node and managing the control flow between them ([How to build a multi-agent network (functional API)](https://langchain-ai.github.io/langgraphjs/how-tos/multi-agent-network-functional/#:~:text=In%20this%20how,defined%20in%20the%20main%20entrypoint)).
+
+**Design Considerations**: When building a multi-agent system, consider:
+- **Agents**: What independent agents do you have? (Each could be a separate prompt + LLM, possibly with specialized tools or knowledge.)
+- **Agent communication pattern**: How do agents hand off or collaborate? (One agent might call another for help on certain queries, or all agents might share a common scratchpad of conversation.)
+
+LangGraph’s graph metaphor suits this: each agent is a node, and edges define communication pathways ([LangGraph: Multi-Agent Workflows](https://blog.langchain.dev/langgraph-multi-agent-workflows/#:~:text=2,connected)) ([LangGraph: Multi-Agent Workflows](https://blog.langchain.dev/langgraph-multi-agent-workflows/#:~:text=This%20thinking%20lends%20itself%20incredibly,adding%20to%20the%20graph%27s%20state)). Using the Functional API, we typically create each agent as a task (or a set of tasks), and orchestrate their interaction in the entrypoint logic.
+
+**Example – Two Collaborating Agents**: Imagine a **travel planning** assistant composed of two agents: one for travel destinations and one for hotel recommendations. They can call each other as needed. We define each agent as a LangChain ReAct agent with its own tools, and use a main workflow to route between them:
+
+```python
 from langgraph.func import entrypoint, task
-from langgraph.types import StreamWriter
-
-@task
-def add_one(x):
-    return x + 1
-
-@task
-def add_two(x):
-    return x + 2
-
-checkpointer = MemorySaver()
-
-@entrypoint(checkpointer=checkpointer)
-def main(inputs, writer: StreamWriter) -> int:
-    """A simple workflow that adds one and two to a number."""
-    writer("hello") # Write some data to the `custom` stream
-    add_one(inputs['number']).result() # Will write data to the `updates` stream
-    writer("world") # Write some more data to the `custom` stream
-    add_two(inputs['number']).result() # Will write data to the `updates` stream
-    return 5 
-
-config = {
-    "configurable": {
-        "thread_id": "1"
-    }
-}
-
-for chunk in main.stream({"number": 1}, stream_mode=["custom", "updates"], config=config):
-    print(chunk)
-API Reference: MemorySaver | entrypoint | task | StreamWriter
-
-
-('updates', {'add_one': 2})
-('updates', {'add_two': 3})
-('custom', 'hello')
-('custom', 'world')
-('updates', {'main': 5})
-Important
-
-The writer parameter is automatically injected at run time. It will only be injected if the parameter name appears in the function signature with that exact name.
-
-Retry policy¶
-
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.func import entrypoint, task
-from langgraph.types import RetryPolicy
-
-attempts = 0
-
-# Let's configure the RetryPolicy to retry on ValueError.
-# The default RetryPolicy is optimized for retrying specific network errors.
-retry_policy = RetryPolicy(retry_on=ValueError)
-
-@task(retry=retry_policy) 
-def get_info():
-    global attempts
-    attempts += 1
-
-    if attempts < 2:
-        raise ValueError('Failure')
-    return "OK"
-
-checkpointer = MemorySaver()
-
-@entrypoint(checkpointer=checkpointer)
-def main(inputs, writer):
-    return get_info().result()
-
-config = {
-    "configurable": {
-        "thread_id": "1"
-    }
-}
-
-main.invoke({'any_input': 'foobar'}, config=config)
-API Reference: MemorySaver | entrypoint | task | RetryPolicy
-
-
-'OK'
-Resuming after an error¶
-
-import time
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.func import entrypoint, task
-from langgraph.types import StreamWriter
-
-# This variable is just used for demonstration purposes to simulate a network failure.
-# It's not something you will have in your actual code.
-attempts = 0
-
-@task()
-def get_info():
-    """
-    Simulates a task that fails once before succeeding.
-    Raises an exception on the first attempt, then returns "OK" on subsequent tries.
-    """
-    global attempts
-    attempts += 1
-
-    if attempts < 2:
-        raise ValueError("Failure")  # Simulate a failure on the first attempt
-    return "OK"
-
-# Initialize an in-memory checkpointer for persistence
-checkpointer = MemorySaver()
-
-@task
-def slow_task():
-    """
-    Simulates a slow-running task by introducing a 1-second delay.
-    """
-    time.sleep(1)
-    return "Ran slow task."
-
-@entrypoint(checkpointer=checkpointer)
-def main(inputs, writer: StreamWriter):
-    """
-    Main workflow function that runs the slow_task and get_info tasks sequentially.
-
-    Parameters:
-    - inputs: Dictionary containing workflow input values.
-    - writer: StreamWriter for streaming custom data.
-
-    The workflow first executes `slow_task` and then attempts to execute `get_info`,
-    which will fail on the first invocation.
-    """
-    slow_task_result = slow_task().result()  # Blocking call to slow_task
-    get_info().result()  # Exception will be raised here on the first attempt
-    return slow_task_result
-
-# Workflow execution configuration with a unique thread identifier
-config = {
-    "configurable": {
-        "thread_id": "1"  # Unique identifier to track workflow execution
-    }
-}
-
-# This invocation will take ~1 second due to the slow_task execution
-try:
-    # First invocation will raise an exception due to the `get_info` task failing
-    main.invoke({'any_input': 'foobar'}, config=config)
-except ValueError:
-    pass  # Handle the failure gracefully
-API Reference: MemorySaver | entrypoint | task | StreamWriter
-
-When we resume execution, we won't need to re-run the slow_task as its result is already saved in the checkpoint.
-
-
-main.invoke(None, config=config)
-
-'Ran slow task.'
-Human-in-the-loop¶
-The functional API supports human-in-the-loop workflows using the interrupt function and the Command primitive.
-
-Please see the following examples for more details:
-
-How to wait for user input (Functional API): Shows how to implement a simple human-in-the-loop workflow using the functional API.
-How to review tool calls (Functional API): Guide demonstrates how to implement human-in-the-loop workflows in a ReAct agent using the LangGraph Functional API.
-Short-term memory¶
-State management using the previous parameter and optionally using the entrypoint.final primitive can be used to implement short term memory.
-
-Please see the following how-to guides for more details:
-
-How to add thread-level persistence (functional API): Shows how to add thread-level persistence to a functional API workflow and implements a simple chatbot.
-Long-term memory¶
-long-term memory allows storing information across different thread ids. This could be useful for learning information about a given user in one conversation and using it in another.
-
-Please see the following how-to guides for more details:
-
-How to add cross-thread persistence (functional API): Shows how to add cross-thread persistence to a functional API workflow and implements a simple chatbot.
-Workflows¶
-Workflows and agent guide for more examples of how to build workflows using the Functional API.
-Agents¶
-How to create a React agent from scratch (Functional API): Shows how to create a simple React agent from scratch using the functional API.
-How to build a multi-agent network: Shows how to build a multi-agent network using the functional API.
-How to add multi-turn conversation in a multi-agent application (functional API): allow an end-user to engage in a multi-turn conversation with one or more agents.
-
-Memory¶
-What is Memory?¶
-Memory is a cognitive function that allows people to store, retrieve, and use information to understand their present and future. Consider the frustration of working with a colleague who forgets everything you tell them, requiring constant repetition! As AI agents undertake more complex tasks involving numerous user interactions, equipping them with memory becomes equally crucial for efficiency and user satisfaction. With memory, agents can learn from feedback and adapt to users' preferences. This guide covers two types of memory based on recall scope:
-
-Short-term memory, or thread-scoped memory, can be recalled at any time from within a single conversational thread with a user. LangGraph manages short-term memory as a part of your agent's state. State is persisted to a database using a checkpointer so the thread can be resumed at any time. Short-term memory updates when the graph is invoked or a step is completed, and the State is read at the start of each step.
-
-Long-term memory is shared across conversational threads. It can be recalled at any time and in any thread. Memories are scoped to any custom namespace, not just within a single thread ID. LangGraph provides stores (reference doc) to let you save and recall long-term memories.
-
-Both are important to understand and implement for your application.
-
-
-
-Short-term memory¶
-Short-term memory lets your application remember previous interactions within a single thread or conversation. A thread organizes multiple interactions in a session, similar to the way email groups messages in a single conversation.
-
-LangGraph manages short-term memory as part of the agent's state, persisted via thread-scoped checkpoints. This state can normally include the conversation history along with other stateful data, such as uploaded files, retrieved documents, or generated artifacts. By storing these in the graph's state, the bot can access the full context for a given conversation while maintaining separation between different threads.
-
-Since conversation history is the most common form of representing short-term memory, in the next section, we will cover techniques for managing conversation history when the list of messages becomes long. If you want to stick to the high-level concepts, continue on to the long-term memory section.
-
-Managing long conversation history¶
-Long conversations pose a challenge to today's LLMs. The full history may not even fit inside an LLM's context window, resulting in an irrecoverable error. Even if your LLM technically supports the full context length, most LLMs still perform poorly over long contexts. They get "distracted" by stale or off-topic content, all while suffering from slower response times and higher costs.
-
-Managing short-term memory is an exercise of balancing precision & recall with your application's other performance requirements (latency & cost). As always, it's important to think critically about how you represent information for your LLM and to look at your data. We cover a few common techniques for managing message lists below and hope to provide sufficient context for you to pick the best tradeoffs for your application:
-
-Editing message lists: How to think about trimming and filtering a list of messages before passing to language model.
-Summarizing past conversations: A common technique to use when you don't just want to filter the list of messages.
-Editing message lists¶
-Chat models accept context using messages, which include developer provided instructions (a system message) and user inputs (human messages). In chat applications, messages alternate between human inputs and model responses, resulting in a list of messages that grows longer over time. Because context windows are limited and token-rich message lists can be costly, many applications can benefit from using techniques to manually remove or forget stale information.
-
-
-
-The most direct approach is to remove old messages from a list (similar to a least-recently used cache).
-
-The typical technique for deleting content from a list in LangGraph is to return an update from a node telling the system to delete some portion of the list. You get to define what this update looks like, but a common approach would be to let you return an object or dictionary specifying which values to retain.
-
-
-def manage_list(existing: list, updates: Union[list, dict]):
-    if isinstance(updates, list):
-        # Normal case, add to the history
-        return existing + updates
-    elif isinstance(updates, dict) and updates["type"] == "keep":
-        # You get to decide what this looks like.
-        # For example, you could simplify and just accept a string "DELETE"
-        # and clear the entire list.
-        return existing[updates["from"]:updates["to"]]
-    # etc. We define how to interpret updates
-
-class State(TypedDict):
-    my_list: Annotated[list, manage_list]
-
-def my_node(state: State):
-    return {
-        # We return an update for the field "my_list" saying to
-        # keep only values from index -5 to the end (deleting the rest)
-        "my_list": {"type": "keep", "from": -5, "to": None}
-    }
-LangGraph will call the manage_list "reducer" function any time an update is returned under the key "my_list". Within that function, we define what types of updates to accept. Typically, messages will be added to the existing list (the conversation will grow); however, we've also added support to accept a dictionary that lets you "keep" certain parts of the state. This lets you programmatically drop old message context.
-
-Another common approach is to let you return a list of "remove" objects that specify the IDs of all messages to delete. If you're using the LangChain messages and the add_messages reducer (or MessagesState, which uses the same underlying functionality) in LangGraph, you can do this using a RemoveMessage.
-
-
-from langchain_core.messages import RemoveMessage, AIMessage
-from langgraph.graph import add_messages
-# ... other imports
-
-class State(TypedDict):
-    # add_messages will default to upserting messages by ID to the existing list
-    # if a RemoveMessage is returned, it will delete the message in the list by ID
-    messages: Annotated[list, add_messages]
-
-def my_node_1(state: State):
-    # Add an AI message to the `messages` list in the state
-    return {"messages": [AIMessage(content="Hi")]}
-
-def my_node_2(state: State):
-    # Delete all but the last 2 messages from the `messages` list in the state
-    delete_messages = [RemoveMessage(id=m.id) for m in state['messages'][:-2]]
-    return {"messages": delete_messages}
-API Reference: RemoveMessage | AIMessage | add_messages
-
-In the example above, the add_messages reducer allows us to append new messages to the messages state key as shown in my_node_1. When it sees a RemoveMessage, it will delete the message with that ID from the list (and the RemoveMessage will then be discarded). For more information on LangChain-specific message handling, check out this how-to on using RemoveMessage .
-
-See this how-to guide and module 2 from our LangChain Academy course for example usage.
-
-Summarizing past conversations¶
-The problem with trimming or removing messages, as shown above, is that we may lose information from culling of the message queue. Because of this, some applications benefit from a more sophisticated approach of summarizing the message history using a chat model.
-
-
-
-Simple prompting and orchestration logic can be used to achieve this. As an example, in LangGraph we can extend the MessagesState to include a summary key.
-
-
-from langgraph.graph import MessagesState
-class State(MessagesState):
-    summary: str
-Then, we can generate a summary of the chat history, using any existing summary as context for the next summary. This summarize_conversation node can be called after some number of messages have accumulated in the messages state key.
-
-
-def summarize_conversation(state: State):
-
-    # First, we get any existing summary
-    summary = state.get("summary", "")
-
-    # Create our summarization prompt
-    if summary:
-
-        # A summary already exists
-        summary_message = (
-            f"This is a summary of the conversation to date: {summary}\n\n"
-            "Extend the summary by taking into account the new messages above:"
-        )
-
-    else:
-        summary_message = "Create a summary of the conversation above:"
-
-    # Add prompt to our history
-    messages = state["messages"] + [HumanMessage(content=summary_message)]
-    response = model.invoke(messages)
-
-    # Delete all but the 2 most recent messages
-    delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-2]]
-    return {"summary": response.content, "messages": delete_messages}
-See this how-to here and module 2 from our LangChain Academy course for example usage.
-
-Knowing when to remove messages¶
-Most LLMs have a maximum supported context window (denominated in tokens). A simple way to decide when to truncate messages is to count the tokens in the message history and truncate whenever it approaches that limit. Naive truncation is straightforward to implement on your own, though there are a few "gotchas". Some model APIs further restrict the sequence of message types (must start with human message, cannot have consecutive messages of the same type, etc.). If you're using LangChain, you can use the trim_messages utility and specify the number of tokens to keep from the list, as well as the strategy (e.g., keep the last max_tokens) to use for handling the boundary.
-
-Below is an example.
-
-
-from langchain_core.messages import trim_messages
-trim_messages(
-    messages,
-    # Keep the last <= n_count tokens of the messages.
-    strategy="last",
-    # Remember to adjust based on your model
-    # or else pass a custom token_encoder
-    token_counter=ChatOpenAI(model="gpt-4"),
-    # Remember to adjust based on the desired conversation
-    # length
-    max_tokens=45,
-    # Most chat models expect that chat history starts with either:
-    # (1) a HumanMessage or
-    # (2) a SystemMessage followed by a HumanMessage
-    start_on="human",
-    # Most chat models expect that chat history ends with either:
-    # (1) a HumanMessage or
-    # (2) a ToolMessage
-    end_on=("human", "tool"),
-    # Usually, we want to keep the SystemMessage
-    # if it's present in the original history.
-    # The SystemMessage has special instructions for the model.
-    include_system=True,
+from langchain.agents import initialize_agent, AgentType
+from langchain.llms import OpenAI
+
+# Define the tools (for simplicity, dummy implementations)
+def get_travel_recommendations() -> str:
+    return "Try visiting Paris or Tokyo."
+def get_hotel_recommendations(location: str) -> str:
+    return f"Hotels in {location}: Hotel A, Hotel B."
+
+# Wrap tools in LangChain’s tool format if needed, or define as tasks:
+# (Here we assume initialize_agent will handle the tool calling via LangChain)
+
+llm = OpenAI(...)  # some LLM initialization
+travel_agent = initialize_agent(
+    tools=[{"name": "GetTravelRecommendations", "func": get_travel_recommendations, "description": "Recommend travel destinations"}],
+    llm=llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True
 )
-API Reference: trim_messages
-
-Long-term memory¶
-Long-term memory in LangGraph allows systems to retain information across different conversations or sessions. Unlike short-term memory, which is thread-scoped, long-term memory is saved within custom "namespaces."
-
-Storing memories¶
-LangGraph stores long-term memories as JSON documents in a store (reference doc). Each memory is organized under a custom namespace (similar to a folder) and a distinct key (like a filename). Namespaces often include user or org IDs or other labels that makes it easier to organize information. This structure enables hierarchical organization of memories. Cross-namespace searching is then supported through content filters. See the example below for an example.
-
-
-from langgraph.store.memory import InMemoryStore
-
-
-def embed(texts: list[str]) -> list[list[float]]:
-    # Replace with an actual embedding function or LangChain embeddings object
-    return [[1.0, 2.0] * len(texts)]
-
-
-# InMemoryStore saves data to an in-memory dictionary. Use a DB-backed store in production use.
-store = InMemoryStore(index={"embed": embed, "dims": 2})
-user_id = "my-user"
-application_context = "chitchat"
-namespace = (user_id, application_context)
-store.put(
-    namespace,
-    "a-memory",
-    {
-        "rules": [
-            "User likes short, direct language",
-            "User only speaks English & python",
-        ],
-        "my-key": "my-value",
-    },
+hotel_agent = initialize_agent(
+    tools=[{"name": "GetHotelRecommendations", "func": get_hotel_recommendations, "description": "Recommend hotels in a location"}],
+    llm=llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True
 )
-# get the "memory" by ID
-item = store.get(namespace, "a-memory")
-# search for "memories" within this namespace, filtering on content equivalence, sorted by vector similarity
-items = store.search(
-    namespace, filter={"my-key": "my-value"}, query="language preferences"
-)
-Framework for thinking about long-term memory¶
-Long-term memory is a complex challenge without a one-size-fits-all solution. However, the following questions provide a structure framework to help you navigate the different techniques:
 
-What is the type of memory?
-
-Humans use memories to remember facts, experiences, and rules. AI agents can use memory in the same ways. For example, AI agents can use memory to remember specific facts about a user to accomplish a task. We expand on several types of memories in the section below.
-
-When do you want to update memories?
-
-Memory can be updated as part of an agent's application logic (e.g. "on the hot path"). In this case, the agent typically decides to remember facts before responding to a user. Alternatively, memory can be updated as a background task (logic that runs in the background / asynchronously and generates memories). We explain the tradeoffs between these approaches in the section below.
-
-Memory types¶
-Different applications require various types of memory. Although the analogy isn't perfect, examining human memory types can be insightful. Some research (e.g., the CoALA paper) have even mapped these human memory types to those used in AI agents.
-
-Memory Type	What is Stored	Human Example	Agent Example
-Semantic	Facts	Things I learned in school	Facts about a user
-Episodic	Experiences	Things I did	Past agent actions
-Procedural	Instructions	Instincts or motor skills	Agent system prompt
-Semantic Memory¶
-Semantic memory, both in humans and AI agents, involves the retention of specific facts and concepts. In humans, it can include information learned in school and the understanding of concepts and their relationships. For AI agents, semantic memory is often used to personalize applications by remembering facts or concepts from past interactions.
-
-Note: Not to be confused with "semantic search" which is a technique for finding similar content using "meaning" (usually as embeddings). Semantic memory is a term from psychology, referring to storing facts and knowledge, while semantic search is a method for retrieving information based on meaning rather than exact matches.
-
-Profile¶
-Semantic memories can be managed in different ways. For example, memories can be a single, continuously updated "profile" of well-scoped and specific information about a user, organization, or other entity (including the agent itself). A profile is generally just a JSON document with various key-value pairs you've selected to represent your domain.
-
-When remembering a profile, you will want to make sure that you are updating the profile each time. As a result, you will want to pass in the previous profile and ask the model to generate a new profile (or some JSON patch to apply to the old profile). This can be become error-prone as the profile gets larger, and may benefit from splitting a profile into multiple documents or strict decoding when generating documents to ensure the memory schemas remains valid.
-
-
-
-Collection¶
-Alternatively, memories can be a collection of documents that are continuously updated and extended over time. Each individual memory can be more narrowly scoped and easier to generate, which means that you're less likely to lose information over time. It's easier for an LLM to generate new objects for new information than reconcile new information with an existing profile. As a result, a document collection tends to lead to higher recall downstream.
-
-However, this shifts some complexity memory updating. The model must now delete or update existing items in the list, which can be tricky. In addition, some models may default to over-inserting and others may default to over-updating. See the Trustcall package for one way to manage this and consider evaluation (e.g., with a tool like LangSmith) to help you tune the behavior.
-
-Working with document collections also shifts complexity to memory search over the list. The Store currently supports both semantic search and filtering by content.
-
-Finally, using a collection of memories can make it challenging to provide comprehensive context to the model. While individual memories may follow a specific schema, this structure might not capture the full context or relationships between memories. As a result, when using these memories to generate responses, the model may lack important contextual information that would be more readily available in a unified profile approach.
-
-
-
-Regardless of memory management approach, the central point is that the agent will use the semantic memories to ground its responses, which often leads to more personalized and relevant interactions.
-
-Episodic Memory¶
-Episodic memory, in both humans and AI agents, involves recalling past events or actions. The CoALA paper frames this well: facts can be written to semantic memory, whereas experiences can be written to episodic memory. For AI agents, episodic memory is often used to help an agent remember how to accomplish a task.
-
-In practice, episodic memories are often implemented through few-shot example prompting, where agents learn from past sequences to perform tasks correctly. Sometimes it's easier to "show" than "tell" and LLMs learn well from examples. Few-shot learning lets you "program" your LLM by updating the prompt with input-output examples to illustrate the intended behavior. While various best-practices can be used to generate few-shot examples, often the challenge lies in selecting the most relevant examples based on user input.
-
-Note that the memory store is just one way to store data as few-shot examples. If you want to have more developer involvement, or tie few-shots more closely to your evaluation harness, you can also use a LangSmith Dataset to store your data. Then dynamic few-shot example selectors can be used out-of-the box to achieve this same goal. LangSmith will index the dataset for you and enable retrieval of few shot examples that are most relevant to the user input based upon keyword similarity (using a BM25-like algorithm for keyword based similarity).
-
-See this how-to video for example usage of dynamic few-shot example selection in LangSmith. Also, see this blog post showcasing few-shot prompting to improve tool calling performance and this blog post using few-shot example to align an LLMs to human preferences.
-
-Procedural Memory¶
-Procedural memory, in both humans and AI agents, involves remembering the rules used to perform tasks. In humans, procedural memory is like the internalized knowledge of how to perform tasks, such as riding a bike via basic motor skills and balance. Episodic memory, on the other hand, involves recalling specific experiences, such as the first time you successfully rode a bike without training wheels or a memorable bike ride through a scenic route. For AI agents, procedural memory is a combination of model weights, agent code, and agent's prompt that collectively determine the agent's functionality.
-
-In practice, it is fairly uncommon for agents to modify their model weights or rewrite their code. However, it is more common for agents to modify their own prompts.
-
-One effective approach to refining an agent's instructions is through "Reflection" or meta-prompting. This involves prompting the agent with its current instructions (e.g., the system prompt) along with recent conversations or explicit user feedback. The agent then refines its own instructions based on this input. This method is particularly useful for tasks where instructions are challenging to specify upfront, as it allows the agent to learn and adapt from its interactions.
-
-For example, we built a Tweet generator using external feedback and prompt re-writing to produce high-quality paper summaries for Twitter. In this case, the specific summarization prompt was difficult to specify a priori, but it was fairly easy for a user to critique the generated Tweets and provide feedback on how to improve the summarization process.
-
-The below pseudo-code shows how you might implement this with the LangGraph memory store, using the store to save a prompt, the update_instructions node to get the current prompt (as well as feedback from the conversation with the user captured in state["messages"]), update the prompt, and save the new prompt back to the store. Then, the call_model get the updated prompt from the store and uses it to generate a response.
-
-
-# Node that *uses* the instructions
-def call_model(state: State, store: BaseStore):
-    namespace = ("agent_instructions", )
-    instructions = store.get(namespace, key="agent_a")[0]
-    # Application logic
-    prompt = prompt_template.format(instructions=instructions.value["instructions"])
-    ...
-
-# Node that updates instructions
-def update_instructions(state: State, store: BaseStore):
-    namespace = ("instructions",)
-    current_instructions = store.search(namespace)[0]
-    # Memory logic
-    prompt = prompt_template.format(instructions=instructions.value["instructions"], conversation=state["messages"])
-    output = llm.invoke(prompt)
-    new_instructions = output['new_instructions']
-    store.put(("agent_instructions",), "agent_a", {"instructions": new_instructions})
-    ...
-
-
-Writing memories¶
-While humans often form long-term memories during sleep, AI agents need a different approach. When and how should agents create new memories? There are at least two primary methods for agents to write memories: "on the hot path" and "in the background".
-
-
-
-Writing memories in the hot path¶
-Creating memories during runtime offers both advantages and challenges. On the positive side, this approach allows for real-time updates, making new memories immediately available for use in subsequent interactions. It also enables transparency, as users can be notified when memories are created and stored.
-
-However, this method also presents challenges. It may increase complexity if the agent requires a new tool to decide what to commit to memory. In addition, the process of reasoning about what to save to memory can impact agent latency. Finally, the agent must multitask between memory creation and its other responsibilities, potentially affecting the quantity and quality of memories created.
-
-As an example, ChatGPT uses a save_memories tool to upsert memories as content strings, deciding whether and how to use this tool with each user message. See our memory-agent template as an reference implementation.
-
-Writing memories in the background¶
-Creating memories as a separate background task offers several advantages. It eliminates latency in the primary application, separates application logic from memory management, and allows for more focused task completion by the agent. This approach also provides flexibility in timing memory creation to avoid redundant work.
-
-However, this method has its own challenges. Determining the frequency of memory writing becomes crucial, as infrequent updates may leave other threads without new context. Deciding when to trigger memory formation is also important. Common strategies include scheduling after a set time period (with rescheduling if new events occur), using a cron schedule, or allowing manual triggers by users or the application logic.
-
-See our memory-service template as an reference implementation.
-
-How to review tool calls (Functional API)¶
-Prerequisites
-
-This guide assumes familiarity with the following:
-
-Implementing human-in-the-loop workflows with interrupt
-How to create a ReAct agent using the Functional API
-This guide demonstrates how to implement human-in-the-loop workflows in a ReAct agent using the LangGraph Functional API.
-
-We will build off of the agent created in the How to create a ReAct agent using the Functional API guide.
-
-Specifically, we will demonstrate how to review tool calls generated by a chat model prior to their execution. This can be accomplished through use of the interrupt function at key points in our application.
-
-Preview:
-
-We will implement a simple function that reviews tool calls generated from our chat model and call it from inside our application's entrypoint:
-
-
-def review_tool_call(tool_call: ToolCall) -> Union[ToolCall, ToolMessage]:
-    """Review a tool call, returning a validated version."""
-    human_review = interrupt(
-        {
-            "question": "Is this correct?",
-            "tool_call": tool_call,
-        }
-    )
-    review_action = human_review["action"]
-    review_data = human_review.get("data")
-    if review_action == "continue":
-        return tool_call
-    elif review_action == "update":
-        updated_tool_call = {**tool_call, **{"args": review_data}}
-        return updated_tool_call
-    elif review_action == "feedback":
-        return ToolMessage(
-            content=review_data, name=tool_call["name"], tool_call_id=tool_call["id"]
-        )
-Setup¶
-First, let's install the required packages and set our API keys:
-
-
-%%capture --no-stderr
-%pip install -U langgraph langchain-openai
-
-import getpass
-import os
-
-
-def _set_env(var: str):
-    if not os.environ.get(var):
-        os.environ[var] = getpass.getpass(f"{var}: ")
-
-
-_set_env("OPENAI_API_KEY")
-Set up LangSmith for better debugging
-
-Sign up for LangSmith to quickly spot issues and improve the performance of your LangGraph projects. LangSmith lets you use trace data to debug, test, and monitor your LLM aps built with LangGraph — read more about how to get started in the docs.
-
-Define model and tools¶
-Let's first define the tools and model we will use for our example. As in the ReAct agent guide, we will use a single place-holder tool that gets a description of the weather for a location.
-
-We will use an OpenAI chat model for this example, but any model supporting tool-calling will suffice.
-
-
-from langchain_openai import ChatOpenAI
-from langchain_core.tools import tool
-
-model = ChatOpenAI(model="gpt-4o-mini")
-
-
-@tool
-def get_weather(location: str):
-    """Call to get the weather from a specific location."""
-    # This is a placeholder for the actual implementation
-    if any([city in location.lower() for city in ["sf", "san francisco"]]):
-        return "It's sunny!"
-    elif "boston" in location.lower():
-        return "It's rainy!"
-    else:
-        return f"I am not sure what the weather is in {location}"
-
-
-tools = [get_weather]
-API Reference: ChatOpenAI | tool
-
-Define tasks¶
-Our tasks are unchanged from the ReAct agent guide:
-
-Call model: We want to query our chat model with a list of messages.
-Call tool: If our model generates tool calls, we want to execute them.
-
-from langchain_core.messages import ToolCall, ToolMessage
-from langgraph.func import entrypoint, task
-
-
-tools_by_name = {tool.name: tool for tool in tools}
-
+# Define tasks to invoke each agent
+@task
+def ask_travel_agent(user_message: str):
+    """Send user query to travel agent and get response (which may include a tool use or final answer)."""
+    return travel_agent.run(user_message)
 
 @task
-def call_model(messages):
-    """Call model with a sequence of messages."""
-    response = model.bind_tools(tools).invoke(messages)
-    return response
+def ask_hotel_agent(user_message: str):
+    """Send user query to hotel agent and get response."""
+    return hotel_agent.run(user_message)
 
+# Entrypoint to coordinate agents
+@entrypoint()
+def multi_agent_workflow(user_query: str) -> str:
+    # Start with the travel agent by default
+    conversation = []
+    current_query = user_query
+    next_agent = ask_travel_agent
 
-@task
-def call_tool(tool_call):
-    tool = tools_by_name[tool_call["name"]]
-    observation = tool.invoke(tool_call["args"])
-    return ToolMessage(content=observation, tool_call_id=tool_call["id"])
-API Reference: ToolCall | ToolMessage | entrypoint | task
-
-Define entrypoint¶
-To review tool calls before execution, we add a review_tool_call function that calls interrupt. When this function is called, execution will be paused until we issue a command to resume it.
-
-Given a tool call, our function will interrupt for human review. At that point we can either:
-
-Accept the tool call;
-Revise the tool call and continue;
-Generate a custom tool message (e.g., instructing the model to re-format its tool call).
-We will demonstrate these three cases in the usage examples below.
-
-
-from typing import Union
-
-
-def review_tool_call(tool_call: ToolCall) -> Union[ToolCall, ToolMessage]:
-    """Review a tool call, returning a validated version."""
-    human_review = interrupt(
-        {
-            "question": "Is this correct?",
-            "tool_call": tool_call,
-        }
-    )
-    review_action = human_review["action"]
-    review_data = human_review.get("data")
-    if review_action == "continue":
-        return tool_call
-    elif review_action == "update":
-        updated_tool_call = {**tool_call, **{"args": review_data}}
-        return updated_tool_call
-    elif review_action == "feedback":
-        return ToolMessage(
-            content=review_data, name=tool_call["name"], tool_call_id=tool_call["id"]
-        )
-We can now update our entrypoint to review the generated tool calls. If a tool call is accepted or revised, we execute in the same way as before. Otherwise, we just append the ToolMessage supplied by the human.
-
-Tip
-
-The results of prior tasks — in this case the initial model call — are persisted, so that they are not run again following the interrupt.
-
-
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph.message import add_messages
-from langgraph.types import Command, interrupt
-
-
-checkpointer = MemorySaver()
-
-
-@entrypoint(checkpointer=checkpointer)
-def agent(messages, previous):
-    if previous is not None:
-        messages = add_messages(previous, messages)
-
-    llm_response = call_model(messages).result()
+    # Loop allowing agents to hand off between each other
     while True:
-        if not llm_response.tool_calls:
-            break
+        response = next_agent(current_query).result()  # get agent response
+        conversation.append(response)
+        # Simple logic: if travel agent decided to hand off to hotel agent (say by a special signal in response):
+        if "transfer to hotel agent" in response.lower():
+            # Switch to hotel agent for next turn
+            next_agent = ask_hotel_agent
+            # Perhaps extract a specific query for the hotel agent, here assumed as part of response:
+            current_query = "best hotels in Paris"  # (In practice, parse from response)
+            continue
+        break  # if no handoff signal, break loop
 
-        # Review tool calls
-        tool_results = []
-        tool_calls = []
-        for i, tool_call in enumerate(llm_response.tool_calls):
-            review = review_tool_call(tool_call)
-            if isinstance(review, ToolMessage):
-                tool_results.append(review)
-            else:  # is a validated tool call
-                tool_calls.append(review)
-                if review != tool_call:
-                    llm_response.tool_calls[i] = review  # update message
+    final_answer = response  # last agent's response
+    return final_answer
+```
 
-        # Execute remaining tool calls
-        tool_result_futures = [call_tool(tool_call) for tool_call in tool_calls]
-        remaining_tool_results = [fut.result() for fut in tool_result_futures]
+In the above pseudo-code, `ask_travel_agent` and `ask_hotel_agent` are tasks wrapping calls to each agent. The `multi_agent_workflow` entrypoint sends the user query to the travel agent first. If the travel agent’s answer indicates handing off (we used a placeholder check for a phrase like "transfer to hotel agent"), the workflow then directs the next question to the hotel agent. The loop continues until an agent produces a final answer without handing off.
 
-        # Append to message list
-        messages = add_messages(
-            messages,
-            [llm_response, *tool_results, *remaining_tool_results],
-        )
+**Key Patterns**:
+- Each agent is encapsulated as a callable (could be a LangChain agent or a LangGraph sub-workflow).
+- The entrypoint manages which agent is “active” and when to switch. In this case, we used a simple string signal; in more complex cases, the agents could explicitly output an action like `{"action": "handoff_to", "agent": "hotel", ...}` that we parse.
+- We maintain a `conversation` list if needed to log the interaction. LangGraph could also maintain state (more on that in Memory Management section).
 
-        # Call model again
-        llm_response = call_model(messages).result()
+LangGraph’s official docs demonstrate a similar idea where a *tool* is used to signal agent handoff, and the entrypoint inspects the conversation to choose the next agent ([How to build a multi-agent network (functional API)](https://langchain-ai.github.io/langgraphjs/how-tos/multi-agent-network-functional/#:~:text=In%20this%20how,defined%20in%20the%20main%20entrypoint)) ([How to build a multi-agent network (functional API)](https://langchain-ai.github.io/langgraphjs/how-tos/multi-agent-network-functional/#:~:text=let%20callActiveAgent%20%3D%20callTravelAdvisor%3B%20let,return%20messages%3B)). The benefit of using LangGraph tasks for each agent is that the handoff and looping logic can be written in straightforward Python, while LangGraph handles the execution and state under the hood.
 
-    # Generate final response
-    messages = add_messages(messages, llm_response)
-    return entrypoint.final(value=llm_response, save=messages)
-API Reference: MemorySaver | add_messages | Command | interrupt
+**Many-to-Many Agent Networks**: The above is a one-to-one handoff. LangGraph can handle more complex networks (e.g. multiple agents all communicating via a shared message board, or hierarchical setups). For instance, a **fully connected network** where any agent can call any other would involve more dynamic routing. Typically you might give each agent a tool (or an action) to call each other agent, and in the workflow loop route accordingly. The Functional API’s flexibility allows implementing custom coordination schemes (like round-robin questioning, or a central “manager” agent delegating tasks to specialist sub-agents, etc.).
 
-Usage¶
-Let's demonstrate some scenarios.
+**Benefits**: Multi-agent workflows can break complex tasks into specialized subtasks, improving performance and reliability ([LangGraph: Multi-Agent Workflows](https://blog.langchain.dev/langgraph-multi-agent-workflows/#:~:text=,without%20breaking%20the%20larger%20application)) ([LangGraph: Multi-Agent Workflows](https://blog.langchain.dev/langgraph-multi-agent-workflows/#:~:text=Multi,specialized%20agents%20and%20LLM%20programs)). LangGraph provides a structured way to design these interactions (each agent as a node and transitions as edges in concept), while the Functional API lets you implement it in code without explicitly drawing a graph.
 
+## 3. Tool Calling in the Functional API (ReAct Agents & Human-in-the-Loop)
 
-def _print_step(step: dict) -> None:
-    for task_name, result in step.items():
-        if task_name == "agent":
-            continue  # just stream from tasks
-        print(f"\n{task_name}:")
-        if task_name in ("__interrupt__", "review_tool_call"):
-            print(result)
-        else:
-            result.pretty_print()
-Accept a tool call¶
-To accept a tool call, we just indicate in the data we provide in the Command that the tool call should pass through.
+Integrating external tools (e.g. web search, calculators, databases) is a common requirement in LLM applications. LangGraph’s Functional API supports tool usage, and you can incorporate **human as a tool** for human-in-the-loop interactions.
 
+**Defining Tools**: In LangChain/LangGraph, a “tool” is typically a function that the agent can call. In the Functional API (Python), you can use the `@tool` decorator from LangChain to wrap a function as a tool, or simply define a normal function and ensure the agent knows about it. Each tool should have a **name**, **description**, and an **input schema** (which can be enforced via Python type hints, Pydantic, or even simple dict schemas). For example:
 
-config = {"configurable": {"thread_id": "1"}}
-
-user_message = {"role": "user", "content": "What's the weather in san francisco?"}
-print(user_message)
-
-for step in agent.stream([user_message], config):
-    _print_step(step)
-
-{'role': 'user', 'content': "What's the weather in san francisco?"}
-
-call_model:
-==================================[1m Ai Message [0m==================================
-Tool Calls:
-  get_weather (call_Bh5cSwMqCpCxTjx7AjdrQTPd)
- Call ID: call_Bh5cSwMqCpCxTjx7AjdrQTPd
-  Args:
-    location: San Francisco
-
-__interrupt__:
-(Interrupt(value={'question': 'Is this correct?', 'tool_call': {'name': 'get_weather', 'args': {'location': 'San Francisco'}, 'id': 'call_Bh5cSwMqCpCxTjx7AjdrQTPd', 'type': 'tool_call'}}, resumable=True, ns=['agent:22fcc9cd-3573-b39b-eea7-272a025903e2'], when='during'),)
-
-human_input = Command(resume={"action": "continue"})
-
-for step in agent.stream(human_input, config):
-    _print_step(step)
-
-call_tool:
-=================================[1m Tool Message [0m=================================
-
-It's sunny!
-
-call_model:
-==================================[1m Ai Message [0m==================================
-
-The weather in San Francisco is sunny!
-Revise a tool call¶
-To revise a tool call, we can supply updated arguments.
-
-
-config = {"configurable": {"thread_id": "2"}}
-
-user_message = {"role": "user", "content": "What's the weather in san francisco?"}
-print(user_message)
-
-for step in agent.stream([user_message], config):
-    _print_step(step)
-
-{'role': 'user', 'content': "What's the weather in san francisco?"}
-
-call_model:
-==================================[1m Ai Message [0m==================================
-Tool Calls:
-  get_weather (call_b9h8e18FqH0IQm3NMoeYKz6N)
- Call ID: call_b9h8e18FqH0IQm3NMoeYKz6N
-  Args:
-    location: san francisco
-
-__interrupt__:
-(Interrupt(value={'question': 'Is this correct?', 'tool_call': {'name': 'get_weather', 'args': {'location': 'san francisco'}, 'id': 'call_b9h8e18FqH0IQm3NMoeYKz6N', 'type': 'tool_call'}}, resumable=True, ns=['agent:9559a81d-5720-dc19-a457-457bac7bdd83'], when='during'),)
-
-human_input = Command(resume={"action": "update", "data": {"location": "SF, CA"}})
-
-for step in agent.stream(human_input, config):
-    _print_step(step)
-
-call_tool:
-=================================[1m Tool Message [0m=================================
-
-It's sunny!
-
-call_model:
-==================================[1m Ai Message [0m==================================
-
-The weather in San Francisco is sunny!
-The LangSmith traces for this run are particularly informative:
-In the trace before the interrupt, we generate a tool call for location "San Francisco".
-In the trace after resuming, we see that the tool call in the message has been updated to "SF, CA".
-Generate a custom ToolMessage¶
-To Generate a custom ToolMessage, we supply the content of the message. In this case we will ask the model to reformat its tool call.
-
-
-config = {"configurable": {"thread_id": "3"}}
-
-user_message = {"role": "user", "content": "What's the weather in san francisco?"}
-print(user_message)
-
-for step in agent.stream([user_message], config):
-    _print_step(step)
-
-{'role': 'user', 'content': "What's the weather in san francisco?"}
-
-call_model:
-==================================[1m Ai Message [0m==================================
-Tool Calls:
-  get_weather (call_VqGjKE7uu8HdWs9XuY1kMV18)
- Call ID: call_VqGjKE7uu8HdWs9XuY1kMV18
-  Args:
-    location: San Francisco
-
-__interrupt__:
-(Interrupt(value={'question': 'Is this correct?', 'tool_call': {'name': 'get_weather', 'args': {'location': 'San Francisco'}, 'id': 'call_VqGjKE7uu8HdWs9XuY1kMV18', 'type': 'tool_call'}}, resumable=True, ns=['agent:4b3b372b-9da3-70be-5c68-3d9317346070'], when='during'),)
-
-human_input = Command(
-    resume={
-        "action": "feedback",
-        "data": "Please format as <City>, <State>.",
-    },
-)
-
-for step in agent.stream(human_input, config):
-    _print_step(step)
-
-call_model:
-==================================[1m Ai Message [0m==================================
-Tool Calls:
-  get_weather (call_xoXkK8Cz0zIpvWs78qnXpvYp)
- Call ID: call_xoXkK8Cz0zIpvWs78qnXpvYp
-  Args:
-    location: San Francisco, CA
-
-__interrupt__:
-(Interrupt(value={'question': 'Is this correct?', 'tool_call': {'name': 'get_weather', 'args': {'location': 'San Francisco, CA'}, 'id': 'call_xoXkK8Cz0zIpvWs78qnXpvYp', 'type': 'tool_call'}}, resumable=True, ns=['agent:4b3b372b-9da3-70be-5c68-3d9317346070'], when='during'),)
-Once it is re-formatted, we can accept it:
-
-human_input = Command(resume={"action": "continue"})
-
-for step in agent.stream(human_input, config):
-    _print_step(step)
-
-call_tool:
-=================================[1m Tool Message [0m=================================
-
-It's sunny!
-
-call_model:
-==================================[1m Ai Message [0m==================================
-
-The weather in San Francisco, CA is sunny!
-
-How to create a ReAct agent from scratch (Functional API)¶
-Prerequisites
-
-This guide assumes familiarity with the following:
-
-Chat Models
-Messages
-Tool Calling
-Entrypoints and Tasks
-This guide demonstrates how to implement a ReAct agent using the LangGraph Functional API.
-
-The ReAct agent is a tool-calling agent that operates as follows:
-
-Queries are issued to a chat model;
-If the model generates no tool calls, we return the model response.
-If the model generates tool calls, we execute the tool calls with available tools, append them as tool messages to our message list, and repeat the process.
-This is a simple and versatile set-up that can be extended with memory, human-in-the-loop capabilities, and other features. See the dedicated how-to guides for examples.
-
-Setup¶
-First, let's install the required packages and set our API keys:
-
-
-%%capture --no-stderr
-%pip install -U langgraph langchain-openai
-
-import getpass
-import os
-
-
-def _set_env(var: str):
-    if not os.environ.get(var):
-        os.environ[var] = getpass.getpass(f"{var}: ")
-
-
-_set_env("OPENAI_API_KEY")
-Set up LangSmith for better debugging
-
-Sign up for LangSmith to quickly spot issues and improve the performance of your LangGraph projects. LangSmith lets you use trace data to debug, test, and monitor your LLM aps built with LangGraph — read more about how to get started in the docs.
-
-Create ReAct agent¶
-Now that you have installed the required packages and set your environment variables, we can create our agent.
-
-Define model and tools¶
-Let's first define the tools and model we will use for our example. Here we will use a single place-holder tool that gets a description of the weather for a location.
-
-We will use an OpenAI chat model for this example, but any model supporting tool-calling will suffice.
-
-
-from langchain_openai import ChatOpenAI
-from langchain_core.tools import tool
-
-model = ChatOpenAI(model="gpt-4o-mini")
-
+```python
+from langchain.agents import tool
 
 @tool
-def get_weather(location: str):
-    """Call to get the weather from a specific location."""
-    # This is a placeholder for the actual implementation
-    if any([city in location.lower() for city in ["sf", "san francisco"]]):
-        return "It's sunny!"
-    elif "boston" in location.lower():
-        return "It's rainy!"
-    else:
-        return f"I am not sure what the weather is in {location}"
+def search_web(query: str) -> str:
+    """Search the web for the query and return the top result."""
+    # ... implementation ...
+    return result_text
+```
 
+The above would allow an agent to call `search_web` if it decides to. When using LangGraph, how do we plug tools in? One approach is to use LangChain’s agent tooling in tasks. Another approach is to manually manage tool calls.
 
-tools = [get_weather]
-API Reference: ChatOpenAI | tool
+**ReAct Loop via Tasks**: A common pattern (as seen in LangChain’s ReAct agent) is:
+1. Call LLM to get an action (tool invocation or final answer).
+2. If the LLM requested a tool, execute the tool and add the result to the context.
+3. Repeat until LLM provides a final answer.
 
-Define tasks¶
-We next define the tasks we will execute. Here there are two different tasks:
+We can implement this loop with Functional API tasks ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=%40task%20def%20call_model%28messages%29%3A%20,invoke%28messages%29%20return%20response)) ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=,result%28%29%20for%20fut%20in%20tool_result_futures)):
+- A task to call the model and get an output (which may include tool usage instructions).
+- A task to call a tool and return its result as a message.
+- The entrypoint to orchestrate the loop.
 
-Call model: We want to query our chat model with a list of messages.
-Call tool: If our model generates tool calls, we want to execute them.
+For example:
 
+```python
+from langgraph.func import entrypoint, task
+from langchain.chat_models import ChatOpenAI
+from langchain_core.tools import tool
 from langchain_core.messages import ToolMessage
-from langgraph.func import entrypoint, task
 
-tools_by_name = {tool.name: tool for tool in tools}
+# Define a tool using LangChain's @tool
+@tool
+def get_weather(location: str) -> str:
+    """Get weather for a given location."""
+    # dummy implementation:
+    if location.lower() in ["sf", "san francisco"]:
+        return "It's sunny."
+    elif location.lower() == "boston":
+        return "It's rainy."
+    else:
+        return f"No weather info for {location}."
 
+# Define an "LLM + tools" instance (LangGraph can use LangChain models under the hood)
+model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+tools = [get_weather]  # list of tool functions
+tools_by_name = {t.name: t for t in tools}
 
 @task
 def call_model(messages):
-    """Call model with a sequence of messages."""
+    """Call the LLM with accumulated messages (chat history) and bound tools."""
+    # Bind tools so the LLM knows it can call them (for openAI functions or LangChain agent)
     response = model.bind_tools(tools).invoke(messages)
-    return response
-
+    return response  # response might include llm_output plus tool_calls list
 
 @task
-def call_tool(tool_call):
-    tool = tools_by_name[tool_call["name"]]
-    observation = tool.invoke(tool_call["args"])
-    return ToolMessage(content=observation, tool_call_id=tool_call["id"])
-API Reference: ToolMessage | entrypoint | task
+def call_tool(tool_call: dict):
+    """Execute a tool based on the LLM's tool call instruction."""
+    tool_name = tool_call["name"]
+    tool_input = tool_call.get("args") or tool_call.get("input")
+    result = tools_by_name[tool_name].invoke(tool_input)
+    # Wrap the tool’s output as a message to feed back to LLM (ToolMessage in LangChain)
+    return ToolMessage(content=result, tool_call_id=tool_call["id"])
+```
 
-Define entrypoint¶
-Our entrypoint will handle the orchestration of these two tasks. As described above, when our call_model task generates tool calls, the call_tool task will generate responses for each. We append all messages to a single messages list.
+In this snippet, `model.bind_tools(tools).invoke(messages)` calls the LLM and allows it to choose a tool defined in `tools` ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=%40task%20def%20call_model%28messages%29%3A%20,invoke%28messages%29%20return%20response)). The returned `response` would likely include a `response.tool_calls` attribute (a list of tool call instructions the LLM decided on). We then loop over those tool calls, execute each with `call_tool`, and append the results to the message list.
 
-Tip
+**Tool Loop in Entrypoint**: The entrypoint ties it together:
 
-Note that because tasks return future-like objects, the below implementation executes tools in parallel.
-
-
+```python
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.message import add_messages
 
+checkpointer = MemorySaver()
 
-@entrypoint()
-def agent(messages):
+@entrypoint(checkpointer=checkpointer)
+def agent(messages: list, *, previous=None):
+    # If there's conversation history from a previous run, include it
+    if previous is not None:
+        messages = add_messages(previous, messages)
+    # Call LLM
     llm_response = call_model(messages).result()
-    while True:
-        if not llm_response.tool_calls:
-            break
-
-        # Execute tools
-        tool_result_futures = [
-            call_tool(tool_call) for tool_call in llm_response.tool_calls
-        ]
-        tool_results = [fut.result() for fut in tool_result_futures]
-
-        # Append to message list
+    # Loop while LLM has tool actions
+    while llm_response.tool_calls:
+        tool_futures = [call_tool(tc) for tc in llm_response.tool_calls]
+        tool_results = [f.result() for f in tool_futures]  # execute all requested tools in parallel
+        # Add the tool results (as messages) to the conversation and call LLM again
         messages = add_messages(messages, [llm_response, *tool_results])
-
-        # Call model again
         llm_response = call_model(messages).result()
+    # No more tool calls; final answer ready
+    messages = add_messages(messages, llm_response)
+    # Return final answer, and save full conversation in state (for memory)
+    return entrypoint.final(value=llm_response, save=messages)
+```
 
-    return llm_response
-API Reference: add_messages
+This structure implements a ReAct agent using tasks ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=while%20True%3A%20if%20not%20llm_response,break)) ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=,result)):
+1. Combine new user message with previous conversation (`previous` comes from memory, if any).
+2. Call the LLM (`call_model`) to get a response.
+3. If the response includes tools to call, execute each tool via `call_tool` tasks (note: we collect futures and then `.result()` them, which allows parallel tool execution if multiple are issued) ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=,result%28%29%20for%20fut%20in%20tool_result_futures)) ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=,result)).
+4. Append the LLM response and tool results to the messages, and loop back to call the LLM again with the updated context.
+5. Once the LLM produces no tool calls, that response is the final answer. We add it to messages and return, using `entrypoint.final` to save the entire conversation (for memory continuity).
 
-Usage¶
-To use our agent, we invoke it with a messages list. Based on our implementation, these can be LangChain message objects or OpenAI-style dicts:
+**Human-in-the-Loop as a Tool**: Sometimes the “tool” an agent should use is asking the **user** for input (e.g. clarifying a query, or, as in the Reddit example, asking for credentials mid-workflow). We can implement this by creating a tool that triggers an interrupt. LangGraph’s `interrupt()` function will pause the workflow and yield control back to us with a prompt for the user ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=Human,and%20await%20input%20before%20proceeding)) ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=Waiting%20for%20human%20input%20is,and%20await%20input%20before%20proceeding)).
 
+For instance, define a tool that when called by the agent, stops and asks the user:
 
-user_message = {"role": "user", "content": "What's the weather in san francisco?"}
-print(user_message)
+```python
+from langgraph.types import interrupt
+from langchain.agents import tool
 
-for step in agent.stream([user_message]):
-    for task_name, message in step.items():
-        if task_name == "agent":
-            continue  # Just print task updates
-        print(f"\n{task_name}:")
-        message.pretty_print()
+@tool
+def human_assistance(query: str) -> str:
+    """Tool that asks the user for assistance with the given query."""
+    # When agent calls this tool, pause execution and ask user
+    user_response = interrupt({"query": query})
+    # The `interrupt` returns a dict (or value) after resume. Suppose user provides {"data": "..."}.
+    return user_response["data"]
+```
 
-{'role': 'user', 'content': "What's the weather in san francisco?"}
+Adding this `human_assistance` tool to the agent’s tool list means the LLM can decide to “invoke” a human helper ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=from%20langgraph)). When `interrupt()` is called inside the task, LangGraph will produce an `__interrupt__` event containing the prompt or data needed ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=)). At this point, the workflow **pauses** and awaits a resume signal.
 
-call_model:
-==================================[1m Ai Message [0m==================================
-Tool Calls:
-  get_weather (call_tNnkrjnoz6MNfCHJpwfuEQ0v)
- Call ID: call_tNnkrjnoz6MNfCHJpwfuEQ0v
-  Args:
-    location: san francisco
+**Using Interrupt with Chainlit**: Chainlit doesn’t automatically know what to do with LangGraph’s interrupt events, so you’ll integrate it manually:
+- Run the agent via `entrypoint.stream()` in your Chainlit app. As you iterate over events, check for an event indicating an interrupt (it might appear as a dictionary with `{"__interrupt__": ...}`).
+- When you detect an interrupt, you can use Chainlit’s **AskUserMessage** to prompt the user for input in the UI ([Issues when prompting for credentials using Chainlit UI + Langgraph : r/LangChain](https://www.reddit.com/r/LangChain/comments/1h3u7ei/issues_when_prompting_for_credentials_using/#:~:text=%E2%80%A2)). For example, in your Chainlit `on_message` handler:
 
-call_tool:
-=================================[1m Tool Message [0m=================================
+  ```python
+  import chainlit as cl
 
-It's sunny!
+  @cl.on_message
+  async def handle_message(message: str):
+      for event in agent.stream([{"role": "user", "content": message}], config={"configurable": {"thread_id": "xyz"}}):
+          if "__interrupt__" in event:
+              prompt = event["__interrupt__"][0].value  # the message asking for input
+              # Use Chainlit AskUserMessage to prompt user on UI and wait for reply
+              user_reply = await cl.AskUserMessage(content=prompt).send()
+              # Resume the agent by sending the Command with user reply
+              resume_event = agent.stream(cl.Command(resume=user_reply["content"]), config={"configurable": {"thread_id": "xyz"}})
+              # continue iterating over resume_event and so on
+          else:
+              # handle normal events (LLM responses, tool outputs, etc.)
+              await cl.Message(content=str(event)).send()
+  ```
+  *(Pseudocode for demonstration)*
 
-call_model:
-==================================[1m Ai Message [0m==================================
+  The idea is: when LangGraph interrupts, we present the user with a question. The user's answer is then passed back into the workflow via `Command(resume=...)` to continue ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=provides%20instructions%20to%20resume%20the,task)). Chainlit’s `AskUserMessage` is designed exactly for these scenarios – it displays a message and waits for the user’s response, allowing a seamless human-in-loop interaction in the UI ([Issues when prompting for credentials using Chainlit UI + Langgraph : r/LangChain](https://www.reddit.com/r/LangChain/comments/1h3u7ei/issues_when_prompting_for_credentials_using/#:~:text=%E2%80%A2)).
 
-The weather in San Francisco is sunny!
-Perfect! The graph correctly calls the get_weather tool and responds to the user after receiving the information from the tool. Check out the LangSmith trace here.
-Add thread-level persistence¶
-Adding thread-level persistence lets us support conversational experiences with our agent: subsequent invocations will append to the prior messages list, retaining the full conversational context.
+**Best Practices for Tool Integration**:
+- Define clear tool schemas. Use Pydantic models or dataclasses for complex tool inputs to ensure the agent gets structured data (LangChain’s function calling is compatible with Pydantic schemas; more in Pydantic section).
+- Avoid too many tools per agent; it’s often better to split into multiple agents if you have a very large toolset ([LangGraph: Multi-Agent Workflows](https://blog.langchain.dev/langgraph-multi-agent-workflows/#:~:text=,without%20breaking%20the%20larger%20application)).
+- For human tools, ensure the agent’s prompt or logic knows when to invoke them (e.g., the agent could have an instruction like “If you need help from a human, call the `human_assistance` tool”). Also handle the user response carefully – possibly re-validating it or confirming.
+- **Human approval flows**: Another human-in-loop pattern is reviewing a tool’s output. LangGraph provides mechanisms to *review or edit* tool outputs via interrupts as well (using `Command` to approve or modify results) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=match%20at%20L619%20%2A%20Human,determinism%20section%20for%20more%20details)) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=match%20at%20L652%20To%20utilize,deterministic)), which can be useful for safety-critical applications.
 
-To add thread-level persistence to our agent:
+By combining LangGraph Functional API’s tool calling with Chainlit’s UI for human input, you can build rich interactive agents that not only use automated tools but also seamlessly defer to humans when necessary.
 
-Select a checkpointer: here we will use MemorySaver, a simple in-memory checkpointer.
-Update our entrypoint to accept the previous messages state as a second argument. Here, we simply append the message updates to the previous sequence of messages.
-Choose which values will be returned from the workflow and which will be saved by the checkpointer as previous using entrypoint.final (optional)
+## 4. Memory State Management in LangGraph (Multi-Turn Conversations)
 
+Maintaining state across turns (or steps) is crucial for conversational agents and multi-step workflows. LangGraph’s Functional API provides built-in support for **short-term memory** (conversation or session state) and **long-term memory** (persistent data across sessions) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=Short)) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=You%20can%20implement%20long,interactions%20with%20the%20same%20user)).
+
+### 4.1 Short-Term Memory (Conversation Context)
+
+Short-term memory refers to the running context of the current conversation or workflow run – for example, the dialogue history in a chat with a user. In LangGraph, enabling persistence on an entrypoint allows the framework to store the state after each run and feed it into the next run of that workflow for the same “session.” The Functional API offers two mechanisms to help with this:
+- The `previous` parameter in an entrypoint function signature.
+- The `entrypoint.final()` return helper.
+
+When you decorate an entrypoint with a `checkpointer` (like `MemorySaver` for in-memory persistence), you can include a parameter named `previous` in the function. LangGraph will automatically fill this with the saved state from the last execution (if any) for the same conversation thread ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=In%20the%20Functional%20API%2C%20you,term%20memory%20using)) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=%40entrypoint%28checkpointer%3Dcheckpointer%29%20def%20conversational_agent%28user_message%2C%20,messages%20%3D%20previous%20or)). The saved state itself is determined by what you return via `entrypoint.final`.
+
+**Example**: Simplified conversational agent entrypoint using these features:
+
+```python
 from langgraph.checkpoint.memory import MemorySaver
 
 checkpointer = MemorySaver()
 
-
 @entrypoint(checkpointer=checkpointer)
-def agent(messages, previous):
-    if previous is not None:
-        messages = add_messages(previous, messages)
+def chat_agent(user_input: str, *, previous=None):
+    # previous contains the conversation list from last turn, if exists
+    conversation = previous or []  # start with old messages or fresh list
+    conversation.append({"role": "user", "content": user_input})
+    # Call LLM with the full conversation (this could be via a task, omitted for brevity)
+    assistant_reply = call_llm(conversation)  # suppose this returns assistant message text
+    conversation.append({"role": "assistant", "content": assistant_reply})
+    # Return the assistant's reply as output, but save the entire conversation
+    return entrypoint.final(value=assistant_reply, save=conversation)
+```
 
-    llm_response = call_model(messages).result()
-    while True:
-        if not llm_response.tool_calls:
-            break
+Here:
+- We set `checkpointer=MemorySaver()`, which tells LangGraph to keep a checkpoint of the state in memory for each unique session (the session is identified by a `thread_id` in the config when calling, e.g. we might call this entrypoint with `config={"configurable": {"thread_id": "session1"}}`).
+- `previous` is used to retrieve the last saved conversation for the session ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=%40entrypoint%28checkpointer%3Dcheckpointer%29%20def%20conversational_agent%28user_message%2C%20,messages%20%3D%20previous%20or)).
+- We append the new user message to the conversation, then generate the assistant’s reply (through some LLM call).
+- We return `entrypoint.final(value=assistant_reply, save=conversation)`. The `entrypoint.final` tells LangGraph: the immediate result of this workflow is `assistant_reply` (just the assistant's answer), but the state to persist (`previous` for next time) is the full `conversation` list ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=,extend%28new_messages)). This way, next time the user sends a message in the same session, `previous` will contain all past messages, allowing the agent to maintain context.
 
-        # Execute tools
-        tool_result_futures = [
-            call_tool(tool_call) for tool_call in llm_response.tool_calls
-        ]
-        tool_results = [fut.result() for fut in tool_result_futures]
+Under the hood, LangGraph will store the `conversation` in a checkpoint (MemorySaver keeps it in memory; other checkpointers can serialize to disk or database). On the next invocation for the same `thread_id`, LangGraph injects that saved conversation as `previous`.
 
-        # Append to message list
-        messages = add_messages(messages, [llm_response, *tool_results])
+**Multi-Turn Interaction**: With this setup, you can handle a dialogue iteratively. For example:
 
-        # Call model again
-        llm_response = call_model(messages).result()
+```python
+# First user message
+agent.invoke("Hello", config={"configurable": {"thread_id": "session1"}})
+# returns "assistant's first reply"
 
-    # Generate final response
-    messages = add_messages(messages, llm_response)
-    return entrypoint.final(value=llm_response, save=messages)
-API Reference: MemorySaver
+# Second user message
+agent.invoke("What's the weather?", config={"configurable": {"thread_id": "session1"}})
+# Now inside chat_agent, previous will contain [{"role": "user": ...}, {"role": "assistant": ...}] from first turn.
+# The agent can use that context before answering the second question.
+```
 
-We will now need to pass in a config when running our application. The config will specify an identifier for the conversational thread.
+LangGraph ensures that tasks already executed in a prior turn are not needlessly repeated and that the sequence of messages is preserved ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=Tip)) ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=)). The built-in persistence abstracts away a lot of boilerplate; you don’t need to manually manage a conversation buffer – just use `previous` and `entrypoint.final(save=...)`.
 
-Tip
+### 4.2 Long-Term Memory (Cross-Session Persistence)
 
-Read more about thread-level persistence in our concepts page and how-to guides.
+Long-term memory means storing information that persists beyond a single conversation thread. For instance, a personal assistant might remember a user’s preferences or profile information across all sessions. LangGraph addresses this with a concept of **stores**.
 
+You can provide a `store` to an entrypoint (via the `store` argument in the decorator) which gives you access to a key–value storage (could be in-memory, database-backed, etc.) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=You%20can%20implement%20long,interactions%20with%20the%20same%20user)) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=You%20can%20implement%20long,interactions%20with%20the%20same%20user)). The `store` typically implements methods like `.get(key)` and `.set(key, value)` to read/write persistent data.
 
-config = {"configurable": {"thread_id": "1"}}
-We start a thread the same way as before, this time passing in the config:
+To use long-term memory:
+```python
+from langgraph.store.memory import InMemoryStore
 
+store = InMemoryStore()  # or a persistent implementation
 
-user_message = {"role": "user", "content": "What's the weather in san francisco?"}
-print(user_message)
+@entrypoint(checkpointer=MemorySaver(), store=store)
+def agent_with_long_term(data: dict, *, previous=None, store=None):
+    # 'store' is automatically provided if named as parameter
+    user_id = data.get("user_id")
+    # Retrieve user profile or preferences
+    profile = store.get(f"profile_{user_id}") or {}
+    # ... use profile info in prompt or logic ...
+    # maybe update something
+    store.set(f"profile_{user_id}", profile)
+    # normal short-term handling...
+    return entrypoint.final(value=..., save=...)
+```
 
-for step in agent.stream([user_message], config):
-    for task_name, message in step.items():
-        if task_name == "agent":
-            continue  # Just print task updates
-        print(f"\n{task_name}:")
-        message.pretty_print()
+Here, `store: BaseStore` parameter in the function is injected by LangGraph ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=match%20at%20L183%20from%20langgraph,memory%20import%20InMemoryStore)) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=You%20can%20implement%20long,interactions%20with%20the%20same%20user)). We can call `store.get` or `store.set` to retrieve or update persistent data. Unlike `previous` which is tied to a specific conversation thread, `store` is shared and survives independently (in this case, since we used `InMemoryStore`, it lasts as long as the app runs; for real persistence you might use a file-based or database store).
 
-{'role': 'user', 'content': "What's the weather in san francisco?"}
+Use cases for long-term memory:
+- Storing user-specific data (preferences, past interactions summary, domain knowledge) that should be available even if the conversation restarts.
+- Caching expensive results (like embeddings, or tool outputs) keyed by some identifier, to reuse later.
+- Implementing a simple vector store or knowledge base by writing to the store across sessions.
 
-call_model:
-==================================[1m Ai Message [0m==================================
-Tool Calls:
-  get_weather (call_lubbUSdDofmOhFunPEZLBz3g)
- Call ID: call_lubbUSdDofmOhFunPEZLBz3g
-  Args:
-    location: San Francisco
+LangGraph’s design cleanly separates short-term vs long-term: short-term (conversation state) is handled via checkpointing/previous, and long-term via store. This separation prevents confusion between ephemeral dialogue context and truly persistent knowledge.
 
-call_tool:
-=================================[1m Tool Message [0m=================================
+**Memory and Determinism**: It’s worth noting that LangGraph aims to make workflows reproducible. If randomness (like an LLM call) is involved, the checkpointing ensures that once a task’s result is obtained, it’s reused on resume rather than re-run, to avoid divergence ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=match%20at%20L652%20To%20utilize,deterministic)). This is critical when using interrupts and memory – you want the conversation so far to remain fixed when resuming. LangGraph’s memory system takes care of that by persisting prior task results after an interrupt ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=Tip)).
 
-It's sunny!
+**Alternate Memory Options**: `MemorySaver` is an in-memory checkpoint; for production you might use a more durable checkpointer (there might be DiskSaver or database-backed savers in LangGraph). Ensure the choice fits your deployment – for example, if you run multiple server replicas, a memory checkpointer won’t share state between them, so a centralized store or DB might be needed for consistency.
 
-call_model:
-==================================[1m Ai Message [0m==================================
+In summary, LangGraph provides out-of-the-box solutions for maintaining conversation state and storing persistent data:
+- Use `previous` and `entrypoint.final(..., save=state)` for keeping track of multi-turn interactions **within a session** ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=%40entrypoint%28checkpointer%3Dcheckpointer%29%20def%20conversational_agent%28user_message%2C%20,messages%20%3D%20previous%20or)) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=,extend%28new_messages)).
+- Use `store` for **cross-session memory** that all sessions (or future sessions) can access ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=You%20can%20implement%20long,interactions%20with%20the%20same%20user)).
+- These mechanisms free you from manually plumbing state through every function or using global variables, and they play nicely with multiple users (each conversation thread is uniquely identified, avoiding cross-talk).
 
-The weather in San Francisco is sunny!
-When we ask a follow-up conversation, the model uses the prior context to infer that we are asking about the weather:
+## 5. Memory Persistence in Chainlit (Conversation History Across Sessions)
 
-user_message = {"role": "user", "content": "How does it compare to Boston, MA?"}
-print(user_message)
+Chainlit provides features to **persist chat history** and user session data, which complement LangGraph’s in-app memory. By default, Chainlit does *not* persist conversations – if you refresh or restart, the chat log is gone. However, with a bit of configuration, Chainlit can store chats (e.g., in a database) and allow users to resume them later ([Overview - Chainlit](https://docs.chainlit.io/data-persistence/overview#:~:text=By%20default%2C%20your%20Chainlit%20app,of%20your%20project%20or%20organization)) ([Overview - Chainlit](https://docs.chainlit.io/data-persistence/overview#:~:text=Open%20Source%20Data%20Layer%20Use,28)).
 
-for step in agent.stream([user_message], config):
-    for task_name, message in step.items():
-        if task_name == "agent":
-            continue  # Just print task updates
-        print(f"\n{task_name}:")
-        message.pretty_print()
+### 5.1 Enabling Chat Persistence in Chainlit
 
-{'role': 'user', 'content': 'How does it compare to Boston, MA?'}
+To turn on persistence, you need to set up a **data layer** in Chainlit:
+- Use Chainlit’s **official data layer** or a community one. The official data layer uses a PostgreSQL (or SQLite) database via SQLAlchemy to store conversations, messages, and feedback.
+- Set the environment variable `DATABASE_URL` in your Chainlit app’s environment (for example, in a `.env` file) to point to your database ([Official Data Layer - Chainlit](https://docs.chainlit.io/data-layers/official#:~:text=steps%2C%20feedback%2C%20etc)). For a quick local setup, you might use SQLite: `DATABASE_URL=sqlite:///chainlit.db`.
+- Ensure you have authentication enabled (Chainlit supports simple auth or OAuth) if you want multiple users to have separate histories. Chainlit requires both persistence and user authentication to properly attribute and retrieve chat histories ([Chat History - Chainlit](https://docs.chainlit.io/data-persistence/history#:~:text=Chat%20history%20allow%20users%20to,and%20resume%20their%20past%20conversations)) ([Chat History - Chainlit](https://docs.chainlit.io/data-persistence/history#:~:text=If%20data%20persistence%20is%20enabled,to%20see%20the%20chat%20history)).
 
-call_model:
-==================================[1m Ai Message [0m==================================
-Tool Calls:
-  get_weather (call_8sTKYAhSIHOdjLD5d6gaswuV)
- Call ID: call_8sTKYAhSIHOdjLD5d6gaswuV
-  Args:
-    location: Boston, MA
+Once configured, Chainlit will save every conversation (thread) to the database. It also offers a UI for users to browse their past chats if logged in.
 
-call_tool:
-=================================[1m Tool Message [0m=================================
+### 5.2 Resuming Conversations with on_chat_resume
 
-It's rainy!
+To let a user pick up an old conversation (for example, continue where they left off yesterday), Chainlit provides a lifecycle hook `@cl.on_chat_resume`. This is called when a user opens a saved thread. Chainlit will automatically retrieve the stored messages and even restore any user session data that was saved ([on_chat_resume - Chainlit](https://docs.chainlit.io/api-reference/lifecycle-hooks/on-chat-resume#:~:text=Decorator%20to%20enable%20users%20to,46%20to%20be%20enabled)) ([on_chat_resume - Chainlit](https://docs.chainlit.io/api-reference/lifecycle-hooks/on-chat-resume#:~:text=,Restore%20the%20user%20session)). However, **for the LangGraph agent to actually continue the logic**, you might need to reconstruct its state.
 
-call_model:
-==================================[1m Ai Message [0m==================================
+Chainlit will by default **replay the messages to the UI** (so the user sees the chat history) and restore `cl.user_session` data. But if your agent relies on internal state (like LangGraph’s `previous` conversation or other memory), you need to handle that on resume.
 
-Compared to San Francisco, which is sunny, Boston, MA is experiencing rainy weather.
-In the LangSmith trace, we can see that the full conversational context is retained in each model call.
+**Steps to handle resume**:
+1. **Identify the thread**: Chainlit passes a `thread: ThreadDict` object to the `on_chat_resume` handler, containing the conversation data (messages, etc.).
+2. **Reinitialize or restore agent**: You may need to load the LangGraph memory for that thread. If you used a persistent checkpointer (like a database or MemorySaver that’s still in memory), LangGraph might still have the state keyed by `thread_id`. If not (e.g., your app restarted and MemorySaver lost data), you might reconstruct the `previous` messages from `thread`.
+3. **Set session variables**: Chainlit’s `cl.user_session` can store custom info. On resume, it’s restored, but if your LangGraph agent object or some references weren’t kept, you might recreate them here.
 
-Message
-The Message class is designed to send, stream, update or remove messages.
-
-​
-Parameters
-​
-content
-str
-The content of the message.
-
-​
-author
-str
-The author of the message, defaults to the chatbot name defined in your config file.
-
-​
-elements
-Element[]
-Elements to attach to the message.
-
-​
-actions
-Action[]
-Actions to attach to the message.
-
-​
-language
-str
-Language of the code if the content is code. See https://react-code-blocks-rajinwonderland.vercel.app/?path=/story/codeblock—supported-languages for a list of supported languages.
-
-​
-Send a message
-Send a new message to the UI.
-
-
-Copy
+A simple example using `on_chat_resume`:
+```python
 import chainlit as cl
 
+@cl.on_chat_resume
+async def on_chat_resume(thread: cl.ThreadDict):
+    # This runs when a user resumes a saved chat.
+    # thread contains keys like "messages": [message_dicts], etc.
+    history = thread.get("messages", [])
+    # If using LangGraph with thread IDs, ensure to use the same thread_id for continuity.
+    # For example, store the thread_id in user_session on first run.
+    saved_thread_id = cl.user_session.get("thread_id")
+    if saved_thread_id:
+        print(f"Resuming LangGraph session: {saved_thread_id}")
+    else:
+        # If not stored, you might derive it or set a new one
+        cl.user_session.set("thread_id", thread["id"])
+```
 
+In practice, if you used `thread_id` in LangGraph config (like `"1"` or a random UUID) that might not directly correspond to Chainlit’s internal thread ID. One strategy is to tie them together:
+- When starting a new chat, generate a unique ID (or use `thread["id"]` from Chainlit if accessible in `on_chat_start`) and use it as LangGraph’s `thread_id` for the checkpointer.
+- Save this mapping somewhere (like `cl.user_session.set("thread_id", lg_id)`).
+- On resume, retrieve it and pass it to LangGraph.
+
+Chainlit’s resume decorator notes that if using a LangChain agent, you must re-instantiate it on resume ([on_chat_resume - Chainlit](https://docs.chainlit.io/api-reference/lifecycle-hooks/on-chat-resume#:~:text=However%2C%20if%20you%20are%20using,in%20the%20user%20session%20yourself)). The same applies to a LangGraph agent: ensure your `agent` (entrypoint function object) is available and any needed initialization (API keys, etc.) is done. Typically, if your LangGraph setup is defined at module import, it will still be there.
+
+**Integration with LangGraph Memory**: The ideal scenario is using a persistent LangGraph checkpointer (like one that writes to the same database Chainlit uses, or another DB). Then even if the app restarts, LangGraph can retrieve the conversation by thread_id. If that’s complex, a shortcut is to use Chainlit’s stored messages:
+- The `thread["messages"]` list will contain the conversation (likely as a list of dict with roles and content).
+- You can feed that into your LangGraph entrypoint on the next user query as the `previous` argument manually. For example, in `on_message`, if `cl.user_session.get("resumed")` is True, you might skip the normal memory retrieval and instead use the chainlit `history` to initialize LangGraph.
+
+Chainlit basically handles the front-end of memory (display and user session), whereas LangGraph handles the back-end of memory (state for reasoning). You may combine them by:
+  - Storing minimal state in Chainlit’s `user_session` (like an ID or some flags).
+  - Letting Chainlit’s DB keep the message history for user visibility.
+  - Relying on LangGraph’s `previous` via a persistent thread_id for actual context when calling the agent.
+
+**Human Memory Example**: If a user resumes and asks a follow-up, you’d call:
+```python
+thread_id = cl.user_session.get("thread_id") or "default"
+result = agent.invoke(user_input, config={"configurable": {"thread_id": thread_id}})
+```
+Because `thread_id` is the same as a previous conversation, LangGraph’s checkpointer will load `previous` messages. If not found (first run), `previous` will be None.
+
+**Important**: If Chainlit’s chat history and LangGraph’s state diverge (e.g., you didn’t persist LangGraph state and app restarted), the agent might start fresh while the UI shows old messages. To avoid confusion, ensure one of:
+- The agent can reconstruct context from the visible history (maybe by concatenating it into the prompt anew).
+- Or use a persistent LangGraph memory tied to Chainlit’s chat storage.
+
+Chainlit’s documentation and examples (see the “Resume Langchain Chat Example”) can guide how to load context on resume ([on_chat_resume - Chainlit](https://docs.chainlit.io/api-reference/lifecycle-hooks/on-chat-resume#:~:text=However%2C%20if%20you%20are%20using,in%20the%20user%20session%20yourself)). The main point is that Chainlit gives you the hooks and storage to track conversations across sessions, and you as the developer need to link that with your agent’s memory mechanism.
+
+### 5.3 Using Chainlit’s User Session for State
+
+Apart from conversation content, Chainlit’s `cl.user_session` is a Python dictionary-like store that persists across the lifetime of a chat session (even across multiple messages). This is handy for lightweight state, counters, or caching inside your Chainlit app logic ([User Session - Chainlit](https://docs.chainlit.io/concepts/user-session#:~:text=import%20chainlit%20as%20cl)) ([User Session - Chainlit](https://docs.chainlit.io/concepts/user-session#:~:text=cl.user_session.set%28)). By default, Chainlit itself uses it to store things like the current chat thread. Only JSON-serializable data in `user_session` is saved across resumes ([on_chat_resume - Chainlit](https://docs.chainlit.io/api-reference/lifecycle-hooks/on-chat-resume#:~:text=,Restore%20the%20user%20session)).
+
+For example, you might store a LangGraph “run id” or partial results in `cl.user_session` if needed. But avoid putting large or complex objects there.
+
+**Summary**: To persist conversations in Chainlit:
+- Enable a data layer with `DATABASE_URL` and possibly authentication ([Official Data Layer - Chainlit](https://docs.chainlit.io/data-layers/official#:~:text=steps%2C%20feedback%2C%20etc)).
+- Use `@cl.on_chat_resume` to hook the resume event and restore any necessary agent state (like setting the proper LangGraph thread_id or reloading profile info).
+- Ensure your agent calls use a consistent identifier for memory (so that the context continues).
+- Test the resume flow: start a chat, get some conversation, stop and resume, ask another question – verify the agent still remembers context correctly.
+
+By combining LangGraph’s memory (for the reasoning part) with Chainlit’s persistence (for the interface and session tracking), users can have continuous conversations that survive app restarts and can be recalled later.
+
+## 6. Pydantic Integration with LangGraph (Type Validation & Structured Data)
+
+Pydantic is a popular library for data validation and settings management, and it integrates nicely with LangChain/LangGraph for enforcing structured data schemas. There are a few areas where Pydantic models can enhance LangGraph workflows:
+
+- **Tool Input/Output schemas**: Define tools to accept and return Pydantic `BaseModel` types for clarity and validation.
+- **State validation**: If you’re using the Graph API (StateGraph) or even passing around complex state in Functional API, Pydantic can ensure at runtime that the state adheres to a schema ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=,can%20be%20any%20type)).
+- **Model outputs**: Enforcing LLM outputs to match a schema (LangChain offers `PydanticOutputParser` to help LLMs format their output as a Pydantic model ([Pydantic parser - ️ LangChain](https://python.langchain.com/v0.1/docs/modules/model_io/output_parsers/types/pydantic/#:~:text=Pydantic%20parser%20,that%20conform%20to%20that%20schema)), which can then be parsed into actual model instances).
+
+### 6.1 Using Pydantic for Tool Schemas
+
+When defining a tool function, you can use Pydantic models to describe its input or output instead of raw dictionaries. For example:
+
+```python
+from pydantic import BaseModel
+
+class WeatherRequest(BaseModel):
+    location: str
+    unit: str = "fahrenheit"
+
+class WeatherInfo(BaseModel):
+    location: str
+    temperature: float
+    condition: str
+
+@tool
+def get_weather(data: WeatherRequest) -> WeatherInfo:
+    """Get weather info for a location."""
+    # data is an instance of WeatherRequest, already validated
+    loc = data.location
+    # ... call some API ...
+    return WeatherInfo(location=loc, temperature=72.0, condition="Sunny")
+```
+
+Using this approach, if the LLM tries to call `get_weather` with a wrong schema (say missing `location` or wrong type), LangChain/LangGraph can catch it. In LangChain’s function calling, if you provide a Pydantic model, it knows the JSON schema for it and the LLM’s output is validated against it. If the model returns a Pydantic object, Chainlit (or your code) can easily serialize it to show results.
+
+### 6.2 Pydantic for State Validation (Graph API)
+
+In LangGraph’s Graph API (not strictly needed for Functional API usage, but instructive), you can specify a `state_schema` when building a state graph. Pydantic models can serve as that schema. The LangGraph docs show how a `BaseModel` can be the state schema and thereby validate node inputs at runtime ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=In%20this%20how,run%20time%20validation%20on%20inputs)) ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=Known%20Limitations)). For example:
+
+```python
+from langgraph.graph import StateGraph, START, END
+from pydantic import BaseModel
+
+class OverallState(BaseModel):
+    a: str  # expecting a string field 'a'
+
+def node(state: OverallState):
+    # state is an OverallState instance
+    return {"a": "processed"}  # returning an update
+
+builder = StateGraph(state_schema=OverallState)
+builder.add_node(node)
+builder.add_edge(START, "node"); builder.add_edge("node", END)
+graph = builder.compile()
+
+# Test with valid input
+print(graph.invoke({"a": "hello"}))  # {'a': 'processed'}
+
+# Test with invalid input (a should be str, not int)
+try:
+    graph.invoke({"a": 123})
+except Exception as e:
+    print("Got validation error:", e)
+```
+
+Output:
+```
+Got validation error: 1 validation error for OverallState
+a
+  Input should be a valid string [type=string_type, input_value=123, input_type=int]
+``` ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=except%20Exception%20as%20e%3A%20print%28,print%28e)) ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=An%20exception%20was%20raised%20because,9%2Fv%2Fstring_type))
+
+The above shows Pydantic catching an invalid type for the state before the node runs. This kind of validation is useful to catch mistakes early (for instance, if an upstream LLM provided data not conforming to expected schema, you’d know).
+
+While this example uses the explicit Graph API, the same concept can apply in Functional API if you design it similarly: e.g., define a Pydantic model for inputs and outputs of tasks. When a task is called, LangGraph will attempt to serialize inputs/outputs for checkpointing – if they are Pydantic, it should handle them as normal dataclasses.
+
+**Pydantic in Functional Tasks**: You can annotate a task function’s parameters or return type with Pydantic models. LangGraph will treat those like any Python object. You won’t get automatic validation unless you actually create an instance of the model (or use Pydantic’s `validate` methods). One approach is to accept a dict but immediately parse it into a Pydantic model inside the task. For example:
+
+```python
+@task
+def process_user_info(info: dict) -> dict:
+    user = UserProfile(**info)  # Pydantic model parse & validation
+    # now user is a validated model
+    updated = user.copy(update={"last_seen": datetime.utcnow()})
+    return updated.dict()
+```
+
+This way, if `info` is missing required fields, the Pydantic constructor will raise and LangGraph can handle the exception or fail early.
+
+### 6.3 Structured Outputs from LLMs
+
+Pydantic models shine when you want the LLM to return structured data. With function calling (OpenAI functions or LangChain’s agent tools) and output parsers, you can guide the LLM to fill a Pydantic schema. For instance, define a Pydantic for an answer format, and use LangChain’s `PydanticOutputParser` to format the prompt. This isn’t LangGraph-specific, but you can integrate it within a LangGraph task that calls the LLM. The result will be a Pydantic model (or easily parseable JSON) which you can then feed into subsequent tasks or tools reliably.
+
+**Pydantic for Config**: LangGraph might also use Pydantic for configuration objects (e.g., LangSmith or other integration settings). If you encounter that, the principle remains – Pydantic ensures those configs are correct.
+
+**Caveats**:
+- Ensure Pydantic version compatibility. LangChain might use Pydantic v1 (via pydantic.v1 module if installed with v2) ([How to use LangChain with different Pydantic versions](https://python.langchain.com/v0.2/docs/how_to/pydantic_compatibility/#:~:text=How%20to%20use%20LangChain%20with,v1%20namespace%20of%20Pydantic%202)). If you encounter version issues, refer to LangChain docs on Pydantic integration.
+- Pydantic validation is at runtime and adds some overhead. Use it where the safety or clarity benefits outweigh performance costs (usually fine unless you’re calling it thousands of times per second).
+- The error messages from Pydantic might not automatically propagate in agent output. They will show up in exceptions/logs. In testing, you might assert that no validation errors occurred.
+
+In summary, Pydantic helps add a **type safety net** to LangGraph:
+- Use it to define structured **input/output schemas** for tasks and tools so that your LLM and tools communicate with well-defined data shapes.
+- Use it to define the shape of shared **state** to catch any inconsistencies (especially in multi-agent or multi-step flows where many parts read/write the state) ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=1%20validation%20error%20for%20OverallState,9%2Fv%2Fstring_type)) ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=,integer)).
+- This can significantly reduce bugs by catching mismatched assumptions early (for example, one agent returns a list where another expected a dict – a Pydantic model can flag that immediately).
+
+## 7. Testing LangGraph Applications with Pytest (and Async Considerations)
+
+Testing LLM-based applications can be challenging due to nondeterminism, but LangGraph’s structured approach makes it easier to isolate and verify components. Here are guidelines and patterns for testing LangGraph workflows with **pytest** (or any testing framework):
+
+### 7.1 Unit Testing Tasks (Nodes)
+
+**Unit test each `@task` function** whenever possible with regular function calls or by invoking them with stubbed data. Since tasks are just Python functions (possibly wrapping API calls), you can call the underlying function logic directly (if not using any LangGraph-specific magic inside). For tasks that call external services (like OpenAI API or tools), use mocking to simulate responses:
+- Use `unittest.mock` or pytest monkeypatch to replace the actual API call with a deterministic function that returns a known output.
+- For example, if `call_model` task calls `model.invoke()`, monkeypatch `model.invoke` to return a preset object mimicking an LLM response (e.g., a fake object with `.tool_calls` etc.).
+
+This way, you can test that given certain inputs (prompt messages), the task returns the structure you expect, without calling the real API (saving cost and time).
+
+**Assert validations**: If you use Pydantic models or have explicit checks, write tests that pass invalid data to ensure your task raises an error or handles it gracefully.
+
+### 7.2 Testing Workflow Logic (Entrypoints)
+
+The entrypoint function contains the control flow, which is crucial to test (especially for multi-step or multi-agent logic). However, you don’t want the real LLM or long tools running in each test. The strategy is to **mock tasks when testing the entrypoint**:
+- Monkeypatch the `@task` functions used inside the entrypoint to dummy implementations that return predetermined values quickly.
+- Alternatively, if the tasks are defined in the same module, you might call `task.invoke = lambda *args, **kwargs: StubFuture(result_value)` to bypass actual execution.
+
+A pattern suggested by community experts ([How to write tests for Langgraph Workflows · langchain-ai langgraph · Discussion #633 · GitHub](https://github.com/langchain-ai/langgraph/discussions/633#:~:text=My%20preferred%20option%20to%20test,graphs%20would%20be%20the%20following)) ([How to write tests for Langgraph Workflows · langchain-ai langgraph · Discussion #633 · GitHub](https://github.com/langchain-ai/langgraph/discussions/633#:~:text=,call%20the%20actual%20model%20but)):
+- **Unit test routing logic**: Provide fake implementations for tasks but keep the entrypoint’s branching and looping intact. For example, in a multi-agent workflow, make a fake `ask_travel_agent` that returns a handoff signal, and a fake `ask_hotel_agent` that returns a final answer. Then assert that your entrypoint loop indeed switched to hotel agent and returned the expected final answer.
+- This ensures that the **flow** (edges of your “graph”) works as intended for various scenarios (e.g., one where no handoff occurs, one where multiple handoffs occur, etc.).
+
+To mock a LangGraph task’s behavior, you might set the function’s `.result` method via monkeypatch. Another simpler way: since tasks can be called like normal Python (if you ignore the future part), you could monkeypatch the entire function. For instance:
+
+```python
+# inside test function
+from my_app import ask_travel_agent, ask_hotel_agent, multi_agent_workflow
+
+def fake_ask_travel_agent(query):
+    class DummyResp: pass
+    # simulate an agent response that triggers a handoff
+    DummyResp.tool_calls = []  # if expecting attribute
+    return "Please transfer to hotel agent for details."
+# monkeypatch the task function to our fake (need to replace .result usage carefully if any)
+monkeypatch.setattr(my_app, "ask_travel_agent", lambda q: type("F", (), {"result": lambda self=None: fake_ask_travel_agent(q)})() )
+```
+
+The above is a bit involved; an alternative is designing your tasks to have injectable dependencies so you can directly call a fake version. Or, structure your code so that the core logic (like deciding next agent) is in a pure function that you can call with synthetic inputs.
+
+**End-to-End vs Unit**: Not everything can be unit tested easily (LLM behavior might be too dynamic to mock fully). Identify critical paths and create integration tests for them:
+- **Integration test with cached LLM outputs**: One approach is to run the workflow once with the real LLM (maybe in a dev environment) and record the outputs. Store these outputs (could serialize the LangGraph events or final results) in a test fixture. In tests, instead of calling the LLM API, load these cached results. This is similar to using VCR cassettes or snapshots. LangGraph’s LangSmith integration or callback traces could assist in capturing these results.
+- Alternatively, manually craft likely LLM outputs for given prompts and use those in tests.
+
+The goal is to make tests deterministic:
+- Set LLM `temperature=0` to reduce randomness.
+- Provide fixed random seeds if any stochastic processes.
+- Use smaller or more predictable models for tests (maybe a local model or a dummy chain that echoes inputs).
+
+### 7.3 Testing State and Memory
+
+For workflows with memory, write tests to ensure state carries over:
+- Simulate a sequence of calls as a user would do in conversation. For example, call the entrypoint twice with the same thread_id and different user inputs, and assert that the second response differs based on the first input (indicating context was remembered).
+- Check that the state saved (`previous` or `store` content) is as expected. You can directly inspect the `MemorySaver` contents if accessible, or use the return of `entrypoint.final` (it often returns the final value, but if you need to ensure `save` had correct content, you might need to adjust design or use a custom checkpointer that exposes its data for tests).
+- If using long-term memory store, populate it with known data and see if the workflow retrieves it. Also test updates: run the entrypoint that modifies the store, then query the store after to see if changes persisted.
+
+Because LangGraph’s memory system relies on the `config` with thread_id, be sure to pass a consistent config in your test calls. Example:
+
+```python
+config = {"configurable": {"thread_id": "test-session"}}
+result1 = agent.invoke("Hello", config=config)
+result2 = agent.invoke("Hi again", config=config)
+assert "Hello" in some_form_of(result2)  # pseudo-check that context used
+```
+
+### 7.4 Asynchronous and Streaming Tests
+
+LangGraph supports async execution, and Chainlit itself encourages async handlers. When writing tests for async code:
+- Use `pytest.mark.asyncio` to define asynchronous test functions that can `await` calls.
+- If your entrypoint or tasks are async (i.e., defined with `async def`), you can `await entrypoint.invoke_async(...)` or, if using stream, collect results like `results = [chunk async for chunk in entrypoint.astream(input)]`.
+- Test that streaming yields the expected sequence of events. For example, a generation might stream tokens – you could assert that a certain token eventually appears, or that the final chunk matches the complete output.
+- Test interrupt flows by simulating the user response. For instance, run the workflow until interrupt (maybe by calling `.stream()` and breaking when interrupt is hit), then resume with a dummy Command, and verify the final result.
+
+Because handling concurrency can be tricky in tests, you might choose to run synchronous versions of code for simplicity. LangGraph tasks running in parallel (as futures) still can be tested in a synchronous manner by controlling when you call `.result()`. If you truly spawn parallel tasks (like making multiple API calls), you could mock those calls to deliberately include a delay or order and ensure the framework handles it.
+
+### 7.5 Example: Pytest for a ReAct Agent
+
+Suppose we have the `agent` entrypoint from section 3. We want to test that if the LLM outputs a tool call, our agent actually returns a final answer that includes the tool result:
+```python
+def test_agent_tool_usage(monkeypatch):
+    from my_app import agent, call_model, call_tool
+
+    # Monkeypatch call_model to return a dummy response with a tool call
+    class DummyLLMResponse:
+        def __init__(self, content, tool_name=None, tool_args=None):
+            self.content = content
+            self.tool_calls = []
+            if tool_name:
+                # Simulate a LangChain LLMResult with a tool call
+                self.tool_calls = [ {"id": "123", "name": tool_name, "args": tool_args or {}} ]
+    def fake_call_model(messages):
+        # Always ask for weather via tool regardless of input
+        return DummyLLMResponse("I should use a tool", tool_name="get_weather", tool_args={"location": "Paris"})
+    monkeypatch.setattr(call_model, "result", lambda self=None: fake_call_model(None))
+
+    # Monkeypatch call_tool to return a dummy ToolMessage
+    def fake_call_tool(tool_call):
+        # Simulate tool output
+        return ToolMessage(content="Sunny in Paris.", tool_call_id=tool_call["id"])
+    monkeypatch.setattr(call_tool, "result", lambda self=None, tool_call=None: fake_call_tool({"id":"123"}))
+
+    # Now when we invoke agent, it should go through one loop of tool usage
+    user_msg = [{"role": "user", "content": "What's the weather in Paris?"}]
+    response = agent.invoke(user_msg, config={"configurable": {"thread_id": "test"}})
+    assert "Sunny in Paris" in str(response)
+```
+
+The above test patches:
+- `call_model.result` to bypass actual LLM and produce a tool call for `get_weather`.
+- `call_tool.result` to bypass actual tool execution and return a preset observation.
+Then it calls the `agent` entrypoint with a user query. The assertion checks that the final answer includes the tool’s information ("Sunny in Paris"), meaning the loop worked.
+
+This approach isolates the logic of the loop from the unpredictable LLM/tool and makes the test deterministic.
+
+### 7.6 Using LangSmith or Tracing for Testing
+
+LangChain/LangGraph’s LangSmith (or tracing callbacks) can help in testing by capturing intermediate steps. You might use it in a test to ensure certain sequence:
+- After running the agent, inspect the trace to confirm the order: e.g., user message -> LLM call -> tool call -> LLM call -> final.
+- LangSmith also has a pytest integration ([Test a ReAct agent with Pytest/Vitest and LangSmith](https://docs.smith.langchain.com/evaluation/tutorials/testing#:~:text=Test%20a%20ReAct%20agent%20with,to%20evaluate%20your%20LLM%20application)) ([How to Properly Test RAG Agents in LangChain/LangGraph? - Reddit](https://www.reddit.com/r/LangChain/comments/1izqrhz/how_to_properly_test_rag_agents_in/#:~:text=How%20to%20Properly%20Test%20RAG,don%27t%20break%20the%20expected)) to treat evaluation datasets as tests. If you have a set of input prompts and expected outputs, you can use that to automatically validate your agent’s responses and even measure performance over time.
+
+**Performance Tests**: If concurrency is used, you might want to test that it indeed runs faster or doesn’t block. This is more advanced, but you could time the execution with and without parallel tasks (using `pytest` markers or just print debug info).
+
+**Error Handling**: Write tests for failure modes too. For example, if a tool fails (raises exception), does your workflow catch it and respond gracefully? You can simulate exceptions by monkeypatching a tool to raise, and asserting that the agent output contains an apology or error message.
+
+In summary, for testing:
+- **Break it down**: test tasks and small functions in isolation whenever you can.
+- **Control randomness**: mock external calls, set seeds, use deterministic models.
+- **Simulate flows**: test the branching logic by substituting dummy data for each branch.
+- **Leverage LangGraph features**: its structured nature means you can often replay a fixed sequence and get the same result. Use that to your advantage in tests, possibly recording a “golden run” and comparing future runs to it (regression testing).
+- **Pytest fixtures**: use fixtures to set up any heavy components (like instantiate an agent once for multiple tests) and to load test data (like sample prompts or fake API replies).
+- **Async tests**: use `pytest.mark.asyncio` for any coroutine tests; test streaming by accumulating outputs from `entrypoint.stream()`.
+
+By following these practices, you’ll gain confidence in the reliability of your LangGraph application. Remember that even though LLM outputs can change, your surrounding logic should be robust – testing helps ensure that, for example, even if the phrasing changes, the agent still calls the right tool or preserves the state. It’s about testing the **framework of the conversation** more than the exact natural language.
+
+## 8. Asynchronous LangGraph Functional API Usage (Parallelism & Streaming)
+
+LangGraph’s Functional API and Chainlit are both asynchronous-friendly. Writing workflows that execute concurrently and stream results can significantly improve performance and user experience (e.g., parallel API calls or token-by-token streaming of LLM responses). This section provides guidelines for using async features.
+
+### 8.1 Concurrent Task Execution
+
+As hinted earlier, you can invoke multiple tasks “at the same time” and then wait for their results, allowing parallel execution ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=Parallel%20execution%C2%B6)) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=%40entrypoint%28checkpointer%3Dcheckpointer%29%20def%20graph%28numbers%3A%20list%5Bint%5D%29%20,result%28%29%20for%20f%20in%20futures)). This is particularly useful for IO-bound operations like calling multiple external APIs or tools.
+
+**Pattern**: Instead of doing:
+```python
+res1 = task1(param).result()
+res2 = task2(param).result()
+```
+which runs them sequentially, you can do:
+```python
+future1 = task1(param)  # don't call .result() yet
+future2 = task2(param)
+res1 = future1.result()
+res2 = future2.result()
+```
+Between starting `future1` and calling `future1.result()`, the actual execution of `task1` can happen asynchronously. If `task2` doesn’t depend on `task1`, starting it before waiting for `task1` means both can run in parallel ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=Tasks%20can%20be%20executed%20in,calling%20APIs%20for%20LLMs)) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=def%20graph%28numbers%3A%20list%5Bint%5D%29%20,result%28%29%20for%20f%20in%20futures)). Under the hood, LangGraph likely uses threads or event loops to execute tasks concurrently (ensuring thread-safe if needed for I/O).
+
+**Example**: Suppose your agent, at some point, needs to fetch data from two different APIs to answer a question (like weather and news). You could do:
+
+```python
+@task
+def fetch_weather(city: str) -> str: ...
+@task
+def fetch_news(topic: str) -> str: ...
+
+@entrypoint()
+def get_info(city: str, topic: str):
+    # kick off both API calls concurrently
+    weather_future = fetch_weather(city)
+    news_future = fetch_news(topic)
+    # now wait for both to finish
+    weather = weather_future.result()
+    news = news_future.result()
+    combined = f"Weather: {weather}; News: {news}"
+    return combined
+```
+
+This will likely be faster than calling one then the other, because while one API is waiting, the other can proceed.
+
+**Asynchronous `async def` tasks**: If a task itself is defined as `async def`, LangGraph’s `@task` decorator should detect that and allow awaiting it. For instance:
+
+```python
+@task
+async def call_llm_async(messages) -> LLMResult:
+    result = await async_llm.generate(messages)  # assuming async llm client
+    return result
+```
+
+You would still use it similarly (if called within an entrypoint, you might do `resp_future = call_llm_async(msgs)` then later `resp = resp_future.result()` – the `result()` call would internally await the coroutine).
+
+**Avoiding common pitfalls**:
+- Make sure tasks truly don’t depend on each other when running in parallel. If there is a dependency, you must .result() the first before starting the second (or else risk using uninitialized data).
+- The order of `.result()` calls can be different from invocation order. You could, for example, start 5 tasks, then iterate `for fut in futures: results.append(fut.result())`. This will effectively wait for the slowest at each step, but they were all launched already.
+- There’s no built-in mechanism to get results as they complete (like `asyncio.as_completed`) via LangGraph’s futures, but you can always design your own awaitable tasks if needed outside of LangGraph.
+
+### 8.2 Streaming Outputs
+
+LangGraph supports streaming in multiple ways:
+- **Token streaming from LLMs**: If you use a streaming-enabled LLM (like OpenAI’s API with `stream=True`), LangChain can yield tokens incrementally. LangGraph will capture those as part of the run’s events.
+- **Custom streaming via `StreamWriter`**: The Functional API provides a `StreamWriter` type that you can include in an entrypoint to send arbitrary data to a `"custom"` stream ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=Streaming%20custom%20data%C2%B6)) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=from%20langgraph,types%20import%20StreamWriter)). For example, your workflow might produce intermediate progress messages or data that you want to stream to the frontend before the final result.
+
+Using `.stream()` when invoking an entrypoint will yield a sequence of `(stream, data)` tuples or events. For instance:
+```python
+for event in my_entrypoint.stream(input, stream_mode=["custom", "updates"]):
+    print(event)
+```
+You might see events like:
+- `('updates', {'step1': 'partial result'})` indicating an update from a task ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=API%20Reference%3A%20MemorySaver%20%20,80)).
+- `('custom', 'some message')` from your custom writer calls.
+- `('interrupt', ...)` if an interrupt happened (as discussed).
+- Final `'updates'` with the final result.
+
+In Chainlit, you can forward these streamed events to the UI. Chainlit natively supports token streaming: if you use `cl.Message(content=..., stream=True)` and keep sending tokens, the UI will animate them. With LangGraph, if you intercept token-by-token events, you can call `await cl.Message(content=token, stream=True).send()` for each token.
+
+**Integrating Streaming in Chainlit**:
+- If the LangGraph entrypoint returns an `StreamingIterable` or you use `entrypoint.stream`, then in your Chainlit handler, iterate over it and send messages as they come.
+- Chainlit’s `@cl.on_message` can be async, so you can `async for chunk in agent.astream(user_input, config=...)` as well. Or use synchronous `.stream` in a separate thread if needed (Chainlit allows sync usage but encourages async).
+
+**Example**: Streaming a response:
+```python
 @cl.on_message
-async def main(message: cl.Message):
-    await cl.Message(
-        content=f"Received: {message.content}",
-    ).send()
-​
-Stream a message
-Send a message token by token to the UI.
+async def on_message(msg: str):
+    # Start the agent in streaming mode for both LLM token stream and custom messages
+    for stream, data in agent.stream(msg, stream_mode=["tokens", "custom"], config={"configurable": {"thread_id": "xyz"}}):
+        if stream == "tokens":
+            # Suppose data is a single token or chunk of text
+            await cl.Message(content=data, author="assistant", stream=True).send()
+        elif stream == "custom":
+            # Maybe custom stream used for debugging or other info
+            print(f"Custom event: {data}")
+        elif stream == "interrupt":
+            # (Pseudo-code) handle interrupt if it appears in stream events
+            prompt = data['value'] if isinstance(data, dict) else str(data)
+            user_answer = await cl.AskUserMessage(content=prompt).send()
+            # resume logic as earlier...
+```
+Chainlit will ensure the UI displays tokens in order. Once the loop ends and the final message is sent (with `stream=False` on the last one automatically when `cl.Message.send()` completes streaming), the user sees the full answer.
+
+**Async Concurrency in Chainlit**: If you plan to have multiple users or multi-turn with overlapping tasks, remember that Chainlit’s `on_message` for different sessions run concurrently. The LangGraph `thread_id` keeps each session’s state separate, but heavy parallelism might still strain resources (e.g., many LLM calls at once). Use async features to not block the server loop, and consider rate limiting or queueing if needed.
+
+### 8.3 Async Entrypoints and Tasks
+
+You might wonder if you can make the entrypoint itself `async`. In Python, an `async def` entrypoint decorated with `@entrypoint` likely works, but typically you don’t `await` an entrypoint; you call `.invoke()` or `.stream()` on it. Under the hood, LangGraph might run it in an event loop. If you need to do asynchronous operations in the entrypoint, you can still call async tasks or other asyncio code by awaiting within tasks or using Python concurrency primitives.
+
+**Streaming and Memory**: They work together – as you stream out tokens or intermediate results, the state is still being built. Only once the entrypoint finishes do we checkpoint the final state. So if a run is interrupted (e.g., error or manual stop), you might not have saved the latest state (unless using advanced “time travel” features of LangGraph).
+
+**Error Handling in Async**: If any task raises (e.g., API fails), how to handle it? You can include try/except inside tasks or the entrypoint. Alternatively, LangGraph might allow a `retry` policy on tasks ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=Retry%20policy%C2%B6)) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=%40task,attempts%20%2B%3D%201)). For example, you can specify `@task(retry=RetryPolicy(...))` to auto-retry certain exceptions. This is useful to handle flaky API calls in a workflow without crashing the whole run.
+
+**Cancelling tasks**: If the user stops the Chainlit conversation mid-way, ideally you’d cancel the LangGraph run. Chainlit might not yet have a direct cancel mechanism, but you could implement a cooperative cancellation by checking some flag in long loops.
+
+### 8.4 Example: Parallel Agents (Advanced Async)
+
+Think of a scenario: you have multiple agents (e.g. 3 different specialists) and you want them to **work concurrently** on parts of a problem, then gather their answers. With LangGraph, you could spawn each agent as a task:
+
+```python
+@task
+def agent1_task(question): ...
+@task
+def agent2_task(question): ...
+@task
+def agent3_task(question): ...
+
+@entrypoint()
+def multi_agent_concurrent(question: str):
+    futures = [agent1_task(question), agent2_task(question), agent3_task(question)]
+    results = [f.result() for f in futures]  # run all three in parallel
+    # Combine or choose among results
+    final = combine_answers(results)
+    return final
+```
+
+This runs all three agents in parallel, cutting down latency significantly compared to sequential queries. The combine logic could simply concatenate answers or have another LLM decide the best. In testing, ensure that parallel execution doesn’t cause race conditions (each agent is separate so usually fine) and that resource usage is acceptable (3 simultaneous LLM calls).
+
+**Performance note**: Python’s GIL means threads can’t run Python code truly in parallel, but I/O operations can overlap. If tasks are mostly I/O bound (calling external services), this approach is beneficial. If tasks are CPU-bound, consider using `asyncio` for I/O tasks or even multiprocessing for CPU-bound tasks (though that complicates LangGraph usage).
+
+### 8.5 Monitoring Async Workflows
+
+Using LangGraph’s observability tools (like LangSmith or built-in logging), you can monitor parallel tasks and streaming:
+- Each `task` invocation likely logs when it starts and ends. By reviewing logs or traces, you can confirm that tasks overlapped in time.
+- For streaming, ensure that partial outputs are as expected (no missing chunks, etc.). In case of anomalies, debug whether the issue is in the model streaming or in how events are forwarded.
+
+In conclusion, the Functional API’s async capabilities allow you to build *efficient and responsive* LLM applications:
+- Utilize parallel tasks to handle tool calls or subtasks concurrently ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=Tasks%20can%20be%20executed%20in,calling%20APIs%20for%20LLMs)) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=def%20graph%28numbers%3A%20list%5Bint%5D%29%20,result%28%29%20for%20f%20in%20futures)), improving throughput.
+- Embrace streaming to provide users faster feedback (partial answers or progress indicators) rather than waiting for the entire response.
+- With Chainlit, tie these into a UI that updates in real time, giving the feel of a live conversation or process.
+
+By combining all the above – multi-agent design, tool use, memory, Pydantic for robust data, testing for reliability, and async for performance – you can implement complex AI workflows that are **modular, maintainable, and user-friendly**. LangGraph’s Functional API and Chainlit together offer a powerful stack for building next-generation AI applications.
 
 
-Copy
-import chainlit as cl
-
-token_list = ["the", "quick", "brown", "fox"]
-
-
-@cl.on_chat_start
-async def main():
-    msg = cl.Message(content="")
-    for token in token_list:
-        await msg.stream_token(token)
-
-    await msg.send()
-​
-Update a message
-Update a message that already has been sent.
-
-
-Copy
-import chainlit as cl
-
-
-@cl.on_chat_start
-async def main():
-    msg = cl.Message(content="Hello!")
-    await msg.send()
-
-    await cl.sleep(2)
-
-    msg.content = "Hello again!"
-    await msg.update()
-​
-Remove a message
-Remove a message from the UI.
-
-
-Copy
-import chainlit as cl
-
-
-@cl.on_chat_start
-async def main():
-    msg = cl.Message(content="Message 1")
-    await msg.send()
-    await cl.sleep(2)
-    await msg.remove()
