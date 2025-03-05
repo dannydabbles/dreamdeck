@@ -3,6 +3,8 @@ import logging
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
 from langgraph.message import ToolMessage
+from langchain_openai import ChatOpenAI  # Import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from ..config import STORYBOARD_EDITOR_AGENT_TEMPERATURE, STORYBOARD_EDITOR_AGENT_MAX_TOKENS, STORYBOARD_EDITOR_AGENT_STREAMING, STORYBOARD_EDITOR_AGENT_VERBOSE, LLM_TIMEOUT
 
 # Initialize logging
