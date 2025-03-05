@@ -5,7 +5,7 @@ import re
 from typing import List, Tuple, Optional
 from uuid import uuid4  # Import uuid4
 from langgraph.prebuilt import create_react_agent
-from typing import Dict
+from langgraph.func import task
 from ..config import DICE_ROLLING_ENABLED, DICE_SIDES
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
@@ -14,7 +14,8 @@ from langgraph.message import ToolMessage  # Import ToolMessage
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
+@task
+async def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
     """Roll dice based on user input.
 
     Args:
@@ -22,10 +23,14 @@ def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
                                  Defaults to "d20" if not specified.
 
     Returns:
-        dict: The result of the dice roll.
+        ToolMessage: The result of the dice roll.
     """
     if not DICE_ROLLING_ENABLED:
-        return {"name": "error", "args": {"content": "Dice rolling is disabled in the configuration."}}
+        return ToolMessage(
+            content="Dice rolling is disabled in the configuration.",
+            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
+            name="error",
+        )
 
     try:
         # Default to d20 if no input is provided
@@ -61,14 +66,14 @@ def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
         )
 
     except ValueError as e:
-        cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
+        cl_logger.error(f"Dice roll failed: {e}")
         return ToolMessage(
             content=f"🎲 Error rolling dice: {str(e)}",
             tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="error",
         )
     except Exception as e:
-        cl_logger.error(f"Dice roll failed: {e}", exc_info=True)
+        cl_logger.error(f"Dice roll failed: {e}")
         return ToolMessage(
             content=f"🎲 Error rolling dice: {str(e)}",
             tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call

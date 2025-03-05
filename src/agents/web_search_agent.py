@@ -2,6 +2,7 @@ import os
 import requests
 import logging
 from langgraph.prebuilt import create_react_agent
+from langgraph.func import task
 from typing import Dict
 from uuid import uuid4  # Import uuid4
 from ..config import SERPAPI_KEY, WEB_SEARCH_ENABLED
@@ -11,7 +12,8 @@ from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-def web_search(query: str) -> dict:
+@task
+async def web_search(query: str) -> dict:
     """Perform a web search using SerpAPI.
 
     Args:
@@ -34,26 +36,23 @@ def web_search(query: str) -> dict:
             raise ValueError(f"Search error: {data['error']}")
         return ToolMessage(
             content=data.get("organic_results", [{}])[0].get("snippet", "No results found."),
-            tool_call_id=str(uuid.uuid4()),  # Generate a unique ID for the tool call
+            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="web_search",
         )
     except requests.exceptions.RequestException as e:
-        cl_logger.error(f"Web search failed: {e}", exc_info=True)
+        cl_logger.error(f"Web search failed: {e}")
         return ToolMessage(
             content=f"Web search failed: {str(e)}",
-            tool_call_id=str(uuid.uuid4()),  # Generate a unique ID for the tool call
+            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="error",
         )
     except ValueError as e:
-        cl_logger.error(f"Web search failed: {e}", exc_info=True)
+        cl_logger.error(f"Web search failed: {e}")
         return ToolMessage(
             content=f"Web search failed: {str(e)}",
-            tool_call_id=str(uuid.uuid4()),  # Generate a unique ID for the tool call
+            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="error",
         )
-
-from langchain_openai import ChatOpenAI  # Import ChatOpenAI
-from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 
 # Initialize the web search agent
 web_search_agent = create_react_agent(

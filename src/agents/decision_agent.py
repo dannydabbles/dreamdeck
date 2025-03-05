@@ -1,5 +1,6 @@
 import os
 import logging
+from langgraph.func import task
 from langgraph.prebuilt import create_react_agent
 from .dice_agent import dice_roll_agent
 from .web_search_agent import web_search_agent
@@ -16,7 +17,8 @@ from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-def decide_action(user_input: str) -> dict:
+@task
+async def decide_action(user_input: str) -> dict:
     """Determine the next action based on user input.
 
     Args:
@@ -26,7 +28,6 @@ def decide_action(user_input: str) -> dict:
         dict: The next action to take.
     """
     try:
-        # Determine the action based on user input
         if "roll" in user_input.lower():
             return {"name": "roll", "args": {}}
         elif "search" in user_input.lower():
@@ -34,7 +35,7 @@ def decide_action(user_input: str) -> dict:
         else:
             return {"name": "continue_story", "args": {}}
     except Exception as e:
-        cl_logger.error(f"Decision failed: {e}", exc_info=True)
+        cl_logger.error(f"Decision failed: {e}")
         return {"name": "continue_story", "args": {}}
 
 # Initialize the decision agent
