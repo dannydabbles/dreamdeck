@@ -27,7 +27,7 @@ class ConfigSchema(BaseModel):
     paths: dict
     openai: dict
     search: dict
-    features: dict
+    features: dict  # Add agents configuration
     error_handling: dict
     logging: dict
     api: dict
@@ -55,9 +55,9 @@ def load_config() -> ConfigSchema:
 config = load_config()
 
 # Expose all required variables as module-level attributes
-DICE_ROLLING_ENABLED = config.features.dice_rolling
+DICE_ROLLING_ENABLED = config.features['dice_rolling']
 DICE_SIDES = config.dice.sides
-WEB_SEARCH_ENABLED = config.features.web_search
+WEB_SEARCH_ENABLED = config.features['web_search']
 DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
 KNOWLEDGE_DIRECTORY = config.paths.knowledge
 LLM_MAX_TOKENS = config.llm.max_tokens
@@ -69,7 +69,7 @@ LLM_PRESENCE_PENALTY = config.llm.presence_penalty
 LLM_FREQUENCY_PENALTY = config.llm.frequency_penalty
 LLM_TOP_P = config.llm.top_p
 LLM_VERBOSE = config.llm.verbose
-IMAGE_GENERATION_ENABLED = config.features.image_generation
+IMAGE_GENERATION_ENABLED = config.features['image_generation']
 DECISION_AGENT_TEMPERATURE = config.agents.decision_agent.temperature
 DECISION_AGENT_MAX_TOKENS = config.agents.decision_agent.max_tokens
 DECISION_AGENT_STREAMING = config.agents.decision_agent.streaming
