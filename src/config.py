@@ -58,30 +58,30 @@ config = load_config()
 DICE_ROLLING_ENABLED = config.features['dice_rolling']
 DICE_SIDES = config.dice.sides
 WEB_SEARCH_ENABLED = config.features['web_search']
-DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
-KNOWLEDGE_DIRECTORY = config.paths.knowledge
-LLM_MAX_TOKENS = config.llm.max_tokens
-LLM_TEMPERATURE = config.llm.temperature
-LLM_MODEL_NAME = config.llm.model_name
-LLM_STREAMING = config.llm.streaming
-LLM_TIMEOUT = config.llm.timeout
-LLM_PRESENCE_PENALTY = config.llm.presence_penalty
-LLM_FREQUENCY_PENALTY = config.llm.frequency_penalty
-LLM_TOP_P = config.llm.top_p
-LLM_VERBOSE = config.llm.verbose
+DATABASE_URL = os.getenv("DATABASE_URL", config.defaults['db_file'])
+KNOWLEDGE_DIRECTORY = config.paths['knowledge']
+LLM_MAX_TOKENS = config.llm['max_tokens']
+LLM_TEMPERATURE = config.llm['temperature']
+LLM_MODEL_NAME = config.llm['model_name']
+LLM_STREAMING = config.llm['streaming']
+LLM_TIMEOUT = config.llm['timeout']
+LLM_PRESENCE_PENALTY = config.llm['presence_penalty']
+LLM_FREQUENCY_PENALTY = config.llm['frequency_penalty']
+LLM_TOP_P = config.llm['top_p']
+LLM_VERBOSE = config.llm['verbose']
 IMAGE_GENERATION_ENABLED = config.features['image_generation']
-DECISION_AGENT_TEMPERATURE = config.agents.decision_agent.temperature
-DECISION_AGENT_MAX_TOKENS = config.agents.decision_agent.max_tokens
-DECISION_AGENT_STREAMING = config.agents.decision_agent.streaming
-DECISION_AGENT_VERBOSE = config.agents.decision_agent.verbose
-WRITER_AGENT_TEMPERATURE = config.agents.writer_agent.temperature
-WRITER_AGENT_MAX_TOKENS = config.agents.writer_agent.max_tokens
-WRITER_AGENT_STREAMING = config.agents.writer_agent.streaming
-WRITER_AGENT_VERBOSE = config.agents.writer_agent.verbose
-STORYBOARD_EDITOR_AGENT_TEMPERATURE = config.agents.storyboard_editor_agent.temperature
-STORYBOARD_EDITOR_AGENT_MAX_TOKENS = config.agents.storyboard_editor_agent.max_tokens
-STORYBOARD_EDITOR_AGENT_STREAMING = config.agents.storyboard_editor_agent.streaming
-STORYBOARD_EDITOR_AGENT_VERBOSE = config.agents.storyboard_editor_agent.verbose
+DECISION_AGENT_TEMPERATURE = config.agents['decision_agent']['temperature']
+DECISION_AGENT_MAX_TOKENS = config.agents['decision_agent']['max_tokens']
+DECISION_AGENT_STREAMING = config.agents['decision_agent']['streaming']
+DECISION_AGENT_VERBOSE = config.agents['decision_agent']['verbose']
+WRITER_AGENT_TEMPERATURE = config.agents['writer_agent']['temperature']
+WRITER_AGENT_MAX_TOKENS = config.agents['writer_agent']['max_tokens']
+WRITER_AGENT_STREAMING = config.agents['writer_agent']['streaming']
+WRITER_AGENT_VERBOSE = config.agents['writer_agent']['verbose']
+STORYBOARD_EDITOR_AGENT_TEMPERATURE = config.agents['storyboard_editor_agent']['temperature']
+STORYBOARD_EDITOR_AGENT_MAX_TOKENS = config.agents['storyboard_editor_agent']['max_tokens']
+STORYBOARD_EDITOR_AGENT_STREAMING = config.agents['storyboard_editor_agent']['streaming']
+STORYBOARD_EDITOR_AGENT_VERBOSE = config.agents['storyboard_editor_agent']['verbose']
 IMAGE_GENERATION_PAYLOAD = config.image_generation_payload
 TIMEOUTS = config.timeouts
 REFUSAL_LIST = config.refusal_list
@@ -101,15 +101,15 @@ CHAINLIT_SETTINGS = config.chainlit
 
 # Configure logging using the loaded config
 logging.basicConfig(
-    level=LOGGING.level,
-    format=LOGGING.format,
+    level=LOGGING['level'],
+    format=LOGGING['format'],
     handlers=[
         RotatingFileHandler(
-            LOGGING.file,
-            maxBytes=int(LOGGING.max_size),
-            backupCount=LOGGING.backup_count
+            LOGGING['file'],
+            maxBytes=int(LOGGING['max_size']),
+            backupCount=LOGGING['backup_count']
         ),
-        logging.StreamHandler() if LOGGING.console else None
+        logging.StreamHandler() if LOGGING['console'] else None
     ],
 )
 
