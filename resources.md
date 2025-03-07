@@ -13,7 +13,6 @@ LangGraph’s Functional API provides a flexible way to define AI workflows usin
 
 **Basic Example**: Here’s a simple entrypoint with two tasks to illustrate the structure:
 
-```python
 from langgraph.func import entrypoint, task
 
 @task
@@ -31,7 +30,6 @@ def workflow(values: dict) -> int:
     summed = total.result()                       # get actual result
     doubled = double(summed).result()             # call second task
     return doubled  # final result of workflow
-```
 
 This workflow adds two numbers and then doubles the sum. The key is that each `@task` can run independently. We could even parallelize tasks if needed (see the Async section). In a real scenario, tasks might call LLM APIs or other services.
 
@@ -53,7 +51,6 @@ LangGraph’s graph metaphor suits this: each agent is a node, and edges define 
 
 **Example – Two Collaborating Agents**: Imagine a **travel planning** assistant composed of two agents: one for travel destinations and one for hotel recommendations. They can call each other as needed. We define each agent as a LangChain ReAct agent with its own tools, and use a main workflow to route between them:
 
-```python
 from langgraph.func import entrypoint, task
 from langchain.agents import initialize_agent, AgentType
 from langchain.llms import OpenAI
@@ -111,7 +108,6 @@ def multi_agent_workflow(user_query: str) -> str:
 
     final_answer = response  # last agent's response
     return final_answer
-```
 
 In the above pseudo-code, `ask_travel_agent` and `ask_hotel_agent` are tasks wrapping calls to each agent. The `multi_agent_workflow` entrypoint sends the user query to the travel agent first. If the travel agent’s answer indicates handing off (we used a placeholder check for a phrase like "transfer to hotel agent"), the workflow then directs the next question to the hotel agent. The loop continues until an agent produces a final answer without handing off.
 
@@ -132,7 +128,6 @@ Integrating external tools (e.g. web search, calculators, databases) is a common
 
 **Defining Tools**: In LangChain/LangGraph, a “tool” is typically a function that the agent can call. In the Functional API (Python), you can use the `@tool` decorator from LangChain to wrap a function as a tool, or simply define a normal function and ensure the agent knows about it. Each tool should have a **name**, **description**, and an **input schema** (which can be enforced via Python type hints, Pydantic, or even simple dict schemas). For example:
 
-```python
 from langchain.agents import tool
 
 @tool
@@ -140,7 +135,6 @@ def search_web(query: str) -> str:
     """Search the web for the query and return the top result."""
     # ... implementation ...
     return result_text
-```
 
 The above would allow an agent to call `search_web` if it decides to. When using LangGraph, how do we plug tools in? One approach is to use LangChain’s agent tooling in tasks. Another approach is to manually manage tool calls.
 
@@ -156,7 +150,6 @@ We can implement this loop with Functional API tasks ([How to wait for user inpu
 
 For example:
 
-```python
 from langgraph.func import entrypoint, task
 from langchain.chat_models import ChatOpenAI
 from langchain_core.tools import tool
@@ -194,13 +187,11 @@ def call_tool(tool_call: dict):
     result = tools_by_name[tool_name].invoke(tool_input)
     # Wrap the tool’s output as a message to feed back to LLM (ToolMessage in LangChain)
     return ToolMessage(content=result, tool_call_id=tool_call["id"])
-```
 
 In this snippet, `model.bind_tools(tools).invoke(messages)` calls the LLM and allows it to choose a tool defined in `tools` ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=%40task%20def%20call_model%28messages%29%3A%20,invoke%28messages%29%20return%20response)). The returned `response` would likely include a `response.tool_calls` attribute (a list of tool call instructions the LLM decided on). We then loop over those tool calls, execute each with `call_tool`, and append the results to the message list.
 
 **Tool Loop in Entrypoint**: The entrypoint ties it together:
 
-```python
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.message import add_messages
 
@@ -224,7 +215,6 @@ def agent(messages: list, *, previous=None):
     messages = add_messages(messages, llm_response)
     # Return final answer, and save full conversation in state (for memory)
     return entrypoint.final(value=llm_response, save=messages)
-```
 
 This structure implements a ReAct agent using tasks ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=while%20True%3A%20if%20not%20llm_response,break)) ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=,result)):
 1. Combine new user message with previous conversation (`previous` comes from memory, if any).
@@ -237,7 +227,6 @@ This structure implements a ReAct agent using tasks ([How to wait for user input
 
 For instance, define a tool that when called by the agent, stops and asks the user:
 
-```python
 from langgraph.types import interrupt
 from langchain.agents import tool
 
@@ -248,7 +237,6 @@ def human_assistance(query: str) -> str:
     user_response = interrupt({"query": query})
     # The `interrupt` returns a dict (or value) after resume. Suppose user provides {"data": "..."}.
     return user_response["data"]
-```
 
 Adding this `human_assistance` tool to the agent’s tool list means the LLM can decide to “invoke” a human helper ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=from%20langgraph)). When `interrupt()` is called inside the task, LangGraph will produce an `__interrupt__` event containing the prompt or data needed ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=)). At this point, the workflow **pauses** and awaits a resume signal.
 
@@ -256,8 +244,7 @@ Adding this `human_assistance` tool to the agent’s tool list means the LLM can
 - Run the agent via `entrypoint.stream()` in your Chainlit app. As you iterate over events, check for an event indicating an interrupt (it might appear as a dictionary with `{"__interrupt__": ...}`).
 - When you detect an interrupt, you can use Chainlit’s **AskUserMessage** to prompt the user for input in the UI ([Issues when prompting for credentials using Chainlit UI + Langgraph : r/LangChain](https://www.reddit.com/r/LangChain/comments/1h3u7ei/issues_when_prompting_for_credentials_using/#:~:text=%E2%80%A2)). For example, in your Chainlit `on_message` handler:
 
-  ```python
-  import chainlit as cl
+    import chainlit as cl
 
   @cl.on_message
   async def handle_message(message: str):
@@ -272,8 +259,7 @@ Adding this `human_assistance` tool to the agent’s tool list means the LLM can
           else:
               # handle normal events (LLM responses, tool outputs, etc.)
               await cl.Message(content=str(event)).send()
-  ```
-  *(Pseudocode for demonstration)*
+    *(Pseudocode for demonstration)*
 
   The idea is: when LangGraph interrupts, we present the user with a question. The user's answer is then passed back into the workflow via `Command(resume=...)` to continue ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=provides%20instructions%20to%20resume%20the,task)). Chainlit’s `AskUserMessage` is designed exactly for these scenarios – it displays a message and waits for the user’s response, allowing a seamless human-in-loop interaction in the UI ([Issues when prompting for credentials using Chainlit UI + Langgraph : r/LangChain](https://www.reddit.com/r/LangChain/comments/1h3u7ei/issues_when_prompting_for_credentials_using/#:~:text=%E2%80%A2)).
 
@@ -299,7 +285,6 @@ When you decorate an entrypoint with a `checkpointer` (like `MemorySaver` for in
 
 **Example**: Simplified conversational agent entrypoint using these features:
 
-```python
 from langgraph.checkpoint.memory import MemorySaver
 
 checkpointer = MemorySaver()
@@ -314,7 +299,6 @@ def chat_agent(user_input: str, *, previous=None):
     conversation.append({"role": "assistant", "content": assistant_reply})
     # Return the assistant's reply as output, but save the entire conversation
     return entrypoint.final(value=assistant_reply, save=conversation)
-```
 
 Here:
 - We set `checkpointer=MemorySaver()`, which tells LangGraph to keep a checkpoint of the state in memory for each unique session (the session is identified by a `thread_id` in the config when calling, e.g. we might call this entrypoint with `config={"configurable": {"thread_id": "session1"}}`).
@@ -326,7 +310,6 @@ Under the hood, LangGraph will store the `conversation` in a checkpoint (MemoryS
 
 **Multi-Turn Interaction**: With this setup, you can handle a dialogue iteratively. For example:
 
-```python
 # First user message
 agent.invoke("Hello", config={"configurable": {"thread_id": "session1"}})
 # returns "assistant's first reply"
@@ -335,7 +318,6 @@ agent.invoke("Hello", config={"configurable": {"thread_id": "session1"}})
 agent.invoke("What's the weather?", config={"configurable": {"thread_id": "session1"}})
 # Now inside chat_agent, previous will contain [{"role": "user": ...}, {"role": "assistant": ...}] from first turn.
 # The agent can use that context before answering the second question.
-```
 
 LangGraph ensures that tasks already executed in a prior turn are not needlessly repeated and that the sequence of messages is preserved ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=Tip)) ([How to wait for user input (Functional API)](https://langchain-ai.github.io/langgraph/how-tos/wait-user-input-functional/#:~:text=)). The built-in persistence abstracts away a lot of boilerplate; you don’t need to manually manage a conversation buffer – just use `previous` and `entrypoint.final(save=...)`.
 
@@ -346,7 +328,6 @@ Long-term memory means storing information that persists beyond a single convers
 You can provide a `store` to an entrypoint (via the `store` argument in the decorator) which gives you access to a key–value storage (could be in-memory, database-backed, etc.) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=You%20can%20implement%20long,interactions%20with%20the%20same%20user)) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=You%20can%20implement%20long,interactions%20with%20the%20same%20user)). The `store` typically implements methods like `.get(key)` and `.set(key, value)` to read/write persistent data.
 
 To use long-term memory:
-```python
 from langgraph.store.memory import InMemoryStore
 
 store = InMemoryStore()  # or a persistent implementation
@@ -362,7 +343,6 @@ def agent_with_long_term(data: dict, *, previous=None, store=None):
     store.set(f"profile_{user_id}", profile)
     # normal short-term handling...
     return entrypoint.final(value=..., save=...)
-```
 
 Here, `store: BaseStore` parameter in the function is injected by LangGraph ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=match%20at%20L183%20from%20langgraph,memory%20import%20InMemoryStore)) ([Introducing the LangGraph Functional API](https://blog.langchain.dev/introducing-the-langgraph-functional-api/#:~:text=You%20can%20implement%20long,interactions%20with%20the%20same%20user)). We can call `store.get` or `store.set` to retrieve or update persistent data. Unlike `previous` which is tied to a specific conversation thread, `store` is shared and survives independently (in this case, since we used `InMemoryStore`, it lasts as long as the app runs; for real persistence you might use a file-based or database store).
 
@@ -407,7 +387,6 @@ Chainlit will by default **replay the messages to the UI** (so the user sees the
 3. **Set session variables**: Chainlit’s `cl.user_session` can store custom info. On resume, it’s restored, but if your LangGraph agent object or some references weren’t kept, you might recreate them here.
 
 A simple example using `on_chat_resume`:
-```python
 import chainlit as cl
 
 @cl.on_chat_resume
@@ -423,7 +402,6 @@ async def on_chat_resume(thread: cl.ThreadDict):
     else:
         # If not stored, you might derive it or set a new one
         cl.user_session.set("thread_id", thread["id"])
-```
 
 In practice, if you used `thread_id` in LangGraph config (like `"1"` or a random UUID) that might not directly correspond to Chainlit’s internal thread ID. One strategy is to tie them together:
 - When starting a new chat, generate a unique ID (or use `thread["id"]` from Chainlit if accessible in `on_chat_start`) and use it as LangGraph’s `thread_id` for the checkpointer.
@@ -442,10 +420,8 @@ Chainlit basically handles the front-end of memory (display and user session), w
   - Relying on LangGraph’s `previous` via a persistent thread_id for actual context when calling the agent.
 
 **Human Memory Example**: If a user resumes and asks a follow-up, you’d call:
-```python
 thread_id = cl.user_session.get("thread_id") or "default"
 result = agent.invoke(user_input, config={"configurable": {"thread_id": thread_id}})
-```
 Because `thread_id` is the same as a previous conversation, LangGraph’s checkpointer will load `previous` messages. If not found (first run), `previous` will be None.
 
 **Important**: If Chainlit’s chat history and LangGraph’s state diverge (e.g., you didn’t persist LangGraph state and app restarted), the agent might start fresh while the UI shows old messages. To avoid confusion, ensure one of:
@@ -480,7 +456,6 @@ Pydantic is a popular library for data validation and settings management, and i
 
 When defining a tool function, you can use Pydantic models to describe its input or output instead of raw dictionaries. For example:
 
-```python
 from pydantic import BaseModel
 
 class WeatherRequest(BaseModel):
@@ -499,7 +474,6 @@ def get_weather(data: WeatherRequest) -> WeatherInfo:
     loc = data.location
     # ... call some API ...
     return WeatherInfo(location=loc, temperature=72.0, condition="Sunny")
-```
 
 Using this approach, if the LLM tries to call `get_weather` with a wrong schema (say missing `location` or wrong type), LangChain/LangGraph can catch it. In LangChain’s function calling, if you provide a Pydantic model, it knows the JSON schema for it and the LLM’s output is validated against it. If the model returns a Pydantic object, Chainlit (or your code) can easily serialize it to show results.
 
@@ -507,7 +481,6 @@ Using this approach, if the LLM tries to call `get_weather` with a wrong schema 
 
 In LangGraph’s Graph API (not strictly needed for Functional API usage, but instructive), you can specify a `state_schema` when building a state graph. Pydantic models can serve as that schema. The LangGraph docs show how a `BaseModel` can be the state schema and thereby validate node inputs at runtime ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=In%20this%20how,run%20time%20validation%20on%20inputs)) ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=Known%20Limitations)). For example:
 
-```python
 from langgraph.graph import StateGraph, START, END
 from pydantic import BaseModel
 
@@ -531,14 +504,11 @@ try:
     graph.invoke({"a": 123})
 except Exception as e:
     print("Got validation error:", e)
-```
 
 Output:
-```
 Got validation error: 1 validation error for OverallState
 a
   Input should be a valid string [type=string_type, input_value=123, input_type=int]
-``` ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=except%20Exception%20as%20e%3A%20print%28,print%28e)) ([How to use Pydantic model as graph state](https://langchain-ai.github.io/langgraph/how-tos/state-model/#:~:text=An%20exception%20was%20raised%20because,9%2Fv%2Fstring_type))
 
 The above shows Pydantic catching an invalid type for the state before the node runs. This kind of validation is useful to catch mistakes early (for instance, if an upstream LLM provided data not conforming to expected schema, you’d know).
 
@@ -546,14 +516,12 @@ While this example uses the explicit Graph API, the same concept can apply in Fu
 
 **Pydantic in Functional Tasks**: You can annotate a task function’s parameters or return type with Pydantic models. LangGraph will treat those like any Python object. You won’t get automatic validation unless you actually create an instance of the model (or use Pydantic’s `validate` methods). One approach is to accept a dict but immediately parse it into a Pydantic model inside the task. For example:
 
-```python
 @task
 def process_user_info(info: dict) -> dict:
     user = UserProfile(**info)  # Pydantic model parse & validation
     # now user is a validated model
     updated = user.copy(update={"last_seen": datetime.utcnow()})
     return updated.dict()
-```
 
 This way, if `info` is missing required fields, the Pydantic constructor will raise and LangGraph can handle the exception or fail early.
 
@@ -599,7 +567,6 @@ A pattern suggested by community experts ([How to write tests for Langgraph Work
 
 To mock a LangGraph task’s behavior, you might set the function’s `.result` method via monkeypatch. Another simpler way: since tasks can be called like normal Python (if you ignore the future part), you could monkeypatch the entire function. For instance:
 
-```python
 # inside test function
 from my_app import ask_travel_agent, ask_hotel_agent, multi_agent_workflow
 
@@ -610,7 +577,6 @@ def fake_ask_travel_agent(query):
     return "Please transfer to hotel agent for details."
 # monkeypatch the task function to our fake (need to replace .result usage carefully if any)
 monkeypatch.setattr(my_app, "ask_travel_agent", lambda q: type("F", (), {"result": lambda self=None: fake_ask_travel_agent(q)})() )
-```
 
 The above is a bit involved; an alternative is designing your tasks to have injectable dependencies so you can directly call a fake version. Or, structure your code so that the core logic (like deciding next agent) is in a pure function that you can call with synthetic inputs.
 
@@ -632,12 +598,10 @@ For workflows with memory, write tests to ensure state carries over:
 
 Because LangGraph’s memory system relies on the `config` with thread_id, be sure to pass a consistent config in your test calls. Example:
 
-```python
 config = {"configurable": {"thread_id": "test-session"}}
 result1 = agent.invoke("Hello", config=config)
 result2 = agent.invoke("Hi again", config=config)
 assert "Hello" in some_form_of(result2)  # pseudo-check that context used
-```
 
 ### 7.4 Asynchronous and Streaming Tests
 
@@ -652,7 +616,6 @@ Because handling concurrency can be tricky in tests, you might choose to run syn
 ### 7.5 Example: Pytest for a ReAct Agent
 
 Suppose we have the `agent` entrypoint from section 3. We want to test that if the LLM outputs a tool call, our agent actually returns a final answer that includes the tool result:
-```python
 def test_agent_tool_usage(monkeypatch):
     from my_app import agent, call_model, call_tool
 
@@ -679,7 +642,6 @@ def test_agent_tool_usage(monkeypatch):
     user_msg = [{"role": "user", "content": "What's the weather in Paris?"}]
     response = agent.invoke(user_msg, config={"configurable": {"thread_id": "test"}})
     assert "Sunny in Paris" in str(response)
-```
 
 The above test patches:
 - `call_model.result` to bypass actual LLM and produce a tool call for `get_weather`.
@@ -717,22 +679,17 @@ LangGraph’s Functional API and Chainlit are both asynchronous-friendly. Writin
 As hinted earlier, you can invoke multiple tasks “at the same time” and then wait for their results, allowing parallel execution ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=Parallel%20execution%C2%B6)) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=%40entrypoint%28checkpointer%3Dcheckpointer%29%20def%20graph%28numbers%3A%20list%5Bint%5D%29%20,result%28%29%20for%20f%20in%20futures)). This is particularly useful for IO-bound operations like calling multiple external APIs or tools.
 
 **Pattern**: Instead of doing:
-```python
 res1 = task1(param).result()
 res2 = task2(param).result()
-```
 which runs them sequentially, you can do:
-```python
 future1 = task1(param)  # don't call .result() yet
 future2 = task2(param)
 res1 = future1.result()
 res2 = future2.result()
-```
 Between starting `future1` and calling `future1.result()`, the actual execution of `task1` can happen asynchronously. If `task2` doesn’t depend on `task1`, starting it before waiting for `task1` means both can run in parallel ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=Tasks%20can%20be%20executed%20in,calling%20APIs%20for%20LLMs)) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=def%20graph%28numbers%3A%20list%5Bint%5D%29%20,result%28%29%20for%20f%20in%20futures)). Under the hood, LangGraph likely uses threads or event loops to execute tasks concurrently (ensuring thread-safe if needed for I/O).
 
 **Example**: Suppose your agent, at some point, needs to fetch data from two different APIs to answer a question (like weather and news). You could do:
 
-```python
 @task
 def fetch_weather(city: str) -> str: ...
 @task
@@ -748,18 +705,15 @@ def get_info(city: str, topic: str):
     news = news_future.result()
     combined = f"Weather: {weather}; News: {news}"
     return combined
-```
 
 This will likely be faster than calling one then the other, because while one API is waiting, the other can proceed.
 
 **Asynchronous `async def` tasks**: If a task itself is defined as `async def`, LangGraph’s `@task` decorator should detect that and allow awaiting it. For instance:
 
-```python
 @task
 async def call_llm_async(messages) -> LLMResult:
     result = await async_llm.generate(messages)  # assuming async llm client
     return result
-```
 
 You would still use it similarly (if called within an entrypoint, you might do `resp_future = call_llm_async(msgs)` then later `resp = resp_future.result()` – the `result()` call would internally await the coroutine).
 
@@ -775,10 +729,8 @@ LangGraph supports streaming in multiple ways:
 - **Custom streaming via `StreamWriter`**: The Functional API provides a `StreamWriter` type that you can include in an entrypoint to send arbitrary data to a `"custom"` stream ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=Streaming%20custom%20data%C2%B6)) ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=from%20langgraph,types%20import%20StreamWriter)). For example, your workflow might produce intermediate progress messages or data that you want to stream to the frontend before the final result.
 
 Using `.stream()` when invoking an entrypoint will yield a sequence of `(stream, data)` tuples or events. For instance:
-```python
 for event in my_entrypoint.stream(input, stream_mode=["custom", "updates"]):
     print(event)
-```
 You might see events like:
 - `('updates', {'step1': 'partial result'})` indicating an update from a task ([Functional API](https://langchain-ai.github.io/langgraph/concepts/functional_api/#:~:text=API%20Reference%3A%20MemorySaver%20%20,80)).
 - `('custom', 'some message')` from your custom writer calls.
@@ -792,7 +744,6 @@ In Chainlit, you can forward these streamed events to the UI. Chainlit natively 
 - Chainlit’s `@cl.on_message` can be async, so you can `async for chunk in agent.astream(user_input, config=...)` as well. Or use synchronous `.stream` in a separate thread if needed (Chainlit allows sync usage but encourages async).
 
 **Example**: Streaming a response:
-```python
 @cl.on_message
 async def on_message(msg: str):
     # Start the agent in streaming mode for both LLM token stream and custom messages
@@ -808,7 +759,6 @@ async def on_message(msg: str):
             prompt = data['value'] if isinstance(data, dict) else str(data)
             user_answer = await cl.AskUserMessage(content=prompt).send()
             # resume logic as earlier...
-```
 Chainlit will ensure the UI displays tokens in order. Once the loop ends and the final message is sent (with `stream=False` on the last one automatically when `cl.Message.send()` completes streaming), the user sees the full answer.
 
 **Async Concurrency in Chainlit**: If you plan to have multiple users or multi-turn with overlapping tasks, remember that Chainlit’s `on_message` for different sessions run concurrently. The LangGraph `thread_id` keeps each session’s state separate, but heavy parallelism might still strain resources (e.g., many LLM calls at once). Use async features to not block the server loop, and consider rate limiting or queueing if needed.
@@ -827,7 +777,6 @@ You might wonder if you can make the entrypoint itself `async`. In Python, an `a
 
 Think of a scenario: you have multiple agents (e.g. 3 different specialists) and you want them to **work concurrently** on parts of a problem, then gather their answers. With LangGraph, you could spawn each agent as a task:
 
-```python
 @task
 def agent1_task(question): ...
 @task
@@ -842,7 +791,6 @@ def multi_agent_concurrent(question: str):
     # Combine or choose among results
     final = combine_answers(results)
     return final
-```
 
 This runs all three agents in parallel, cutting down latency significantly compared to sequential queries. The combine logic could simply concatenate answers or have another LLM decide the best. In testing, ensure that parallel execution doesn’t cause race conditions (each agent is separate so usually fine) and that resource usage is acceptable (3 simultaneous LLM calls).
 
