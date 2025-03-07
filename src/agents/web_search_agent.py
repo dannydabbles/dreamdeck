@@ -3,7 +3,7 @@ import requests
 import logging
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
-from langgraph.message import ToolMessage
+from langchain_core.messages import ToolMessage  # Use LangChain's standard messages
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from ..config import SERPAPI_KEY, WEB_SEARCH_ENABLED
