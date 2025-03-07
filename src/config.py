@@ -139,6 +139,10 @@ def load_config() -> ConfigSchema:
     DICE_SIDES = config.dice.sides  # Default to d20
     cl_logger.info(f"Default dice sides loaded: {DICE_SIDES}")
 
+    # Expose DICE_ROLLING_ENABLED from features.dice_rolling
+    DICE_ROLLING_ENABLED = config.features.dice_rolling
+    cl_logger.info(f"Dice rolling enabled: {DICE_ROLLING_ENABLED}")
+
     # Knowledge directory
     KNOWLEDGE_DIRECTORY = config.paths.knowledge
     cl_logger.info(f"Knowledge directory loaded: {KNOWLEDGE_DIRECTORY}")
