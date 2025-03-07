@@ -1,6 +1,7 @@
 import os
 import requests
 import logging
+from uuid import uuid4  # Import uuid4
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
 from langchain_core.messages import ToolMessage  # Use LangChain's standard messages
