@@ -344,3 +344,7 @@ caching:
   enabled: true
   ttl: 3600
   max_size: "100MB"
+
+chainlit:
+  project_name: "Dreamdeck"
+  db: "sqlite:///./chainlit.db"
