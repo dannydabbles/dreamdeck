@@ -8,6 +8,7 @@ from src.agents.writer_agent import writer_agent
 from src.agents.storyboard_editor_agent import storyboard_editor_agent
 from src.agents.dice_agent import dice_roll_agent
 from src.agents.web_search_agent import web_search_agent
+from chainlit import user_session as cl_user_session  # Import cl_user_session
 
 # Centralized logging configuration
 logging.basicConfig(

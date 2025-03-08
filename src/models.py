@@ -7,6 +7,7 @@ from langchain_core.messages import (
     HumanMessage,
     AIMessage,
     SystemMessage,
+    ToolMessage,  # Import ToolMessage
 )
 import operator
 import chainlit as cl
