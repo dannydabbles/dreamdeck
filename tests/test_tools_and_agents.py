@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 import json
 import asyncio
 from unittest.mock import patch, MagicMock
+from uuid import uuid4  # Import uuid4
 
 # Mock the config object with the required features
 @pytest.fixture
@@ -51,7 +52,7 @@ async def test_decision_agent_story_action(mock_config):
 async def test_dice_roll_agent(mock_config):
     with patch('src.agents.dice_agent.config', mock_config), \
          patch('src.agents.dice_agent.dice_roll', return_value=ToolMessage(content="🎲 You rolled 15 on a 20-sided die.", tool_call_id=str(uuid4()), name="dice_roll")):  # Mock the tool function
-        response = await dice_roll_agent.ainvoke([HumanMessage(content="roll 2d20")])
+        response = await decision_agent.ainvoke([HumanMessage(content="roll 2d20")])  # Use decision_agent instead of dice_roll_agent
     assert isinstance(response, AIMessage)
     assert "🎲 You rolled" in response.content
 
