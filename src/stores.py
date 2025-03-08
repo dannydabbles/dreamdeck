@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Sequence, Tuple
 import os
 import chainlit as cl
 import asyncio
+from src.config import parse_size, CACHING_SETTINGS  # Import parse_size and CACHING_SETTINGS
 
 class VectorStore(BaseStore):
     """Custom vector store implementation using ChromaDB for persistent storage.
