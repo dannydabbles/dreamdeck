@@ -12,7 +12,7 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
-from langgraph.message import CLMessage
+from langchain_core.messages import CLMessage
 from .state import ChatState
 from agents.decision_agent import decision_agent
 from agents.writer_agent import writer_agent
