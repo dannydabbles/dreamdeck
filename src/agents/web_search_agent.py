@@ -13,19 +13,27 @@ from ..config import SERPAPI_KEY, WEB_SEARCH_ENABLED
 cl_logger = logging.getLogger("chainlit")
 
 @task
-async def web_search(query: str) -> dict:
+async def web_search(query: str) -> ToolMessage:
     """Perform a web search using SerpAPI.
 
     Args:
         query (str): The search query.
 
     Returns:
-        dict: The search result.
+        ToolMessage: The search result.
     """
     if not SERPAPI_KEY:
-        return {"name": "error", "args": {"content": "SERPAPI_KEY environment variable not set."}}
+        return ToolMessage(
+            content="SERPAPI_KEY environment variable not set.",
+            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
+            name="error",
+        )
     if not WEB_SEARCH_ENABLED:
-        return {"name": "error", "args": {"content": "Web search is disabled."}}
+        return ToolMessage(
+            content="Web search is disabled.",
+            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
+            name="error",
+        )
 
     url = f"https://serpapi.com/search.json?q={query}&api_key={SERPAPI_KEY}"
     try:
@@ -63,6 +71,6 @@ web_search_agent = create_react_agent(
         verbose=False,
         request_timeout=os.getenv("LLM_TIMEOUT", 10),
     ),
-    tools=[web_search],
+    tools=[web_search],  # <--- FIXED HERE
     checkpointer=MemorySaver(),
 )

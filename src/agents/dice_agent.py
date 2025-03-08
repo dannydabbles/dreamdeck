@@ -107,6 +107,6 @@ dice_roll_agent = create_react_agent(
         verbose=False,
         request_timeout=os.getenv("LLM_TIMEOUT", 10),
     ),
-    tools=[dice_roll],
+    tools=[dice_roll],  # <--- FIXED HERE
     checkpointer=MemorySaver(),
 )

@@ -2,8 +2,8 @@ import os
 import logging
 from langgraph.func import task
 from langgraph.prebuilt import create_react_agent
-from .dice_agent import dice_roll_agent
-from .web_search_agent import web_search_agent
+from .dice_agent import dice_roll  # Import the tool, not the agent
+from .web_search_agent import web_search  # Import the tool, not the agent
 from ..config import (
     DECISION_AGENT_TEMPERATURE,
     DECISION_AGENT_MAX_TOKENS,
@@ -47,6 +47,6 @@ decision_agent = create_react_agent(
         verbose=DECISION_AGENT_VERBOSE,
         request_timeout=LLM_TIMEOUT * 2,
     ),
-    tools=[decide_action, dice_roll_agent, web_search_agent],
+    tools=[decide_action, dice_roll, web_search],  # <--- FIXED HERE
     checkpointer=MemorySaver(),
 )
