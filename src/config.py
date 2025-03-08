@@ -112,6 +112,9 @@ CACHING_SETTINGS = config.caching
 AGENTS = config.agents
 CHAINLIT_SETTINGS = config.chainlit
 
+# Ensure SERPAPI_KEY is set from environment variable first, then config file
+SERPAPI_KEY = os.getenv('SERPAPI_KEY', config.search.get('serpapi_key', ''))
+
 # Configure logging using the loaded config
 logging.basicConfig(
     level=LOGGING['level'],
@@ -201,7 +204,7 @@ cl_logger.info(
 )
 
 # Search settings
-cl_logger.info(f"Search settings loaded: serpapi_key={SEARCH_SETTINGS['serpapi_key']}")
+cl_logger.info(f"Search settings loaded: serpapi_key={SERPAPI_KEY}")
 
 # Features
 cl_logger.info(f"Features loaded: {FEATURES}")
