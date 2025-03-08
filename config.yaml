@@ -221,14 +221,11 @@ image_generation_payload:
   scheduler: "Simple"
   cfg_scale: 3.5
   distilled_cfg_scale: 1.0
-  hr_cfg: 3.5
-  hr_distilled_cfg: 1.0
-  width: 512
-  height: 512
   hr_scale: 2
   hr_upscaler: "SwinIR 4x"
   denoising_strength: 0.6
   hr_second_pass_steps: 10
+  negative_prompt: ""  # Add this line
 
 timeouts:
   image_generation_timeout: 180
