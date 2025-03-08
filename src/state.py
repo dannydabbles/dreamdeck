@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from langchain_core.messages import BaseMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage
 
 
 class ChatState(BaseModel):
