@@ -15,6 +15,10 @@ if not os.path.exists(CONFIG_FILE):
 with open(CONFIG_FILE, "r") as f:
     config_yaml = yaml.safe_load(f)
 
+class DiceConfig(BaseModel):
+    """Pydantic model for dice configuration."""
+    sides: int = Field(description="Number of sides for dice rolls")
+
 class ConfigSchema(BaseModel):
     """Pydantic model for the configuration schema."""
     llm: dict
@@ -23,7 +27,7 @@ class ConfigSchema(BaseModel):
     timeouts: dict
     refusal_list: list
     defaults: dict
-    dice: dict
+    dice: DiceConfig  # Use the nested DiceConfig model
     paths: dict
     openai: dict
     search: dict
@@ -56,7 +60,7 @@ config = load_config()
 
 # Expose all required variables as module-level attributes
 DICE_ROLLING_ENABLED = config.features['dice_rolling']
-DICE_SIDES = config.dice.sides
+DICE_SIDES = config.dice.sides  # Now dice is a DiceConfig instance
 WEB_SEARCH_ENABLED = config.features['web_search']
 DATABASE_URL = os.getenv("DATABASE_URL", config.defaults['db_file'])
 KNOWLEDGE_DIRECTORY = config.paths['knowledge']
