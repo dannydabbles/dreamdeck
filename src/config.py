@@ -41,6 +41,15 @@ class ConfigSchema(BaseModel):
     agents: dict  # Add agents configuration
     chainlit: dict  # Add chainlit configuration
 
+def parse_size(size_str: str) -> int:
+    """Parse size strings like '10MB' to bytes."""
+    units = {'KB': 1024, 'MB': 1024**2, 'GB': 1024**3}
+    size = size_str.upper()
+    for suffix in units:
+        if size.endswith(suffix):
+            num = float(size[:-len(suffix)])
+            return int(num * units[suffix])
+    raise ValueError(f"Invalid size format: {size_str}")
 
 def load_config() -> ConfigSchema:
     """Load and validate configuration from YAML file.
@@ -110,7 +119,7 @@ logging.basicConfig(
     handlers=[
         RotatingFileHandler(
             LOGGING['file'],
-            maxBytes=int(LOGGING['max_size']),
+            maxBytes=parse_size(LOGGING['max_size']),  # Use parse_size
             backupCount=LOGGING['backup_count']
         ),
         logging.StreamHandler() if LOGGING['console'] else None

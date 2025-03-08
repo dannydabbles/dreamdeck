@@ -6,7 +6,6 @@ import os
 import chainlit as cl
 import asyncio
 
-
 class VectorStore(BaseStore):
     """Custom vector store implementation using ChromaDB for persistent storage.
 
@@ -112,3 +111,6 @@ class VectorStore(BaseStore):
             self.get(key, field)
         elif op == "put":
             self.put(key, field, value)
+
+# Ensure max_size is parsed correctly
+max_cache_size = parse_size(CACHING_SETTINGS.get('max_size', '100MB'))
