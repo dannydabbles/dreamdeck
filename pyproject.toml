@@ -35,3 +35,18 @@ langgraph = "^0.3.2"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = true
+follow_imports = silent
+strict_equality = true
+warn_return_any = true
+ignore_missing_imports = false
+
+[tool.flake8]
+extend-select = "E,W,B,C,F,I,S,TUP"
+ignore = "E203,E501"
+max-line-length = 120
+per-file-ignores =
+    "tests/*: E501"

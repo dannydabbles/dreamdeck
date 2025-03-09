@@ -37,7 +37,7 @@ async def main():
         cl_user_session.set("writer_agent", writer_agent)
         cl_user_session.set("storyboard_editor_agent", storyboard_editor_agent)
         cl_user_session.set("dice_roll_agent", dice_roll_agent)
-        cl_user_session.set("web_search_agent", web_search_agent)
+        cl_user_session.set("web_search_agent", search_agent)
 
         # Run Chainlit server
         await chainlit_app.run()
