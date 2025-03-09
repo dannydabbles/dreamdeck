@@ -1,3 +1,4 @@
+from src.config import config
 import os
 import requests
 import logging
