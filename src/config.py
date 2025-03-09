@@ -192,7 +192,8 @@ cl_logger.info(
 )
 
 # Timeouts
-cl_logger.info(f"Image generation timeout loaded: {TIMEOUTS['image_generation_timeout']}")
+IMAGE_GENERATION_TIMEOUT = TIMEOUTS.get("image_generation_timeout", 180)  # Default from config.yaml
+cl_logger.info(f"Image generation timeout loaded: {IMAGE_GENERATION_TIMEOUT}")
 
 # Token limits
 cl_logger.info(f"LLM max tokens loaded: {LLM_MAX_TOKENS}")
