@@ -6,6 +6,7 @@ from src.config import config
 from langgraph.func import task, entrypoint
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
 from unittest.mock import MagicMock, patch
 from uuid import uuid4  # Import uuid4
 

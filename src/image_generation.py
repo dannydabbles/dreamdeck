@@ -9,7 +9,7 @@ from tenacity import (
     retry_if_exception_type,
 )
 from chainlit import element as cl_element  # Import cl_element
-from langchain_core.messages import CLMessage
+from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
 from chainlit.types import CLImage  # Import CLImage
 from .config import (
     DENOISING_STRENGTH,

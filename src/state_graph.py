@@ -10,8 +10,9 @@ from langchain_core.messages import (
     AIMessage,
     HumanMessage,
     SystemMessage,
-    ToolMessage,
+    ToolMessage
 )
+from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
 from .state import ChatState
 from .agents.decision_agent import decide_action  # Import decide_action
 from .agents.dice_agent import dice_roll  # Import dice_roll
