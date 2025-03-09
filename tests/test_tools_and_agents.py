@@ -7,6 +7,7 @@ from langgraph.func import task, entrypoint
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from unittest.mock import MagicMock, patch
+from uuid import uuid4  # Import uuid4
 
 @pytest.fixture
 def mock_checkpointer():

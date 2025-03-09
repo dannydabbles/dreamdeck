@@ -12,13 +12,12 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
-from langchain_core.messages import CLMessage
 from .state import ChatState
-from agents.decision_agent import decision_agent
-from agents.writer_agent import writer_agent
-from agents.storyboard_editor_agent import storyboard_editor_agent
-from agents.dice_agent import dice_roll_agent
-from agents.web_search_agent import web_search_agent
+from .agents.decision_agent import decide_action  # Import decide_action
+from .agents.dice_agent import dice_roll  # Import dice_roll
+from .agents.web_search_agent import web_search  # Import web_search
+from .agents.writer_agent import generate_story  # Import generate_story
+from .agents.storyboard_editor_agent import generate_storyboard  # Import generate_storyboard
 from .image_generation import process_storyboard_images
 from .config import (
     IMAGE_GENERATION_ENABLED,
