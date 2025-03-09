@@ -226,8 +226,8 @@ HR_SECOND_PASS_STEPS = config.image_generation_payload.get("hr_second_pass_steps
 NEGATIVE_PROMPT = config.image_generation_payload.get("negative_prompt", "")
 
 # Expose storyboard generation prompt settings
-STORYBOARD_GENERATION_PROMPT_PREFIX = config.get("storyboard_generation_prompt_prefix", "")
-STORYBOARD_GENERATION_PROMPT_POSTFIX = config.get("storyboard_generation_prompt_postfix", "")
+STORYBOARD_GENERATION_PROMPT_PREFIX = getattr(config, "storyboard_generation_prompt_prefix", "")
+STORYBOARD_GENERATION_PROMPT_POSTFIX = getattr(config, "storyboard_generation_prompt_postfix", "")
 
 # Search settings
 cl_logger.info(f"Search settings loaded: serpapi_key={SERPAPI_KEY}")
