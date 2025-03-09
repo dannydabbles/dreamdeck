@@ -38,3 +38,5 @@ async def decide_action(user_input: str) -> dict:
     except Exception as e:
         cl_logger.error(f"Decision failed: {e}")
         return {"name": "continue_story", "args": {}}
+
+decision_agent = decide_action  # Expose the function as decision_agent

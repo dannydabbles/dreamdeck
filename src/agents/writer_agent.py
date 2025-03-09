@@ -27,3 +27,5 @@ async def generate_story(content: str) -> str:
     except Exception as e:
         cl_logger.error(f"Story generation failed: {e}")
         return "Error generating story."
+
+writer_agent = generate_story  # Expose the function as writer_agent

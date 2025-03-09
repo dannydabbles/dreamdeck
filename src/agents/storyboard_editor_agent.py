@@ -27,3 +27,5 @@ async def generate_storyboard(content: str) -> str:
     except Exception as e:
         cl_logger.error(f"Storyboard generation failed: {e}")
         return "Error generating storyboard."
+
+storyboard_editor_agent = generate_storyboard  # Expose the function as storyboard_editor_agent
