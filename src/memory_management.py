@@ -1,6 +1,7 @@
 import logging
 from .state import ChatState
 from .initialization import DatabasePool
+from langgraph.store.base import BaseStore
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")

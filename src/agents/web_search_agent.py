@@ -62,3 +62,5 @@ async def web_search(query: str) -> ToolMessage:
             tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="error",
         )
+
+web_search_agent = web_search
