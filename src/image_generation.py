@@ -30,6 +30,7 @@ from .config import (
     STORYBOARD_GENERATION_PROMPT_PREFIX,
     STORYBOARD_GENERATION_PROMPT_POSTFIX,
 )
+from langgraph.func import task  # Import task from langgraph
 import httpx  # Import httpx
 
 
