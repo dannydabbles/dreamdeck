@@ -42,6 +42,8 @@ class ConfigSchema(BaseModel):
     caching: dict
     agents: dict  # Add agents configuration
     chainlit: dict  # Add chainlit configuration
+    _env_prefix: ClassVar[str] = "APP_"  # NEW: Enable env var loading with prefix
+    model_config = ConfigDict(extra='forbid')  # ENFORCE strict validation
 
 def parse_size(size_str: str) -> int:
     """Parse size strings like '10MB' to bytes."""
@@ -60,9 +62,9 @@ def load_config() -> ConfigSchema:
         ConfigSchema: Validated configuration object
     """
     try:
-        config = ConfigSchema(**config_yaml)
+        config = ConfigSchema.model_validate(config_yaml)  # USE VALIDATOR
     except ValidationError as e:
-        cl_logger.error(f"Configuration validation failed: {e}")
+        cl_logger.error(f"Validation failed: {e.errors()}")  # BETTER ERROR REPORTING
         raise
     return config
 
