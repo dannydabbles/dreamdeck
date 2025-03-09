@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage
+# Ensure no CLMessage is used here
+# Ensure no CLMessage is used here
 
 
 class ChatState(BaseModel):
