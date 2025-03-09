@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import yaml
 import logging
 from pydantic import BaseModel, Field, ValidationError
@@ -7,7 +8,8 @@ from logging.handlers import RotatingFileHandler
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-CONFIG_FILE = "config.yaml"
+# Locate config.yaml relative to the package root
+CONFIG_FILE = Path(__file__).parent.parent / "config.yaml"
 if not os.path.exists(CONFIG_FILE):
     cl_logger.error(f"Configuration file '{CONFIG_FILE}' not found.")
     raise FileNotFoundError(f"Configuration file '{CONFIG_FILE}' not found.")
