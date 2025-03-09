@@ -216,6 +216,7 @@ prompts:
   storyboard_generation_prompt_postfix: "" #"source_anime, source_cartoon"
 
 image_generation_payload:
+  url: "https://example.com/sdapi"  # Add this line
   steps: 30
   sampler_name: "Euler"
   scheduler: "Simple"

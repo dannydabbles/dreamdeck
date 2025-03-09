@@ -217,6 +217,9 @@ cl_logger.info(
     f"api_key={OPENAI_SETTINGS['api_key']}"
 )
 
+# Expose Stable Diffusion API URL
+STABLE_DIFFUSION_API_URL = config.image_generation_payload.get("url", "https://example.com/sdapi")
+
 CFG_SCALE = config.image_generation_payload.get("cfg_scale", 3.5)
 DENOISING_STRENGTH = config.image_generation_payload.get("denoising_strength", 0.6)
 STEPS = config.image_generation_payload.get("steps", 30)
