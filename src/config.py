@@ -21,7 +21,8 @@ class DiceConfig(BaseModel):
     """Pydantic model for dice configuration."""
     sides: int = Field(description="Number of sides for dice rolls")
 
-from pydantic import ClassVar, ConfigDict  # Import missing imports
+from typing import ClassVar  # Move ClassVar to typing
+from pydantic import ConfigDict  # Keep ConfigDict from pydantic
 
 class ConfigSchema(BaseModel):
     """Pydantic model for the configuration schema."""
