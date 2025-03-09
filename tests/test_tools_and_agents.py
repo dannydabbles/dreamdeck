@@ -57,6 +57,8 @@ async def test_decision_agent_story_action(mock_config):
     assert isinstance(response, AIMessage)
     assert "continue_story" in response.content
 
+from src.agents.dice_agent import dice_roll_agent  # Import dice_roll_agent
+
 @pytest.mark.asyncio
 async def test_dice_roll_agent(mock_config):
     with patch('src.agents.dice_agent.config', mock_config), \
