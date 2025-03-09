@@ -64,7 +64,7 @@ async def process_storyboard(state: ChatState) -> Optional[str]:
         ]
 
         # Get storyboard prompts from the agent
-        response = await storyboard_editor_agent.ainvoke(messages)
+        response = await generate_storyboard(last_gm_message.content).result()
 
         if not response or not response.content:
             cl_logger.warning("Empty storyboard response")
