@@ -27,16 +27,3 @@ async def generate_story(content: str) -> str:
     except Exception as e:
         cl_logger.error(f"Story generation failed: {e}")
         return "Error generating story."
-
-# Initialize the writer AI agent
-writer_agent = create_react_agent(
-    model=ChatOpenAI(
-        temperature=WRITER_AGENT_TEMPERATURE,
-        max_tokens=WRITER_AGENT_MAX_TOKENS,
-        streaming=WRITER_AGENT_STREAMING,
-        verbose=WRITER_AGENT_VERBOSE,
-        request_timeout=LLM_TIMEOUT * 3,
-    ),
-    tools=[generate_story],
-    checkpointer=MemorySaver(),
-)

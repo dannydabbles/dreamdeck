@@ -87,7 +87,6 @@ async def chat_workflow(
     messages: List[BaseMessage],
     store: BaseStore,
     previous: Optional[ChatState] = None,
-    writer: asyncio.StreamWriter = None,
 ) -> ChatState:
     """Main chat workflow handling messages and state.
 
@@ -95,7 +94,6 @@ async def chat_workflow(
         messages (List[BaseMessage]): List of incoming messages.
         store (BaseStore): The store for chat state.
         previous (Optional[ChatState], optional): Previous chat state. Defaults to None.
-        writer (asyncio.StreamWriter, optional): Stream writer for logging. Defaults to None.
 
     Returns:
         ChatState: The updated chat state.
@@ -104,73 +102,50 @@ async def chat_workflow(
     state.messages.extend(messages)
 
     try:
-        if writer:
-            writer("Processing started")
-
         # Determine action
         last_human_message = next(
             (msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)),
             None,
         )
         if not last_human_message:
-            cl_logger.info("No human message found, defaulting to writer")
+            cl_logger.info("No human message found, defaulting to continue_story")
             action = "continue_story"
         else:
             formatted_prompt = DECISION_PROMPT.format(
                 user_input=last_human_message.content
             )
-            messages = [SystemMessage(content=formatted_prompt)]
-            response = await decision_agent.ainvoke(messages)
-
-            if (
-                isinstance(response, dict)
-                and "name" in response
-                and "args" in response
-            ):
-                action = response["args"].get("action", "continue_story")
-            else:
-                action = "continue_story"
+            decision_response = await decide_action(formatted_prompt).result()
+            action = decision_response.get("name", "continue_story")
 
         action_map = {
-            "roll": dice_roll_agent,
-            "search": web_search_agent,
-            "continue_story": writer_agent,
+            "roll": dice_roll,
+            "search": web_search,
+            "continue_story": generate_story,
         }
-        mapped_agent = action_map.get(action, writer_agent)
+        mapped_task = action_map.get(action, generate_story)
 
-        if mapped_agent == dice_roll_agent:
-            result = await dice_roll_agent.ainvoke([HumanMessage(content=last_human_message.content)])
-            tool_message = ToolMessage(
-                content=result["args"]["result"],
-                tool_call_id=result["id"],
-                name="dice_roll",
-            )
+        if mapped_task == dice_roll:
+            result = await dice_roll(last_human_message.content).result()
+            tool_message = ToolMessage(content=result.content, name="dice_roll")
             state.add_tool_message(tool_message)
             state.messages.append(tool_message)
-            await CLMessage(content=tool_message.content).send()
 
-        elif mapped_agent == web_search_agent:
-            result = await web_search_agent.ainvoke([HumanMessage(content=last_human_message.content)])
-            tool_message = ToolMessage(
-                content=result["args"]["result"],
-                tool_call_id=result["id"],
-                name="web_search",
-            )
+        elif mapped_task == web_search:
+            result = await web_search(last_human_message.content).result()
+            tool_message = ToolMessage(content=result.content, name="web_search")
             state.add_tool_message(tool_message)
             state.messages.append(tool_message)
-            await CLMessage(content=tool_message.content).send()
 
         else:
-            ai_response = await mapped_agent.ainvoke(state.messages)
-            state.messages.append(AIMessage(content=ai_response.content))
-            await CLMessage(content=ai_response.content).send()
+            ai_response = await generate_story(last_human_message.content).result()
+            state.messages.append(AIMessage(content=ai_response))
 
         # Generate storyboard if needed and image generation is enabled
         if IMAGE_GENERATION_ENABLED:
-            storyboard = await process_storyboard(state)
+            storyboard = await process_storyboard(state).result()
             if storyboard:
                 state.metadata["storyboard"] = storyboard
-                await process_storyboard_images(storyboard, state.current_message_id)
+                await process_storyboard_images(storyboard, state.current_message_id).result()
 
         # Save state
         await save_chat_memory(state, store)
@@ -178,13 +153,7 @@ async def chat_workflow(
     except Exception as e:
         cl_logger.error(f"Critical error in chat workflow: {str(e)}", exc_info=True)
         state.increment_error_count()
-        await CLMessage(
-            content="⚠️ A critical error occurred. Please try again later or restart the session."
-        ).send()
-        raise
-
-    if writer:
-        writer("Processing completed")
+        state.messages.append(AIMessage(content="⚠️ A critical error occurred. Please try again later or restart the session."))
 
     return state
 

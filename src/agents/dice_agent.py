@@ -98,16 +98,3 @@ def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
         except ValueError as e:
             cl_logger.error(f"Invalid dice specification: {e}")
             raise ValueError("Invalid dice specification") from e
-
-# Initialize the dice roll agent
-dice_roll_agent = create_react_agent(
-    model=ChatOpenAI(
-        temperature=0.0,
-        max_tokens=100,
-        streaming=False,
-        verbose=False,
-        request_timeout=os.getenv("LLM_TIMEOUT", 10),
-    ),
-    tools=[dice_roll],  # <--- FIXED HERE
-    checkpointer=MemorySaver(),
-)

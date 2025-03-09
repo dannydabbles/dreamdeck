@@ -38,16 +38,3 @@ async def decide_action(user_input: str) -> dict:
     except Exception as e:
         cl_logger.error(f"Decision failed: {e}")
         return {"name": "continue_story", "args": {}}
-
-# Initialize the decision agent
-decision_agent = create_react_agent(
-    model=ChatOpenAI(
-        temperature=DECISION_AGENT_TEMPERATURE,
-        max_tokens=DECISION_AGENT_MAX_TOKENS,
-        streaming=DECISION_AGENT_STREAMING,
-        verbose=DECISION_AGENT_VERBOSE,
-        request_timeout=LLM_TIMEOUT * 2,
-    ),
-    tools=[decide_action, dice_roll, web_search],  # <--- FIXED HERE
-    checkpointer=MemorySaver(),
-)

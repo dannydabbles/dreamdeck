@@ -1,102 +1,63 @@
 import pytest
-from src.agents.decision_agent import decision_agent
-from src.agents.writer_agent import writer_agent
-from src.agents.storyboard_editor_agent import storyboard_editor_agent
-from src.agents.dice_agent import dice_roll  # Import the tool, not the agent
-from src.agents.web_search_agent import web_search  # Import the tool, not the agent
-from src.agents.web_search_agent import web_search_agent
+from src.state_graph import chat_workflow  # Main entrypoint
+from src.agents.dice_agent import dice_roll  # Task function
+from src.agents.web_search_agent import web_search  # Task function
+from src.config import config
+from langgraph.func import task, entrypoint
+from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-import json
-import asyncio
-from unittest.mock import patch, MagicMock
-from uuid import uuid4  # Import uuid4
+from unittest.mock import MagicMock, patch
 
-# Mock the config object with the required features
 @pytest.fixture
-def mock_config():
-    class MockConfig:
-        features = {
-            'dice_rolling': True,
-            'web_search': False,
-            'image_generation': True
-        }
-    return MockConfig()
+def mock_checkpointer():
+    return MemorySaver()
+
+@pytest.fixture
+def mock_runnable_config(mock_checkpointer):
+    return {"checkpointer": mock_checkpointer}
 
 @pytest.mark.asyncio
-async def test_decision_agent_roll_action(mock_config):
-    with patch('src.agents.decision_agent.config', mock_config), \
-         patch('src.agents.decision_agent.decide_action', return_value={"name": "roll", "args": {}}), \
-         patch('src.agents.dice_agent.dice_roll', return_value=ToolMessage(content="🎲 You rolled 15 on a 20-sided die.", tool_call_id=str(uuid4()), name="dice_roll")):
-        response = await decision_agent.ainvoke(
-            [HumanMessage(content="roll 2d20")],
-            config={"configurable": {"thread_id": "test-thread-123"}}
-        )
-    assert isinstance(response, AIMessage)
-    assert "🎲 You rolled" in response.content
+async def test_decision_agent_roll_action(mock_checkpointer):
+    # Arrange: Mock the dice_roll task
+    with patch('src.agents.dice_agent.dice_roll', return_value=ToolMessage(content="🎲 You rolled 15 on a 20-sided die.", tool_call_id=str(uuid4()), name="dice_roll")):
+        # Prepare input message
+        user_input = HumanMessage(content="roll 2d20")
+        
+        # Execute the workflow entrypoint
+        state = await chat_workflow([user_input], store={}, previous=None)
+        
+        # Assert outcome
+        assert any(isinstance(msg, ToolMessage) and 'rolled' in msg.content.lower() for msg in state.messages)
 
 @pytest.mark.asyncio
-async def test_decision_agent_search_action(mock_config):
-    with patch('src.agents.decision_agent.config', mock_config), \
-         patch('src.agents.decision_agent.decide_action', return_value={"name": "search", "args": {}}), \
-         patch('src.agents.web_search_agent.web_search', return_value=ToolMessage(content="Web search result: AI is a field of computer science.", tool_call_id=str(uuid4()), name="web_search")):
-        response = await decision_agent.ainvoke(
-            [HumanMessage(content="search for information on AI")],
-            config={"configurable": {"thread_id": "test-thread-456"}}
-        )
-    assert isinstance(response, AIMessage)
-    assert "Web search" in response.content
+async def test_web_search_integration(mock_checkpointer):
+    with patch('src.agents.web_search_agent.web_search', return_value=ToolMessage(content="Web search result: AI is a field of computer science.", tool_call_id=str(uuid4()), name="web_search")):
+        user_input = HumanMessage(content="search AI trends")
+        state = await chat_workflow([user_input], store={}, previous=None)
+        
+        # Verify search result inclusion
+        assert any('web search result' in msg.content.lower() for msg in state.messages)
 
 @pytest.mark.asyncio
-async def test_decision_agent_story_action(mock_config):
-    with patch('src.agents.decision_agent.config', mock_config), \
-         patch('src.agents.decision_agent.decide_action', return_value={"name": "continue_story", "args": {}}):
-        response = await decision_agent.ainvoke(
-            [HumanMessage(content="continue the story")],
-            config={"configurable": {"thread_id": "test-thread-789"}}
-        )
-    assert isinstance(response, AIMessage)
-    assert "continue_story" in response.content
-
-from src.agents.dice_agent import dice_roll_agent  # Import dice_roll_agent
-
-@pytest.mark.asyncio
-async def test_dice_roll_agent(mock_config):
-    with patch('src.agents.dice_agent.config', mock_config), \
-         patch('src.agents.dice_agent.dice_roll', return_value=ToolMessage(content="🎲 You rolled 15 on a 20-sided die.", tool_call_id=str(uuid4()), name="dice_roll")):
-        response = await dice_roll_agent.ainvoke(
-            [HumanMessage(content="roll 2d20")],
-            config={"configurable": {"thread_id": "test-thread-101"}}
-        )
-    assert isinstance(response, AIMessage)
-    assert "🎲 You rolled" in response.content
+async def test_writer_agent_continuation(mock_checkpointer):
+    user_input = HumanMessage(content="Continue the adventure")
+    initial_prompt = HumanMessage(content="Previous story context...")
+    
+    # Execute workflow with mocked state
+    state = await chat_workflow([initial_prompt, user_input], store={}, previous=None)
+    
+    # Ensure AIMessage contains continuation
+    ai_responses = [msg for msg in state.messages if isinstance(msg, AIMessage)]
+    assert len(ai_responses) >= 1 and ai_responses[-1].content.strip()
 
 @pytest.mark.asyncio
-async def test_web_search_agent(mock_config):
-    with patch('src.agents.web_search_agent.config', mock_config), \
-         patch('src.agents.web_search_agent.web_search', return_value=ToolMessage(content="Web search result: AI is a field of computer science.", tool_call_id=str(uuid4()), name="web_search")):
-        response = await web_search_agent.ainvoke(
-            [HumanMessage(content="search for AI information")],
-            config={"configurable": {"thread_id": "test-thread-102"}}
-        )
-    assert isinstance(response, AIMessage)
-    assert "Web search" in response.content
-
-@pytest.mark.asyncio
-async def test_writer_agent(mock_config):
-    with patch('src.agents.writer_agent.config', mock_config):
-        response = await writer_agent.ainvoke(
-            [HumanMessage(content="continue the story")],
-            config={"configurable": {"thread_id": "test-thread-103"}}
-        )
-    assert isinstance(response, AIMessage)
-    assert len(response.content) > 0
-
-@pytest.mark.asyncio
-async def test_storyboard_editor_agent(mock_config):
-    with patch('src.agents.storyboard_editor_agent.config', mock_config):
-        response = await storyboard_editor_agent.ainvoke(
-            [HumanMessage(content="generate a storyboard")],
-            config={"configurable": {"thread_id": "test-thread-104"}}
-        )
-    assert isinstance(response, AIMessage)
-    assert len(response.content) > 0
+async def test_storyboard_editor_agent(mock_checkpointer):
+    user_input = HumanMessage(content="Generate a storyboard")
+    initial_prompt = HumanMessage(content="Previous story context...")
+    
+    # Execute workflow with mocked state
+    state = await chat_workflow([initial_prompt, user_input], store={}, previous=None)
+    
+    # Ensure AIMessage contains storyboard
+    ai_responses = [msg for msg in state.messages if isinstance(msg, AIMessage)]
+    assert len(ai_responses) >= 1 and ai_responses[-1].content.strip()

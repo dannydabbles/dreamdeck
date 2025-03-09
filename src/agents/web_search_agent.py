@@ -62,16 +62,3 @@ async def web_search(query: str) -> ToolMessage:
             tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="error",
         )
-
-# Initialize the web search agent
-web_search_agent = create_react_agent(
-    model=ChatOpenAI(
-        temperature=0.0,
-        max_tokens=100,
-        streaming=False,
-        verbose=False,
-        request_timeout=os.getenv("LLM_TIMEOUT", 10),
-    ),
-    tools=[web_search],  # <--- FIXED HERE
-    checkpointer=MemorySaver(),
-)

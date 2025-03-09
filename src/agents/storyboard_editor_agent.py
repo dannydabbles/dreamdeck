@@ -27,16 +27,3 @@ async def generate_storyboard(content: str) -> str:
     except Exception as e:
         cl_logger.error(f"Storyboard generation failed: {e}")
         return "Error generating storyboard."
-
-# Initialize the storyboard editor agent
-storyboard_editor_agent = create_react_agent(
-    model=ChatOpenAI(
-        temperature=STORYBOARD_EDITOR_AGENT_TEMPERATURE,
-        max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
-        streaming=STORYBOARD_EDITOR_AGENT_STREAMING,
-        verbose=STORYBOARD_EDITOR_AGENT_VERBOSE,
-        request_timeout=LLM_TIMEOUT * 2,
-    ),
-    tools=[generate_storyboard],
-    checkpointer=MemorySaver(),
-)
