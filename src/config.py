@@ -214,6 +214,21 @@ cl_logger.info(
     f"api_key={OPENAI_SETTINGS['api_key']}"
 )
 
+# Expose image generation settings
+DENOISING_STRENGTH = config.image_generation_payload.get("denoising_strength", 0.6)
+STEPS = config.image_generation_payload.get("steps", 30)
+SAMPLER_NAME = config.image_generation_payload.get("sampler_name", "Euler")
+SCHEDULER = config.image_generation_payload.get("scheduler", "Simple")
+WIDTH = config.image_generation_payload.get("width", 512)
+HEIGHT = config.image_generation_payload.get("height", 512)
+HR_UPSCALER = config.image_generation_payload.get("hr_upscaler", "SwinIR 4x")
+HR_SECOND_PASS_STEPS = config.image_generation_payload.get("hr_second_pass_steps", 10)
+NEGATIVE_PROMPT = config.image_generation_payload.get("negative_prompt", "")
+
+# Expose storyboard generation prompt settings
+STORYBOARD_GENERATION_PROMPT_PREFIX = config.get("storyboard_generation_prompt_prefix", "")
+STORYBOARD_GENERATION_PROMPT_POSTFIX = config.get("storyboard_generation_prompt_postfix", "")
+
 # Search settings
 cl_logger.info(f"Search settings loaded: serpapi_key={SERPAPI_KEY}")
 
