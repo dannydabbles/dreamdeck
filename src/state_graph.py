@@ -12,7 +12,7 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage
 )
-from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
+from chainlit import Message as CLMessage  # Import Chainlit's UI-facing message
 from .state import ChatState
 from .agents.decision_agent import decide_action  # Import decide_action
 from .agents.dice_agent import dice_roll  # Import dice_roll
@@ -146,6 +146,19 @@ async def chat_workflow(
             if storyboard:
                 state.metadata["storyboard"] = storyboard
                 await process_storyboard_images(storyboard, state.current_message_id).result()
+
+        # Convert LangGraph messages to Chainlit-compatible format for display
+        cl_messages = [
+            CLMessage(
+                content=msg.content,
+                author="ai" if isinstance(msg, AIMessage) else "user" if isinstance(msg, HumanMessage) else "tool",
+                tool_call_id=msg.tool_call_id if isinstance(msg, ToolMessage) else None,
+            )
+            for msg in state.messages
+        ]
+        # Send to Chainlit UI
+        for cl_msg in cl_messages:
+            await cl_msg.send()
 
         # Save state
         await save_chat_memory(state, store)

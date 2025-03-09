@@ -20,15 +20,13 @@ async def get_chat_memory(store: DatabasePool) -> ChatState:
         raise
 
 
-async def save_chat_memory(state: ChatState, store: DatabasePool) -> None:
+async def save_chat_memory(state: ChatState, store: BaseStore) -> None:
     """Save chat memory to store."""
     try:
-        await store.get_pool().put(
-            "chat_state",
-            state.current_message_id,
-            state.dict(),
-        )
-        cl_logger.info(f"Chat state saved successfully: {state.current_message_id}")
+        # Persist Chainlit thread history separately
+        await store.save_chainlit_history(state.thread_id, state.to_dict())
+        # Save LangGraph state
+        await store.save_langgraph_state(state)
     except Exception as e:
         cl_logger.error(f"Failed to save chat state: {str(e)}", exc_info=True)
         raise

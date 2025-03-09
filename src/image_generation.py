@@ -10,7 +10,7 @@ from tenacity import (
 )
 from chainlit import element as cl_element  # Import cl_element
 from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
-from chainlit.types import CLImage  # Import CLImage
+from chainlit import Image as CLImage  # Import Image from Chainlit
 from .config import (
     DENOISING_STRENGTH,
     CFG_SCALE,

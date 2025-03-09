@@ -18,7 +18,8 @@ from chainlit import (
     Message as CLMessage,
     element as cl_element,
 )
-from chainlit.types import SystemMessage, HumanMessage, AIMessage
+from chainlit import Message as CLMessage  # Import Chainlit's UI-facing message
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage  # Import LangGraph's message types
 from langchain_core.messages import ToolMessage
 from chainlit import LangchainCallbackHandler
 from langchain_community.document_loaders import (
