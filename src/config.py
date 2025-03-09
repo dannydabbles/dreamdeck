@@ -216,7 +216,7 @@ cl_logger.info(
     f"api_key={OPENAI_SETTINGS['api_key']}"
 )
 
-# Expose image generation settings
+CFG_SCALE = config.image_generation_payload.get("cfg_scale", 3.5)
 DENOISING_STRENGTH = config.image_generation_payload.get("denoising_strength", 0.6)
 STEPS = config.image_generation_payload.get("steps", 30)
 SAMPLER_NAME = config.image_generation_payload.get("sampler_name", "Euler")
