@@ -15,21 +15,25 @@ def mock_checkpointer():
     return MemorySaver()
 
 @pytest.fixture
-def mock_runnable_config(mock_checkpointer):
-    return {"checkpointer": mock_checkpointer}
+def mock_store():
+    class MockStore:
+        def put(self, *args): pass
+        def get(self, *args): return {}
+    return MockStore()
 
 @pytest.mark.asyncio
-async def test_decision_agent_roll_action(mock_checkpointer):
+async def test_decision_agent_roll_action(mock_checkpointer, mock_store):
     # Arrange: Mock the dice_roll task
     with patch('src.agents.dice_agent.dice_roll', return_value=ToolMessage(content="🎲 You rolled 15 on a 20-sided die.", tool_call_id=str(uuid4()), name="dice_roll")):
         # Prepare input message
         user_input = HumanMessage(content="roll 2d20")
         
         # Execute the workflow entrypoint
-        state = await chat_workflow([user_input], store={}, previous=None)
+        state = await chat_workflow([user_input], store=mock_store, previous=None)
         
         # Assert outcome
         assert any(isinstance(msg, ToolMessage) and 'rolled' in msg.content.lower() for msg in state.messages)
+        assert mock_store.put.called  # VERIFY STORE USAGE
 
 @pytest.mark.asyncio
 async def test_web_search_integration(mock_checkpointer):
