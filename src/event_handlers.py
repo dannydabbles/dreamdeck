@@ -300,21 +300,22 @@ async def on_message(message: CLMessage):
     cb = LangchainCallbackHandler()
 
     try:
-        # Log the state before processing
-        cl_element.logger.debug(f"Processing message: {message.content}")
-        cl_element.logger.debug(f"Current state: {state}")
-
+        # Load from checkpoint
+        prev_state = await chat_workflow.restore(previous_id=state.thread_id)
         # Add user message to state
-        state.messages.append(CLMessage(content=message.content, type="user"))
+        state.messages.append({"content": message.content, "type": "user"})
 
         # Format system message before generating response
         state.format_system_message()
 
         # Generate AI response using the chat workflow
-        state = await chat_workflow(state.messages, store=cl_user_session.get("vector_memory"), previous=state)
+        new_state = await chat_workflow(state.to_langchain(), store=cl_user_session.get("vector_memory"), previous=prev_state)
+
+        # Save to checkpoint
+        await new_state.save()
 
         # Update session state
-        cl_user_session.set("state", state)
+        cl_user_session.set("state", new_state)
 
     except Exception as e:
         cl_element.logger.error(f"Runnable stream failed: {e}", exc_info=True)
@@ -327,7 +328,7 @@ async def on_message(message: CLMessage):
         return
 
     # Update session state
-    cl_user_session.set("state", state)
+    cl_user_session.set("state", new_state)
 
 
 async def load_knowledge_documents():
