@@ -7,8 +7,9 @@ from langchain_core.messages import (
     HumanMessage,
     AIMessage,
     SystemMessage,
-    ToolMessage,  # Import ToolMessage
+    ToolMessage,  # Import ToolMessage from LangGraph
 )
+from chainlit import Message as CLMessage  # Import Chainlit's UI-facing message
 import operator
 import chainlit as cl
 
