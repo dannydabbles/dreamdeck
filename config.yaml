@@ -293,6 +293,9 @@ agents:
     streaming: false
     verbose: true
 
+storyboard_generation_prompt_prefix: "masterpiece,best quality,amazing quality"  # Add this line
+storyboard_generation_prompt_postfix: ""  # Add this line
+
 search:
   serpapi_key: ""
 
