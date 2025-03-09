@@ -81,6 +81,9 @@ async def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
             name="error",
         )
 
+# Export the function as dice_roll_agent
+dice_roll_agent = dice_roll
+
 def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
     """Parse dice input string into a list of (sides, count) tuples."""
     pattern = r"(\d*)d(\d+)"
