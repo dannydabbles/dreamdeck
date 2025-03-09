@@ -45,6 +45,10 @@ class ConfigSchema(BaseModel):
     caching: dict
     agents: dict  # Add agents configuration
     chainlit: dict  # Add chainlit configuration
+    search_enabled: bool  # Added
+    knowledge_directory: str  # Added
+    image_settings: dict  # Added
+    rate_limits: dict  # Added
     _env_prefix: ClassVar[str] = "APP_"  # NEW: Enable env var loading with prefix
     model_config = ConfigDict(extra='forbid')  # ENFORCE strict validation
 
