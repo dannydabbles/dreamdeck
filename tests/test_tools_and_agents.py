@@ -29,7 +29,13 @@ async def test_decision_agent_roll_action(mock_checkpointer, mock_store):
         user_input = HumanMessage(content="roll 2d20")
         
         # Execute the workflow entrypoint
-        state = await chat_workflow([user_input], store=mock_store, previous=None)
+        input_data = {
+            "messages": [user_input],
+            "store": mock_store,
+            "previous": None
+        }
+        config = {"configurable": {"thread_id": "test_thread"}}
+        state = await chat_workflow.ainvoke(input=input_data, config=config)
         
         # Assert outcome
         assert any(isinstance(msg, ToolMessage) and 'rolled' in msg.content.lower() for msg in state.messages)
@@ -39,7 +45,13 @@ async def test_decision_agent_roll_action(mock_checkpointer, mock_store):
 async def test_web_search_integration(mock_checkpointer):
     with patch('src.agents.web_search_agent.web_search', return_value=ToolMessage(content="Web search result: AI is a field of computer science.", tool_call_id=str(uuid4()), name="web_search")):
         user_input = HumanMessage(content="search AI trends")
-        state = await chat_workflow([user_input], store={}, previous=None)
+        input_data = {
+            "messages": [user_input],
+            "store": {},
+            "previous": None
+        }
+        config = {"configurable": {"thread_id": "test_thread"}}
+        state = await chat_workflow.ainvoke(input=input_data, config=config)
         
         # Verify search result inclusion
         assert any('web search result' in msg.content.lower() for msg in state.messages)
@@ -50,7 +62,13 @@ async def test_writer_agent_continuation(mock_checkpointer):
     initial_prompt = HumanMessage(content="Previous story context...")
     
     # Execute workflow with mocked state
-    state = await chat_workflow([initial_prompt, user_input], store={}, previous=None)
+    input_data = {
+        "messages": [initial_prompt, user_input],
+        "store": {},
+        "previous": None
+    }
+    config = {"configurable": {"thread_id": "test_thread"}}
+    state = await chat_workflow.ainvoke(input=input_data, config=config)
     
     # Ensure AIMessage contains continuation
     ai_responses = [msg for msg in state.messages if isinstance(msg, AIMessage)]
@@ -62,7 +80,13 @@ async def test_storyboard_editor_agent(mock_checkpointer):
     initial_prompt = HumanMessage(content="Previous story context...")
     
     # Execute workflow with mocked state
-    state = await chat_workflow([initial_prompt, user_input], store={}, previous=None)
+    input_data = {
+        "messages": [initial_prompt, user_input],
+        "store": {},
+        "previous": None
+    }
+    config = {"configurable": {"thread_id": "test_thread"}}
+    state = await chat_workflow.ainvoke(input=input_data, config=config)
     
     # Ensure AIMessage contains storyboard
     ai_responses = [msg for msg in state.messages if isinstance(msg, AIMessage)]
