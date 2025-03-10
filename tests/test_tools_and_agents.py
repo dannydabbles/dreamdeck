@@ -6,7 +6,6 @@ from src.state import ChatState
 from src.state_graph import chat_workflow
 from langchain_core.messages import ToolMessage, HumanMessage, AIMessage
 from chainlit import context, user_session, message
-from chainlit.sdk import ChainlitSdk
 
 @pytest.fixture
 def mock_chainlit_context():
