@@ -1,4 +1,5 @@
 from langgraph.func import entrypoint, task
+from .gm_agent import gm_agent  # Adjust path as needed
 
 @task
 def director_decision(user_input: str) -> str:
