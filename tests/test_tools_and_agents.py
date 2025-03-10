@@ -1,6 +1,7 @@
 import pytest
-from unittest.mock import MagicMock, patch, Mock
-from chainlit import Session, context
+from unittest.mock import MagicMock, patch
+from chainlit import App
+from chainlit.user_session import UserSession
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from uuid import uuid4
@@ -10,7 +11,6 @@ from src.state_graph import chat_workflow
 def mock_chainlit_context():
     # Create mock session and context
     # Modern Chainlit context setup (replace with actual context provider)
-    from chainlit import App, UserSession
     app = App()
     user_session = UserSession(session_id="test_thread_id", user_id="test_user_id", user_name="Test User")
     context = app.create_context(user_session)
