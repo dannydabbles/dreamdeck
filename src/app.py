@@ -1,6 +1,5 @@
 import os
 import logging
-from chainlit.server import app as chainlit_app
 from src.initialization import init_db, DatabasePool
 from src.stores import VectorStore  # Import VectorStore
 from src.agents.decision_agent import decision_agent
@@ -40,7 +39,8 @@ async def main():
         cl_user_session.set("web_search_agent", web_search_agent)
 
         # Run Chainlit server
-        await chainlit_app.run()
+        from chainlit.cli import run_chainlit
+        await run_chainlit(__file__)
     except Exception as e:
         cl_logger.error(f"Application failed to start: {e}", exc_info=True)
         raise
