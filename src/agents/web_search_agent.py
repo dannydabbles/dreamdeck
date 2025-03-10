@@ -13,11 +13,13 @@ from ..config import SERPAPI_KEY, WEB_SEARCH_ENABLED
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _web_search(query: str) -> ToolMessage:
+async def _web_search(query: str, store=None, previous=None) -> ToolMessage:
     """Perform a web search using SerpAPI.
 
     Args:
         query (str): The search query.
+        store (BaseStore, optional): The store for chat state. Defaults to None.
+        previous (ChatState, optional): Previous chat state. Defaults to None.
 
     Returns:
         ToolMessage: The search result.
