@@ -9,26 +9,18 @@ from src.state_graph import chat_workflow
 @pytest.fixture
 def mock_chainlit_context():
     # Create mock session and context
-    mock_session = MagicMock(spec=Session)
-    mock_session.id = "test_thread_id"
-    mock_session.user = MagicMock(id="test_user_id", name="Test User")
-    mock_session.is_chat = True
+    # Modern Chainlit context setup (replace with actual context provider)
+    from chainlit import App, UserSession
+    app = App()
+    user_session = UserSession(session_id="test_thread_id", user_id="test_user_id", user_name="Test User")
+    context = app.create_context(user_session)
+    context.chat = MagicMock()
+    context.chat_context = MagicMock()
 
-    mock_emitter = MagicMock()
-    mock_context = ChainlitContext(
-        session=mock_session,
-        emitter=mock_emitter,
-        user=mock_session.user,
-    )
-    mock_context.chat = MagicMock()
-    mock_context.chat_context = MagicMock()
-
-    # Initialize the HTTP context
-    chainlit_context.init_http_context(mock_context)
-    yield mock_context  # Let the test run
+    yield context
 
     # Cleanup (if needed)
-    chainlit_context.reset()
+    context.reset()
 
 @pytest.fixture
 def mock_checkpointer():
