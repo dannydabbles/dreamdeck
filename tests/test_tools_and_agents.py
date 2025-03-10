@@ -6,7 +6,6 @@ from src.state import ChatState
 from src.state_graph import chat_workflow
 from langchain_core.messages import ToolMessage, HumanMessage, AIMessage
 from chainlit import context, user_session, message
-from chainlit.types import ChainlitRequest
 from chainlit.sdk import ChainlitSdk
 
 @pytest.fixture
@@ -22,10 +21,6 @@ def mock_chainlit_context():
     # Mock message sending
     cl_message.Message = MagicMock()
     cl_message.Message.send = AsyncMock()
-
-    # Mock vector store and database connections
-    cl_user_session.set("vector_memory", MagicMock())
-    cl_user_session.set("database", MagicMock())
 
     # Mock LangGraph store
     from langgraph.checkpoint.memory import MemorySaver
