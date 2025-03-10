@@ -13,8 +13,7 @@ from ..config import SERPAPI_KEY, WEB_SEARCH_ENABLED
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-@task
-async def web_search(query: str) -> ToolMessage:
+async def _web_search(query: str) -> ToolMessage:
     """Perform a web search using SerpAPI.
 
     Args:
@@ -62,5 +61,9 @@ async def web_search(query: str) -> ToolMessage:
             tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="error",
         )
+
+@task
+async def web_search(query: str, **kwargs) -> ToolMessage:
+    return await _web_search(query)
 
 web_search_agent = web_search
