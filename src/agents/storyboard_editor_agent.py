@@ -11,8 +11,7 @@ from ..config import STORYBOARD_EDITOR_AGENT_TEMPERATURE, STORYBOARD_EDITOR_AGEN
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-@task
-async def generate_storyboard(content: str) -> str:
+async def _generate_storyboard(content: str) -> str:
     """Generate a storyboard based on the input content.
 
     Args:
@@ -27,5 +26,9 @@ async def generate_storyboard(content: str) -> str:
     except Exception as e:
         cl_logger.error(f"Storyboard generation failed: {e}")
         return "Error generating storyboard."
+    
+@task
+async def generate_storyboard(content: str) -> str:
+    return await _generate_storyboard(content)
 
 storyboard_editor_agent = generate_storyboard  # Expose the function as storyboard_editor_agent
