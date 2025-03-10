@@ -5,7 +5,11 @@ from langgraph.checkpoint.memory import MemorySaver
 from src.state import ChatState
 from src.state_graph import chat_workflow
 from langchain_core.messages import ToolMessage, HumanMessage, AIMessage
-from src.agents import decision_agent, dice_roll_agent, web_search_agent, writer_agent, storyboard_editor_agent
+from src.agents.decision_agent import decision_agent
+from src.agents.dice_agent import dice_agent
+from src.agents.web_search_agent import web_search_agent
+from src.agents.writer_agent import writer_agent
+from src.agents.storyboard_editor_agent import storyboard_editor_agent
 
 @pytest.fixture
 def mock_langgraph_context():
@@ -40,6 +44,6 @@ async def test_storyboard_editor_agent(mock_langgraph_context):
     assert result.content.strip()
 
 @pytest.mark.asyncio
-async def test_dice_roll_agent():
-    result = await dice_roll_agent("d20", {})
+async def test_dice_agent():
+    result = await dice_agent("d20", {})
     assert "rolled" in result.content.lower()

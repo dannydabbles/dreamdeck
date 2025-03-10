@@ -101,3 +101,5 @@ def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
         except ValueError as e:
             cl_logger.error(f"Invalid dice specification: {e}")
             raise ValueError("Invalid dice specification") from e
+
+dice_agent = dice_roll
