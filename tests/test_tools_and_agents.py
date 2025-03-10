@@ -1,7 +1,6 @@
 import pytest
-from unittest.mock import MagicMock, patch
-from chainlit import context as chainlit_context
-from chainlit.types import ChainlitContext, Session
+from unittest.mock import MagicMock, patch, Mock
+from chainlit import Session, context
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from uuid import uuid4
@@ -57,11 +56,11 @@ async def test_decision_agent_roll_action(mock_checkpointer, mock_store, mock_ch
             "previous": None
         }
         config = {"configurable": {"thread_id": "test_thread"}}
-        state = await chat_workflow.ainvoke(input=input_data, config=config)
+        state = await chat_workflow.invoke(input_data, config=config)
         
         # Assert outcome
         assert any(isinstance(msg, ToolMessage) and 'rolled' in msg.content.lower() for msg in state.messages)
-        assert mock_store.put.called  # VERIFY STORE USAGE
+        assert await mock_store.put.called  # VERIFY STORE USAGE
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_chainlit_context")
@@ -75,7 +74,7 @@ async def test_web_search_integration(mock_checkpointer):
             "previous": None
         }
         config = {"configurable": {"thread_id": "test_thread"}}
-        state = await chat_workflow.ainvoke(input=input_data, config=config)
+        state = await chat_workflow.invoke(input_data, config=config)
         
         # Verify search result inclusion
         assert any('web search result' in msg.content.lower() for msg in state.messages)
@@ -94,7 +93,7 @@ async def test_writer_agent_continuation(mock_checkpointer):
             "previous": None
         }
         config = {"configurable": {"thread_id": "test_thread"}}
-        state = await chat_workflow.ainvoke(input=input_data, config=config)
+        state = await chat_workflow.invoke(input_data, config=config)
         
         # Ensure AIMessage contains continuation
         ai_responses = [msg for msg in state.messages if isinstance(msg, AIMessage)]
@@ -114,7 +113,7 @@ async def test_storyboard_editor_agent(mock_checkpointer):
             "previous": None
         }
         config = {"configurable": {"thread_id": "test_thread"}}
-        state = await chat_workflow.ainvoke(input=input_data, config=config)
+        state = await chat_workflow.invoke(input_data, config=config)
         
         # Ensure AIMessage contains storyboard
         ai_responses = [msg for msg in state.messages if isinstance(msg, AIMessage)]
