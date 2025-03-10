@@ -13,18 +13,29 @@ from chainlit import context as chainlit_context
 
 @pytest.fixture
 def mock_chainlit_context():
+    from chainlit import context as chainlit_context
+    from unittest.mock import MagicMock
+
     # Mock Chainlit session and context
     mock_session = MagicMock()
-    mock_session.id = "test_session_id"  # Required for thread_id in models.py
-    
+    mock_session.id = "test_thread_id"  # Matches what your code expects
+    mock_session.user = MagicMock(id="test_user_id", name="Test User")
+    mock_session.is_chat = True  # Required for WebSocket context
+
     mock_context = MagicMock()
     mock_context.session = mock_session
-    mock_context.user = MagicMock(id="test_user_id")
-    
-    # Initialize the HTTP context with mocks
+    mock_context.user = mock_session.user
+    mock_context.emitter = MagicMock()  # Required for sending messages
+
+    # Initialize the HTTP/WebSocket context with mocks
     chainlit_context.init_http_context(mock_context)
     
-    yield  # Let the test run
+    # Ensure the user/session is accessible globally
+    with patch("chainlit.context.chainlit_app") as mock_app:
+        mock_app.user = mock_session.user
+        mock_app.session = mock_session
+        
+        yield  # Let the test run
     
     # Cleanup after test
     chainlit_context.reset()
