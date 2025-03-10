@@ -21,8 +21,28 @@ class DiceConfig(BaseModel):
     """Pydantic model for dice configuration."""
     sides: int = Field(default=20, description="Number of sides for dice rolls")
 
-from typing import ClassVar  # Move ClassVar to typing
-from pydantic import ConfigDict  # Keep ConfigDict from pydantic
+class DecisionAgentConfig(BaseModel):
+    temperature: float
+    max_tokens: int
+    streaming: bool
+    verbose: bool
+
+class WriterAgentConfig(BaseModel):
+    temperature: float
+    max_tokens: int
+    streaming: bool
+    verbose: bool
+
+class StoryboardEditorAgentConfig(BaseModel):
+    temperature: float
+    max_tokens: int
+    streaming: bool
+    verbose: bool
+
+class AgentsConfig(BaseModel):
+    decision_agent: DecisionAgentConfig
+    writer_agent: WriterAgentConfig
+    storyboard_editor_agent: StoryboardEditorAgentConfig
 
 class DefaultsConfig(BaseModel):
     db_file: str = "chainlit.db"
@@ -62,7 +82,7 @@ class ConfigSchema(BaseModel):
     security: dict
     monitoring: dict
     caching: dict
-    agents: dict  # Add agents configuration
+    agents: AgentsConfig  # Replace dict with AgentsConfig
     chainlit: dict  # Add chainlit configuration
     search_enabled: bool  # Added
     knowledge_directory: str  # Added

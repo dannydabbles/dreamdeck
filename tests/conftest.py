@@ -1,5 +1,5 @@
 import pytest
-from src.config import config, DefaultsConfig, LlmConfig, DiceConfig, FeatureConfig
+from src.config import config, DefaultsConfig, LlmConfig, DiceConfig, FeatureConfig, DecisionAgentConfig, WriterAgentConfig, StoryboardEditorAgentConfig, AgentsConfig
 
 @pytest.fixture(autouse=True)
 def mock_env_vars(monkeypatch):
@@ -22,7 +22,11 @@ def mock_env_vars(monkeypatch):
             security={},
             monitoring={},
             caching={},
-            agents={},
+            agents=AgentsConfig(
+                decision_agent=DecisionAgentConfig(temperature=0.2, max_tokens=100, streaming=True, verbose=True),
+                writer_agent=WriterAgentConfig(temperature=0.7, max_tokens=8000, streaming=True, verbose=True),
+                storyboard_editor_agent=StoryboardEditorAgentConfig(temperature=0.7, max_tokens=8000, streaming=False, verbose=True)
+            ),
             chainlit={},
             search_enabled=False,
             knowledge_directory="",
