@@ -11,11 +11,13 @@ from ..config import WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_A
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _generate_story(content: str) -> str:
+async def _generate_story(content: str, store=None, previous=None) -> str:
     """Generate a story segment based on the input content.
 
     Args:
         content (str): The input content for the story.
+        store (BaseStore, optional): The store for chat state. Defaults to None.
+        previous (ChatState, optional): Previous chat state. Defaults to None.
 
     Returns:
         str: The generated story segment.

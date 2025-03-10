@@ -14,9 +14,8 @@ from src.agents.storyboard_editor_agent import _generate_storyboard
 @pytest.fixture
 def mock_langgraph_context():
     return {
-        "store": MagicMock(),
+        "config": {"configurable": {"thread_id": "test-thread-id"}},
         "previous": ChatState(),
-        "config": {"configurable": {"thread_id": "test-thread-id"}}
     }
 
 @pytest.mark.asyncio

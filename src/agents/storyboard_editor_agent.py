@@ -11,11 +11,13 @@ from ..config import STORYBOARD_EDITOR_AGENT_TEMPERATURE, STORYBOARD_EDITOR_AGEN
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _generate_storyboard(content: str) -> str:
+async def _generate_storyboard(content: str, store=None, previous=None) -> str:
     """Generate a storyboard based on the input content.
 
     Args:
         content (str): The input content for the storyboard.
+        store (BaseStore, optional): The store for chat state. Defaults to None.
+        previous (ChatState, optional): Previous chat state. Defaults to None.
 
     Returns:
         str: The generated storyboard.

@@ -18,11 +18,13 @@ from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _decide_action(user_input: str) -> dict:
+async def _decide_action(user_input: str, store=None, previous=None) -> dict:
     """Determine the next action based on user input.
 
     Args:
         user_input (str): The user's input.
+        store (BaseStore, optional): The store for chat state. Defaults to None.
+        previous (ChatState, optional): Previous chat state. Defaults to None.
 
     Returns:
         dict: The next action to take.

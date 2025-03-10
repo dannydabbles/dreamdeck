@@ -19,14 +19,25 @@ with open(CONFIG_FILE, "r") as f:
 
 class DiceConfig(BaseModel):
     """Pydantic model for dice configuration."""
-    sides: int = Field(description="Number of sides for dice rolls")
+    sides: int = Field(default=20, description="Number of sides for dice rolls")
 
 from typing import ClassVar  # Move ClassVar to typing
 from pydantic import ConfigDict  # Keep ConfigDict from pydantic
 
+class LlmConfig(BaseModel):
+    temperature: float
+    max_tokens: int
+    model_name: str
+    streaming: bool
+    timeout: int
+    presence_penalty: float
+    frequency_penalty: float
+    top_p: float
+    verbose: bool
+
 class ConfigSchema(BaseModel):
     """Pydantic model for the configuration schema."""
-    llm: dict
+    llm: LlmConfig
     prompts: dict
     image_generation_payload: dict
     timeouts: dict
