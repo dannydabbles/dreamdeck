@@ -15,8 +15,7 @@ from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-@task
-async def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
+async def _dice_roll(input_str: Optional[str] = None) -> ToolMessage:
     """Roll dice based on user input.
 
     Args:
@@ -80,6 +79,10 @@ async def dice_roll(input_str: Optional[str] = None) -> ToolMessage:
             tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="error",
         )
+
+@task
+async def dice_roll(input_str: Optional[str] = None, **kwargs) -> ToolMessage:
+    return await _dice_roll(input_str)
 
 # Export the function as dice_roll_agent
 dice_roll_agent = dice_roll

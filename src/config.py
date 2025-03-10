@@ -71,11 +71,11 @@ def load_config() -> ConfigSchema:
         ConfigSchema: Validated configuration object
     """
     try:
-        config = ConfigSchema.model_validate(config_yaml)  # USE VALIDATOR
+        config_data = ConfigSchema.model_validate(config_yaml)  # USE VALIDATOR
     except ValidationError as e:
         cl_logger.error(f"Validation failed: {e.errors()}")  # BETTER ERROR REPORTING
         raise
-    return config
+    return config_data  # Ensure returns the validated model
 
 # Load the config when the module is imported
 config = load_config()

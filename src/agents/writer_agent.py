@@ -11,8 +11,7 @@ from ..config import WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_A
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-@task
-async def generate_story(content: str) -> str:
+async def _generate_story(content: str) -> str:
     """Generate a story segment based on the input content.
 
     Args:
@@ -27,5 +26,9 @@ async def generate_story(content: str) -> str:
     except Exception as e:
         cl_logger.error(f"Story generation failed: {e}")
         return "Error generating story."
+
+@task
+async def generate_story(content: str, **kwargs) -> str:
+    return await _generate_story(content)
 
 writer_agent = generate_story  # Expose the function as writer_agent

@@ -18,8 +18,7 @@ from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-@task
-async def decide_action(user_input: str) -> dict:
+async def _decide_action(user_input: str) -> dict:
     """Determine the next action based on user input.
 
     Args:
@@ -38,6 +37,10 @@ async def decide_action(user_input: str) -> dict:
     except Exception as e:
         cl_logger.error(f"Decision failed: {e}")
         return {"name": "continue_story", "args": {}}
+
+@task
+async def decide_action(user_input: str, **kwargs) -> dict:
+    return await _decide_action(user_input)
 
 # Expose the function as decision_agent
 decision_agent = decide_action
