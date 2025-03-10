@@ -50,6 +50,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(main())
+    from chainlit.cli import run_chainlit
+    run_chainlit(__file__)

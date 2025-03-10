@@ -1,0 +1,9 @@
+import pytest
+from unittest.mock import patch
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_chainlit():
+    # Mock CLI arguments to prevent actual server start
+    with patch("sys.argv", ["chainlit", "test"]):
+        from chainlit.cli import run_chainlit
+        run_chainlit("src/app.py")

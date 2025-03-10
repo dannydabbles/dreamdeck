@@ -1,43 +1,30 @@
 import pytest
-from src.state_graph import chat_workflow  # Main entrypoint
-from src.agents.dice_agent import dice_roll  # Task function
-from src.agents.web_search_agent import web_search  # Task function
-from src.config import config
-from langgraph.func import task, entrypoint
-from langgraph.checkpoint.memory import MemorySaver
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
-from unittest.mock import MagicMock, patch
-from uuid import uuid4  # Import uuid4
+from unittest.mock import MagicMock
 from chainlit import context as chainlit_context
+from chainlit.types import ChainlitContext, Session
 
 @pytest.fixture
 def mock_chainlit_context():
-    from chainlit import context as chainlit_context
-    from unittest.mock import MagicMock
-
-    # Mock Chainlit session and context
-    mock_session = MagicMock()
-    mock_session.id = "test_thread_id"  # Matches what your code expects
+    # Create mock session and context
+    mock_session = MagicMock(spec=Session)
+    mock_session.id = "test_thread_id"
     mock_session.user = MagicMock(id="test_user_id", name="Test User")
-    mock_session.is_chat = True  # Required for WebSocket context
+    mock_session.is_chat = True
 
-    mock_context = MagicMock()
-    mock_context.session = mock_session
-    mock_context.user = mock_session.user
-    mock_context.emitter = MagicMock()  # Required for sending messages
+    mock_emitter = MagicMock()
+    mock_context = ChainlitContext(
+        session=mock_session,
+        emitter=mock_emitter,
+        user=mock_session.user,
+    )
+    mock_context.chat = MagicMock()
+    mock_context.chat_context = MagicMock()
 
-    # Initialize the HTTP/WebSocket context with mocks
+    # Initialize the HTTP context
     chainlit_context.init_http_context(mock_context)
-    
-    # Ensure the user/session is accessible globally
-    with patch("chainlit.context.chainlit_app") as mock_app:
-        mock_app.user = mock_session.user
-        mock_app.session = mock_session
-        
-        yield  # Let the test run
-    
-    # Cleanup after test
+    yield mock_context  # Let the test run
+
+    # Cleanup (if needed)
     chainlit_context.reset()
 
 @pytest.fixture
@@ -53,7 +40,7 @@ def mock_store():
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_chainlit_context")
-async def test_decision_agent_roll_action(mock_checkpointer, mock_store):
+async def test_decision_agent_roll_action(mock_checkpointer, mock_store, mock_chainlit_context):
     with patch('src.agents.dice_agent.dice_roll', return_value=ToolMessage(content="🎲 You rolled 15 on a 20-sided die.", tool_call_id=str(uuid4()), name="dice_roll")), \
          patch('src.event_handlers.cl_user_session.get', return_value={}):
         # Prepare input message
