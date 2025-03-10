@@ -35,6 +35,11 @@ class LlmConfig(BaseModel):
     top_p: float
     verbose: bool
 
+class FeatureConfig(BaseModel):
+    dice_rolling: bool
+    web_search: bool
+    image_generation: bool
+
 class ConfigSchema(BaseModel):
     """Pydantic model for the configuration schema."""
     llm: LlmConfig
@@ -47,7 +52,7 @@ class ConfigSchema(BaseModel):
     paths: dict
     openai: dict
     search: dict
-    features: dict  # Add agents configuration
+    features: FeatureConfig  # Use the nested FeatureConfig model
     error_handling: dict
     logging: dict
     api: dict
