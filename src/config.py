@@ -69,7 +69,7 @@ class ConfigSchema(BaseModel):
     image_settings: dict  # Added
     rate_limits: dict  # Added
     storyboard_generation_prompt_prefix: str = ""  # Add this line
-    storyboard_generation_prompt_postfix: ""  # Add this line
+    storyboard_generation_prompt_postfix: str = ""  # Fixed here (added 'str = ')
     _env_prefix: ClassVar[str] = "APP_"  # NEW: Enable env var loading with prefix
     model_config = ConfigDict(extra='forbid')  # ENFORCE strict validation
 
