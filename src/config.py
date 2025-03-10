@@ -24,6 +24,9 @@ class DiceConfig(BaseModel):
 from typing import ClassVar  # Move ClassVar to typing
 from pydantic import ConfigDict  # Keep ConfigDict from pydantic
 
+class DefaultsConfig(BaseModel):
+    db_file: str = "chainlit.db"
+
 class LlmConfig(BaseModel):
     temperature: float
     max_tokens: int
@@ -47,7 +50,7 @@ class ConfigSchema(BaseModel):
     image_generation_payload: dict
     timeouts: dict
     refusal_list: list
-    defaults: dict
+    defaults: DefaultsConfig  # Use the nested DefaultsConfig model
     dice: DiceConfig  # Use the nested DiceConfig model
     paths: dict
     openai: dict
@@ -66,7 +69,7 @@ class ConfigSchema(BaseModel):
     image_settings: dict  # Added
     rate_limits: dict  # Added
     storyboard_generation_prompt_prefix: str = ""  # Add this line
-    storyboard_generation_prompt_postfix: str = ""  # Add this line
+    storyboard_generation_prompt_postfix: ""  # Add this line
     _env_prefix: ClassVar[str] = "APP_"  # NEW: Enable env var loading with prefix
     model_config = ConfigDict(extra='forbid')  # ENFORCE strict validation
 
@@ -160,6 +163,7 @@ logging.basicConfig(
 )
 
 # Database configuration with fallbacks
+DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
 cl_logger.info(f"Database URL loaded: {DATABASE_URL}")
 
 # LLM configuration
@@ -219,7 +223,7 @@ cl_logger.info(f"LLM max tokens loaded: {LLM_MAX_TOKENS}")
 cl_logger.info(f"Refusal list loaded: {REFUSAL_LIST}")
 
 # Defaults
-cl_logger.info(f"Default DB file loaded: {DEFAULTS['db_file']}")
+cl_logger.info(f"Default DB file loaded: {config.defaults.db_file}")
 
 # Dice settings
 cl_logger.info(f"Default dice sides loaded: {DICE_SIDES}")
