@@ -1,10 +1,10 @@
 import pytest
-from src.config import config, DefaultsConfig
+from src.config import config, DefaultsConfig, LlmConfig, DiceConfig, FeatureConfig
 
 @pytest.fixture(autouse=True)
 def mock_env_vars(monkeypatch):
     monkeypatch.setattr("src.config.config", 
-        ConfigSchema(
+        config.ConfigSchema(
             defaults=DefaultsConfig(db_file=":memory:?check_same_thread=False"),
             llm=LlmConfig(temperature=0.6, max_tokens=8000, model_name="gpt-3.5-turbo", streaming=True, timeout=180, presence_penalty=0.1, frequency_penalty=0.1, top_p=1.0, verbose=True),
             prompts={},
