@@ -18,9 +18,8 @@ from chainlit import (
     Message as CLMessage,
     element as cl_element,
 )
-from chainlit import Message as CLMessage  # Import Chainlit's UI-facing message
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage  # Import LangGraph's message types
-from langchain_core.messages import ToolMessage
+from chainlit.message import Message as CLMessage  # Import Chainlit's UI-facing message
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from chainlit import LangchainCallbackHandler
 from langchain_community.document_loaders import (
     PyMuPDFLoader,

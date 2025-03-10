@@ -1,19 +1,27 @@
 import pytest
-from unittest.mock import MagicMock, patch
-from chainlit.user_session import UserSession
-from langgraph.checkpoint.memory import MemorySaver
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-from uuid import uuid4
-from src.state_graph import chat_workflow
+from unittest.mock import MagicMock, AsyncMock
+from chainlit import context, user_session, message
+from chainlit.types import ChainlitRequest
+from chainlit.sdk import ChainlitSdk
 
 @pytest.fixture
 def mock_chainlit_context():
-    from chainlit import context
-
-    # Manually set up context variables
-    context.cycle()  # Start fresh context
-    context.session = MagicMock()
+    # Initialize Chainlit SDK context
+    sdk = ChainlitSdk()
+    context.cycle()  # Reset context
+    context.session = MagicMock(id="test-session-id")
     context.emitter = MagicMock()
+    context.app_config = MagicMock()
+    user_session.set("state", ChatState())
+
+    # Mock user session and thread ID
+    user_session.set("session", MagicMock(id="test-session-id"))
+    context.session.id = "test-session-id"
+
+    # Mock message sending
+    message.Message = MagicMock()
+    message.Message.send = AsyncMock()
+
     yield context
 
     context.reset()
@@ -43,7 +51,7 @@ async def test_decision_agent_roll_action(mock_checkpointer, mock_store, mock_ch
             "store": mock_store,
             "previous": None
         }
-        config = {"configurable": {"thread_id": "test_thread"}}
+        config = {"configurable": {"thread_id": "test-thread-id"}}
         state = await chat_workflow.invoke(input_data, config=config)
         
         # Assert outcome
