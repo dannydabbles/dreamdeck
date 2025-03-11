@@ -7,8 +7,10 @@ from src.stores import VectorStore
 
 @pytest.fixture
 def mock_chat_state():
+    # Serialize messages to dictionaries
+    human_msg = HumanMessage(content="Hello, GM!").dict()
     return ChatState(
-        messages=[HumanMessage(content="Hello, GM!")]
+        messages=[human_msg],
     )
 
 @pytest.mark.asyncio

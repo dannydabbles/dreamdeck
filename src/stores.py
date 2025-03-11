@@ -51,18 +51,11 @@ class VectorStore(BaseStore):
             return []
 
     def put(self, content: str) -> None:
-        """Store new content in ChromaDB.
-
-        Args:
-            field (str): The field to store.
-            value (Dict[str, Any]): The content to store.
-        """
+        """Store new content in ChromaDB."""
         try:
-            # Create and add document
-            doc = Document(page_content=content)
+            doc = Document(page_content=content, metadata={"source": "user_input"})  # Add metadata
             self.vectorstore.add_documents([doc])
             self.vectorstore.persist()
-
         except Exception as e:
             cl.logger.error(f"Error storing document: {e}")
             raise
