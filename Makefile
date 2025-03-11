@@ -53,7 +53,7 @@ aider-sonnet:
 
 aider-dual:
 	@echo "Running aider with local dual coder and reasoner models..."
-	@aider --multiline --architect --4o --openai-api-base http://192.168.1.111:5000/v1 --timeout 500 --model-settings-file .aider.model.settings.yml --model openai/reasoner --editor-model openai/coder --test-cmd "make test" --auto-test --no-show-model-warnings
+	@aider --multiline --architect --openai-api-base http://192.168.1.111:5000/v1 --timeout 500 --model-settings-file .aider.model.settings.yml --model openai/reasoner --editor-model openai/coder --test-cmd "make test" --auto-test --no-show-model-warnings
 
 aider:
 	@echo "Running aider with local llm..."
