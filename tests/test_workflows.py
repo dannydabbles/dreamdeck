@@ -11,6 +11,7 @@ def mock_chat_state():
     return ChatState(
         messages=[HumanMessage(content="Hello, GM!")],
         error_count=0,
+        thread_id="test-thread-id"  # <-- ADD THIS LINE
     )
 
 @pytest.mark.asyncio
