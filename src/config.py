@@ -5,6 +5,8 @@ import logging
 from pydantic import BaseModel, Field, ValidationError, ConfigDict
 from typing import ClassVar
 from logging.handlers import RotatingFileHandler
+import warnings  # Add this import
+warnings.filterwarnings("ignore", category=DeprecationWarning)  # Add this line
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
