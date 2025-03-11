@@ -32,15 +32,19 @@ import src.config  # Import src.config at the top
 @pytest.mark.asyncio
 async def test_web_search_integration(mock_langgraph_context):
     user_input = HumanMessage(content="search AI trends")
+    
+    # Set environment variable and reload config
+    os.environ["APP_FEATURES_WEB_SEARCH"] = "true"
+    from src import config
+    config.config = config.load_config()  # Force reload
+    
     with patch("src.agents.web_search_agent.requests.get", new_callable=AsyncMock) as mock_get:
         mock_response = MagicMock()
         mock_response.json.return_value = {"organic_results": [{"snippet": "AI trends are evolving."}]}
         mock_get.return_value = mock_response
         
-        # Directly patch the config variable in the agent's module
-        with patch.object(src.config, 'WEB_SEARCH_ENABLED', True):
-            result = await _web_search(user_input.content, **mock_langgraph_context)
-            assert "AI trends are evolving" in result.content
+        result = await _web_search(user_input.content, **mock_langgraph_context)
+        assert "AI trends are evolving" in result.content
 
 @pytest.mark.asyncio
 async def test_writer_agent_continuation(mock_langgraph_context):

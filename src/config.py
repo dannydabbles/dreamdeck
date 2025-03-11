@@ -119,7 +119,7 @@ config = load_config()
 # Expose all required variables as module-level attributes
 DICE_ROLLING_ENABLED = config.features.dice_rolling
 DICE_SIDES = config.dice.sides  # Now dice is a DiceConfig instance
-WEB_SEARCH_ENABLED = config.features.web_search
+WEB_SEARCH_ENABLED = config.features.web_search  # Already pulls from config.yaml/environment
 DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
 KNOWLEDGE_DIRECTORY = config.paths.get('knowledge', './knowledge')
 LLM_MAX_TOKENS = config.llm.max_tokens
