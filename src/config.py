@@ -105,15 +105,13 @@ def parse_size(size_str: str) -> int:
             return int(num * units[suffix])
     raise ValueError(f"Invalid size format: {size_str}")
 
-def load_config(force_reload=False):
+def load_config():
     """Load and validate configuration from YAML file.
 
     Returns:
         ConfigSchema: Validated configuration object
     """
-    if force_reload or not hasattr(config, '_cached'):
-        config._cached = ConfigSchema.model_validate(config_yaml)
-    return config._cached
+    return ConfigSchema.model_validate(config_yaml)
 
 # Load the config when the module is imported
 config = load_config()
