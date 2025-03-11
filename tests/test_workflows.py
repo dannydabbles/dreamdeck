@@ -18,16 +18,16 @@ def mock_chat_state():
 async def test_chat_workflow(mock_chat_state):
     with (
         patch("langgraph.config.get_config", return_value={}),
-        patch("src.agents.decision_agent.decide_action", new_callable=AsyncMock) as mock_decide_action_inner,
+        patch("src.agents.decision_agent.decide_action", new_callable=AsyncMock) as mock_decide_action,
         patch("src.agents.dice_agent.dice_roll", new_callable=AsyncMock) as mock_dice_roll,
         patch("src.agents.web_search_agent.web_search", new_callable=AsyncMock) as mock_web_search,
         patch("src.agents.writer_agent.generate_story", new_callable=AsyncMock) as mock_generate_story,
         patch("src.agents.storyboard_editor_agent.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_editor_agent,
     ):
         
-        mock_decide_action_inner.return_value = {"name": "continue_story"}
+        mock_decide_action.return_value = [AIMessage(name="continue_story")]
         mock_generate_story.return_value = "The adventure continues..."
-        mock_storyboard_editor_agent.return_value = "Storyboard generated."
+        mock_storyboard_editor_agent.return_value = []
         
         store = MagicMock()  # Use MagicMock instead of real VectorStore
         state = mock_chat_state
