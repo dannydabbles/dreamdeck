@@ -60,7 +60,7 @@ class VectorStore(BaseStore):
             cl.logger.error(f"Error storing document: {e}")
             raise
 
-    async def abatch(self, operations: Sequence[Tuple[str, tuple, str, Any]]) -> None:
+    async def batch(self, operations: Sequence[Tuple[str, tuple, str, Any]]) -> None:
         """Execute multiple operations in batch asynchronously.
 
         Args:
