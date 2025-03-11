@@ -50,7 +50,7 @@ async def test_web_search_integration(mock_langgraph_context):
 async def test_writer_agent_continuation(mock_langgraph_context):
     user_input = HumanMessage(content="Continue the adventure")
     state = ChatState(messages=[user_input], thread_id="test-thread-id")
-    result = await _generate_story(user_input.content, previous=state, **mock_langgraph_context)
+    result = await _generate_story(state, **mock_langgraph_context)
     assert result.strip()
 
 @pytest.mark.asyncio

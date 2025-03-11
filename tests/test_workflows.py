@@ -10,8 +10,8 @@ from unittest.mock import MagicMock
 def mock_chat_state():
     return ChatState(
         messages=[AIMessage(content="Hello, I'm the GM!")],
+        thread_id="test-thread-id",
         error_count=0,
-        thread_id="test-thread-id"  # <-- ADD THIS LINE
     )
 
 @pytest.mark.asyncio
