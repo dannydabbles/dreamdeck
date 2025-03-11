@@ -46,6 +46,120 @@ async def async_range(end):
         await asyncio.sleep(0.1)
         yield i
 
+@retry(
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    stop=stop_after_attempt(3),
+    retry=retry_if_exception_type(Exception),
+)
+async def generate_image_async(
+    image_generation_prompt: str, seed: int
+) -> Optional[bytes]:
+    """Generate an image asynchronously using the Stable Diffusion API.
+
+    Args:
+        image_generation_prompt (str): The image generation prompt.
+        seed (int): The seed for the image generation.
+
+    Returns:
+        Optional[bytes]: The image bytes, or None if generation fails.
+    """
+    if not IMAGE_GENERATION_ENABLED:
+        cl_element.logger.warning("Image generation is disabled in the configuration.")
+        return None
+
+    try:
+        # Flux payload
+        payload = {
+            "prompt": image_generation_prompt,
+            "negative_prompt": NEGATIVE_PROMPT,
+            "steps": STEPS,
+            "sampler_name": SAMPLER_NAME,
+            "scheduler": SCHEDULER,
+            "cfg_scale": CFG_SCALE,
+            "width": WIDTH,
+            "height": HEIGHT,
+            "hr_upscaler": HR_UPSCALER,
+            "denoising_strength": DENOISING_STRENGTH,
+            "hr_second_pass_steps": HR_SECOND_PASS_STEPS,
+            "seed": seed,
+        }
+
+        async with httpx.AsyncClient(timeout=IMAGE_GENERATION_TIMEOUT) as client:
+            response = await client.post(
+                f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/txt2img", json=payload
+            )
+            response.raise_for_status()
+            image_data = response.json()["images"][0]
+            image_bytes = base64.b64decode(image_data)
+            return image_bytes
+
+    except httpx.RequestError as e:
+        cl_element.logger.error(f"Image generation failed after retries: {e}", exc_info=True)
+        raise
+    except (KeyError, IndexError, ValueError) as e:
+        cl_element.logger.error(f"Error processing image data: {e}", exc_info=True)
+        return None
+
+@retry(
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    stop=stop_after_attempt(3),
+    retry=retry_if_exception_type(Exception),
+)
+async def generate_image_generation_prompts(storyboard: str) -> List[str]:
+    """Generate a list of image generation prompts based on the storyboard.
+
+    Args:
+        storyboard (str): The storyboard content.
+
+    Returns:
+        List[str]: List of generated image generation prompts.
+    """
+    image_gen_prompts = []
+    try:
+        raw_prompts = storyboard.strip().split("\n")
+
+        async for i in async_range(len(raw_prompts)):
+            image_gen_prompt = raw_prompts[i].strip()
+            # Replace with the second paragraph if the first one ends in a ':' character
+            if image_gen_prompt.endswith(":"):
+                continue
+            # Remove leading and trailing punctuation
+            image_gen_prompt = image_gen_prompt.rstrip('.,!?"').lstrip('1234567890.,:"')
+            # Remove all quotes
+            image_gen_prompt = image_gen_prompt.replace('"', "")
+
+            # Apply the image generation prompt prefix
+            prompt_components = []
+            if STORYBOARD_GENERATION_PROMPT_PREFIX.strip() != "":
+                prompt_components.append(STORYBOARD_GENERATION_PROMPT_PREFIX)
+            if image_gen_prompt != "":
+                prompt_components.append(image_gen_prompt)
+            if STORYBOARD_GENERATION_PROMPT_POSTFIX.strip() != "":
+                prompt_components.append(STORYBOARD_GENERATION_PROMPT_POSTFIX)
+
+            full_prompt = ", ".join(prompt_components)
+            # Check refusal list
+            if any(image_gen_prompt.startswith(refusal) for refusal in REFUSAL_LIST):
+                cl_element.logger.warning(
+                    f"LLM refused to generate image prompt. Prompt is a refusal: {full_prompt}"
+                )
+                raise ValueError("LLM refused to generate image prompt.")
+
+            # Check for short prompts
+            if len(image_gen_prompt) < 20 or not image_gen_prompt.strip():
+                cl_element.logger.warning(
+                    f"Generated image prompt is too short or empty: {full_prompt}"
+                )
+            else:
+                image_gen_prompts.append(full_prompt)
+    except Exception as e:
+        cl_element.logger.error(f"Image prompt generation failed: {e}", exc_info=True)
+        image_gen_prompts = []
+
+    cl_element.logger.debug(f"Generated Image Generation Prompt: {image_gen_prompts}")
+
+    return image_gen_prompts
+
 
 
 

@@ -18,7 +18,6 @@ from .agents.decision_agent import decide_action  # Import decide_action
 from .agents.dice_agent import dice_roll  # Import dice_roll
 from .agents.web_search_agent import web_search  # Import web_search
 from .agents.writer_agent import generate_story  # Import generate_story
-from .agents.storyboard_editor_agent import generate_storyboard  # Import generate_storyboard
 from .agents.storyboard_editor_agent import storyboard_editor_agent
 from .config import (
     IMAGE_GENERATION_ENABLED,
