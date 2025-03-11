@@ -43,7 +43,7 @@ from .config import (
     START_MESSAGE
 )
 from .state import ChatState
-from .state_graph import chat_workflow
+from .workflows import chat_workflow
 from .agents.dice_agent import handle_dice_roll  # Import handle_dice_roll
 from .initialization import DatabasePool  # Import DatabasePool
 from .stores import VectorStore
