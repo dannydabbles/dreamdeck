@@ -1,6 +1,12 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+from langchain_core.messages import HumanMessage
 from langchain_core.outputs import Generation, LLMResult
+from src.agents.decision_agent import _decide_action
+from src.agents.web_search_agent import _web_search
+from src.agents.writer_agent import _generate_story
+from src.agents.storyboard_editor_agent import _generate_storyboard
+from src.agents.dice_agent import _dice_roll
 
 @pytest.fixture
 def mock_langgraph_context():
