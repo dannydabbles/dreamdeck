@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from langchain_core.messages import HumanMessage
 from langchain_core.outputs import Generation, LLMResult
+from src.models import ChatState  # Import ChatState
 from src.agents.decision_agent import _decide_action
 from src.agents.web_search_agent import _web_search
 from src.agents.writer_agent import _generate_story
