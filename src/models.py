@@ -117,6 +117,14 @@ class ChatState(BaseModel):
                 tool_results.append(f"{msg.name}: {msg.content}")
         return "\n".join(tool_results) if tool_results else ""
 
+    def add_tool_message(self, tool_message: ToolMessage) -> None:
+        """Add a ToolMessage to the state.
+
+        Args:
+            tool_message (ToolMessage): The tool message to add.
+        """
+        self.messages.append(tool_message)
+
     def format_system_message(self) -> None:
         """Format the system message with current context."""
         if not self.messages:
