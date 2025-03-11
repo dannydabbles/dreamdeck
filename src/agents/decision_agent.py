@@ -15,12 +15,14 @@ from ..config import (
 )
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
-from langchain_core.messages import HumanMessage  # Import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage  # Import HumanMessage
+from ..models import ChatState
+
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _decide_action(user_message: HumanMessage) -> dict:
+async def _decide_action(state: ChatState) -> list[BaseMessage]:
     """Determine the next action based on user input.
 
     Args:
@@ -29,9 +31,15 @@ async def _decide_action(user_message: HumanMessage) -> dict:
     Returns:
         dict: The next action to take.
     """
+    messages = state.messages
+    result = []
+
+    # Get last human message
+    user_input = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None)
+
     try:
         formatted_prompt = DECISION_PROMPT.format(
-            user_input=user_message.content
+            user_input=user_input.content
         )
 
         # Initialize the LLM
@@ -48,14 +56,16 @@ async def _decide_action(user_message: HumanMessage) -> dict:
         decision = response.generations[0][0].text.strip()
 
         if "roll" in decision.lower():
-            return {"name": "roll", "args": {}}
+            result = AIMessage(content="Rolling dice...", name="roll")
         elif "search" in decision.lower():
-            return {"name": "search", "args": {}}
+            result = AIMessage(content="Searching the web...", name="web_search")
         else:
-            return {"name": "continue_story", "args": {}}
+            result = AIMessage(content="Continuing the story...", name="continue_story")
     except Exception as e:
         cl_logger.error(f"Decision failed: {e}")
-        return {"name": "continue_story", "args": {}}
+        result = AIMessage(content="Decision failed.", name="error")
+
+    return [result]
 
 @task
 async def decide_action(user_message: HumanMessage, **kwargs) -> dict:

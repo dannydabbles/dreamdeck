@@ -6,7 +6,8 @@ from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
 from chainlit import Image as CLImage  # Import Image from Chainlit
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
-from langchain_core.messages import ToolMessage
+from ..models import ChatState
+from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from src.image_generation import generate_image_async, generate_image_generation_prompts
@@ -22,7 +23,7 @@ from ..config import (
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _generate_storyboard(content: str, store=None, previous=None) -> str:
+async def _generate_storyboard(state: ChatState) -> list[BaseMessage]:
     """Generate a storyboard based on the input content.
 
     Args:
@@ -33,11 +34,12 @@ async def _generate_storyboard(content: str, store=None, previous=None) -> str:
     Returns:
         str: The generated storyboard.
     """
+    messages = state.messages
     try:
         formatted_prompt = STORYBOARD_GENERATION_PROMPT.format(
-            recent_chat_history=previous.get_recent_history_str(),
-            memories=previous.get_memories_str(),
-            tool_results=previous.get_tool_results_str()
+            recent_chat_history=messages.get_recent_history_str(),
+            memories=messages.get_memories_str(),
+            tool_results=messages.get_tool_results_str()
         )
 
         # Initialize the LLM
@@ -53,14 +55,14 @@ async def _generate_storyboard(content: str, store=None, previous=None) -> str:
         response = await llm.agenerate([formatted_prompt])
         storyboard_result = response.generations[0][0].text.strip()
 
-        await process_storyboard_images(storyboard_result, message_id=previous.thread_id)
-        return storyboard_result
+        await process_storyboard_images(storyboard_result, message_id=state.thread_id)
+        return []
     except Exception as e:
         cl_logger.error(f"Storyboard generation failed: {e}")
         return "Error generating storyboard."
 
 @task
-async def generate_storyboard(content: str, **kwargs) -> str:
+async def generate_storyboard(content: str) -> list[BaseMessage]:
     return await _generate_storyboard(content, **kwargs)
 
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:

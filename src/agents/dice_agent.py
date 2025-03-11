@@ -7,15 +7,16 @@ from typing import List, Tuple, Optional
 from uuid import uuid4  # Import uuid4
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
-from langchain_core.messages import ToolMessage  # Use LangChain's standard messages
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage  # Use LangChain's standard messages
 from ..config import DICE_ROLLING_ENABLED, DICE_SIDES
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
+from ..models import ChatState
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _dice_roll(input_str: Optional[str] = None) -> ToolMessage:
+async def _dice_roll(state: ChatState) -> list[BaseMessage]:
     """Roll dice based on user input.
 
     Args:
@@ -25,8 +26,10 @@ async def _dice_roll(input_str: Optional[str] = None) -> ToolMessage:
     Returns:
         ToolMessage: The result of the dice roll.
     """
+    messages = state.messages
+    input_str = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None)
     if not DICE_ROLLING_ENABLED:
-        return ToolMessage(
+        return AIMessage(
             content="Dice rolling is disabled in the configuration.",
             tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="error",
@@ -59,30 +62,21 @@ async def _dice_roll(input_str: Optional[str] = None) -> ToolMessage:
             result = f"🎲 You rolled {rolls} (total: {total}) on {count}d{sides}."
 
         cl_logger.info(f"Dice roll result: {result}")
-        return ToolMessage(
+        return [AIMessage(
             content=result,
-            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="dice_roll",
-        )
+        )]
 
-    except ValueError as e:
-        cl_logger.error(f"Dice roll failed: {e}")
-        return ToolMessage(
-            content=f"🎲 Error rolling dice: {str(e)}",
-            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
-            name="error",
-        )
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}")
-        return ToolMessage(
+        return [AIMessage(
             content=f"🎲 Error rolling dice: {str(e)}",
-            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="error",
-        )
+        )]
 
 @task
-async def dice_roll(input_str: Optional[str] = None, **kwargs) -> ToolMessage:
-    return await _dice_roll(input_str)
+async def dice_roll(state: ChatState) -> list[BaseMessage]:
+    return await _dice_roll(state)
 
 # Export the function as dice_roll_agent
 dice_roll_agent = dice_roll

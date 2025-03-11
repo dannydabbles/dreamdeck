@@ -8,23 +8,19 @@ from langchain_core.messages import (
 )
 from pydantic import BaseModel
 
+import chainlit as cl
+
+
 class ChatState(BaseModel):
     messages: List[BaseMessage] = []
     is_last_step: bool = False
     thread_id: str = ...
     metadata: dict = {}
     current_message_id: Optional[str] = None
-    tool_results: List[str] = []
     error_count: int = 0
     memories: List[str] = []
     user_preferences: dict = {}
     thread_data: dict = {}
-
-    def add_tool_result(self, result: str) -> None:
-        self.tool_results.append(result)
-
-    def clear_tool_results(self) -> None:
-        self.tool_results = []
 
     def increment_error_count(self) -> None:
         self.error_count += 1
@@ -37,20 +33,22 @@ class ChatState(BaseModel):
         filtered = [
             msg 
             for msg in recent_messages 
-            if isinstance(msg, (HumanMessage, AIMessage)) 
-            or (isinstance(msg, ToolMessage) and "roll" in msg.content.lower())
+            if isinstance(msg, (HumanMessage, AIMessage))
         ]
         return "\n".join([
-            f"{'Human' if isinstance(msg, HumanMessage) else 'GM' if isinstance(msg, AIMessage) else 'Dice'}: {msg.content}"
+            f"{msg.name}: {msg.content}"
             for msg in filtered
         ])
 
     def get_tool_results_str(self) -> str:
-        tool_msgs = [msg for msg in self.messages[-10:] if isinstance(msg, ToolMessage)]
+        recent_messages = self.messages[-5:]
+        # Go through recent messages and find the last AIMessage with name in ["dice_roll", "web_search"]
+        recent_agent_messages = [
+            msg for msg in reversed(recent_messages) if isinstance(msg, AIMessage) and msg.name in ["dice_roll", "web_search"]
+        ]
+        # Set tool_msgs to the last agent message if it exists
+        tool_msgs = recent_agent_messages[:1]
         return "\n".join([f"{msg.name}: {msg.content}" for msg in tool_msgs]) if tool_msgs else ""
-
-    def add_tool_message(self, tool_message: ToolMessage) -> None:
-        self.messages.append(tool_message)
 
     def format_system_message(self) -> None:
         vector_memory = cl.user_session.get("vector_memory")

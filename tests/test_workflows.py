@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 @pytest.fixture
 def mock_chat_state():
     return ChatState(
-        messages=[HumanMessage(content="Hello, GM!")],
+        messages=[AIMessage(content="Hello, I'm the GM!")],
         error_count=0,
         thread_id="test-thread-id"  # <-- ADD THIS LINE
     )
@@ -30,10 +30,12 @@ async def test_chat_workflow(mock_chat_state):
         mock_storyboard_editor_agent.return_value = "Storyboard generated."
         
         store = MagicMock()  # Use MagicMock instead of real VectorStore
+        state = mock_chat_state
+        state.messages.append(HumanMessage(content="Continue the adventure"))
         updated_state = await _chat_workflow(
-            [HumanMessage(content="Continue the adventure")],
+            state.messages,
             store,
-            previous=mock_chat_state
+            previous=state
         )
         
         assert len(updated_state.messages) > len(mock_chat_state.messages)

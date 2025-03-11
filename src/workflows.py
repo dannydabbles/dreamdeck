@@ -70,37 +70,23 @@ async def _chat_workflow(
             cl_logger.info("No human message found, defaulting to continue_story")
             action = "continue_story"
         else:
-            decision_response = await decide_action(user_message=last_human_message)
+            state.messages += decide_action(state).result()
+            decision_response = state.messages[-1].content
             action = decision_response.get("name", "continue_story")
 
-        action_map = {
-            "roll": dice_roll,
-            "search": web_search,
-            "continue_story": generate_story,
-        }
-        mapped_task = action_map.get(action, generate_story)
+        if "roll" in action:
+            state.messages += dice_roll(state).result()
 
-        if action == "roll":
-            roll_result = await dice_roll(last_human_message.content)
-            tool_message = ToolMessage(content=roll_result.content, name="dice_roll")
-            state.add_tool_message(tool_message)
-            state.messages.append(tool_message)
+        elif "search" in action:
+            state.messages += web_search(state).result()
 
-        elif action == "search":
-            search_result = await web_search(last_human_message.content)
-            tool_message = ToolMessage(content=search_result.content, name="web_search")
-            state.add_tool_message(tool_message)
-            state.messages.append(tool_message)
-
-        elif action in ["continue_story", "writer"]:
-            ai_response = await generate_story(last_human_message.content)
-            state.messages.append(AIMessage(content=ai_response))
+        elif ["continue_story", "writer"] in action:
+            state.messages += generate_story(state).result()
+            last_human_message = [msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)][0]
 
             # Generate storyboard if needed and image generation is enabled
             if IMAGE_GENERATION_ENABLED:
-                storyboard_result = await storyboard_editor_agent.generate_storyboard(
-                    last_human_message.content, state=state
-                )
+                storyboard_result = storyboard_editor_agent(state=state).result()
                 if storyboard_result:
                     state.metadata["storyboard"] = storyboard_result
 
