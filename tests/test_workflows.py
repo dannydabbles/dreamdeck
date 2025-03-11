@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 from src.workflows import _chat_workflow
-from src.state import ChatState
+from src.models import ChatState
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from src.stores import VectorStore
 from unittest.mock import MagicMock
@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 def mock_chat_state():
     return ChatState(
         messages=[HumanMessage(content="Hello, GM!")],
-        error_count=0  # Explicitly set to 0
+        error_count=0,
     )
 
 @pytest.mark.asyncio

@@ -12,7 +12,7 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage
 )
-from .state import ChatState
+from .models import ChatState
 from .agents.decision_agent import decide_action  # Import decide_action
 from .agents.dice_agent import dice_roll  # Import dice_roll
 from .agents.web_search_agent import web_search  # Import web_search
