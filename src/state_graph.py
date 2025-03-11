@@ -32,54 +32,6 @@ from .stores import BaseStore  # Import BaseStore
 cl_logger = logging.getLogger("chainlit")
 
 
-@task
-async def process_storyboard(state: ChatState) -> Optional[str]:
-    """Generate storyboard prompts based on the GM's last response.
-
-    Args:
-        state (ChatState): The current chat state.
-
-    Returns:
-        Optional[str]: The generated storyboard or None if generation fails.
-    """
-    try:
-        # Get the last GM response
-        last_gm_message = next(
-            (msg for msg in reversed(state.messages) if isinstance(msg, AIMessage)),
-            None,
-        )
-        if not last_gm_message:
-            cl_logger.warning("No GM message found to generate storyboard from")
-            return None
-
-        # Format the prompt with proper context
-        formatted_prompt = DECISION_PROMPT.format(
-            recent_chat_history=state.get_recent_history_str(),
-            memories=state.get_memories_str(),
-        )
-
-        # Create messages list for the storyboard generation
-        messages = [
-            SystemMessage(content=formatted_prompt),
-            HumanMessage(content=last_gm_message.content),
-        ]
-
-        # Get storyboard prompts from the agent
-        response = await generate_storyboard(last_gm_message.content).result()
-
-        if not response or not response.content:
-            cl_logger.warning("Empty storyboard response")
-            return None
-
-        # Clean up the response - remove any thinking tags, etc.
-        content = response.content
-        if "</think>" in content:
-            content = content.split("</think>")[1].strip()
-
-        return content.strip()
-    except Exception as e:
-        cl_logger.error(f"Storyboard generation failed: {str(e)}", exc_info=True)
-        return None
 
 
 @entrypoint(checkpointer=MemorySaver())
@@ -142,10 +94,11 @@ async def chat_workflow(
 
         # Generate storyboard if needed and image generation is enabled
         if IMAGE_GENERATION_ENABLED:
-            storyboard = await process_storyboard(state).result()
-            if storyboard:
-                state.metadata["storyboard"] = storyboard
-                await process_storyboard_images(storyboard, state.current_message_id).result()
+            storyboard_result = await storyboard_editor_agent.generate_storyboard(
+                last_human_message.content, state=state
+            ).result()
+            if storyboard_result:
+                state.metadata["storyboard"] = storyboard_result
 
         # Convert LangGraph messages to Chainlit-compatible format for display
         cl_messages = [
@@ -171,12 +124,3 @@ async def chat_workflow(
     return state
 
 
-async def generate_story_response(messages: List[BaseMessage]) -> str:
-    """Generate a story response from the given messages."""
-    try:
-        # TODO: Implement actual story generation logic
-        # For now, just return a placeholder response
-        return "This is a placeholder story response."
-    except Exception as e:
-        cl_logger.error(f"Error generating story response: {str(e)}", exc_info=True)
-        return "Error generating response."

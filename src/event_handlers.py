@@ -57,7 +57,8 @@ from .state import ChatState
 from .state_graph import chat_workflow
 from .agents.dice_agent import handle_dice_roll  # Import handle_dice_roll
 from .initialization import DatabasePool  # Import DatabasePool
-from .image_generation import process_storyboard_images
+from .image_generation import generate_image_async, generate_image_generation_prompts
+from .agents.storyboard_editor_agent import process_storyboard_images  # Import process_storyboard_images
 
 
 # Define an asynchronous range generator
