@@ -25,7 +25,7 @@ async def test_chat_workflow(mock_chat_state):
         patch("src.agents.storyboard_editor_agent.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_editor_agent,
     ):
         
-        mock_decide_action.return_value = [AIMessage(name="continue_story")]
+        mock_decide_action.return_value = [AIMessage(name="continue_story", content="The adventure continues...")]
         mock_generate_story.return_value = "The adventure continues..."
         mock_storyboard_editor_agent.return_value = []
         
@@ -39,5 +39,5 @@ async def test_chat_workflow(mock_chat_state):
         )
         
         assert len(updated_state.messages) > len(mock_chat_state.messages)
-        assert any(isinstance(msg, AIMessage) for msg in updated_state.messages)
+        assert any(isinstance(msg, AIMessage) and "The adventure continues..." in msg.content for msg in updated_state.messages)
         assert "The adventure continues..." in updated_state.messages[-1].content
