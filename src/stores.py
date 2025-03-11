@@ -24,6 +24,26 @@ class VectorStore(BaseStore):
             embedding_function=self.embeddings, persist_directory="chroma_db"
         )
 
+    # Required abstract methods from BaseStore
+    def mget(self, keys: Sequence[str]) -> List[Optional[Document]]:
+        """Batch-get documents by IDs."""
+        return [self.vectorstore.get(id=key) for key in keys]
+
+    def mset(self, key_value_pairs: Sequence[Tuple[str, Document]]) -> None:
+        """Batch-set documents."""
+        for key, doc in key_value_pairs:
+            self.put(doc.page_content)  # Delegate to existing 'put' method
+
+    def mdelete(self, keys: Sequence[str]) -> None:
+        """Batch-delete documents by IDs."""
+        self.vectorstore.delete(ids=list(keys))
+
+    def yield_keys(self, prefix: str = None) -> Iterator[str]:
+        """Iterate over keys matching a prefix."""
+        for doc in self.vectorstore.get():
+            if prefix is None or doc.id.startswith(prefix):
+                yield doc.id
+
     def get(self, field: str) -> List[Document]:
         """Get relevant documents using ChromaDB.
 
@@ -52,13 +72,9 @@ class VectorStore(BaseStore):
 
     def put(self, content: str) -> None:
         """Store new content in ChromaDB."""
-        try:
-            doc = Document(page_content=content, metadata={"source": "user_input"})  # Add metadata
-            self.vectorstore.add_documents([doc])
-            self.vectorstore.persist()
-        except Exception as e:
-            cl.logger.error(f"Error storing document: {e}")
-            raise
+        doc = Document(page_content=content, metadata={"source": "user_input"})
+        self.vectorstore.add_documents([doc])
+        self.vectorstore.persist()
 
     async def batch(self, operations: Sequence[Tuple[str, tuple, str, Any]]) -> None:
         """Execute multiple operations in batch asynchronously.

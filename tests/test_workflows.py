@@ -8,7 +8,7 @@ from src.stores import VectorStore
 @pytest.fixture
 def mock_chat_state():
     # Serialize messages to dictionaries
-    human_msg = HumanMessage(content="Hello, GM!").dict()
+    human_msg = HumanMessage(content="Hello, GM!").model_dump()
     return ChatState(
         messages=[human_msg],
     )

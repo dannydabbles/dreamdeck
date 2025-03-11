@@ -35,8 +35,8 @@ async def test_web_search_integration(mock_langgraph_context):
         mock_response.json.return_value = {"organic_results": [{"snippet": "AI trends are evolving."}]}
         mock_get.return_value = mock_response
         
-        # Force-enable web search for this test
-        with patch.dict('src.config.__dict__', {'WEB_SEARCH_ENABLED': True}):  
+        # Directly patch the config variable in the agent's module
+        with patch.object(src.config, 'WEB_SEARCH_ENABLED', True):
             result = await _web_search(user_input.content, **mock_langgraph_context)
             assert "AI trends are evolving" in result.content
 
