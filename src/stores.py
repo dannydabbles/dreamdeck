@@ -2,7 +2,7 @@ from langchain_core.documents import Document
 from langgraph.store.base import BaseStore
 from langchain_huggingface import HuggingFaceEmbeddings
 import chromadb as Chroma
-from typing import Dict, Any, List, Sequence, Tuple
+from typing import Dict, Any, List, Sequence, Tuple, Optional, Iterator  # Import Optional and Iterator
 import os
 import chainlit as cl
 import asyncio

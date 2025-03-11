@@ -27,6 +27,8 @@ async def test_decision_agent_roll_action(mock_langgraph_context):
         result = await _decide_action(user_input, **mock_langgraph_context)
         assert result["name"] == "roll"
 
+import src.config  # Import src.config at the top
+
 @pytest.mark.asyncio
 async def test_web_search_integration(mock_langgraph_context):
     user_input = HumanMessage(content="search AI trends")
