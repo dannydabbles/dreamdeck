@@ -1,3 +1,5 @@
+import os  # Import os at the top
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from langchain_core.messages import HumanMessage
