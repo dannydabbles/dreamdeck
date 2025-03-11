@@ -38,4 +38,5 @@ def test_required_fields():
         "image_settings": {},
         "rate_limits": {}
     }
-    ConfigSchema.model_validate(minimal_config)
+    config = ConfigSchema.model_validate(minimal_config)
+    assert config.llm.model_name == "gpt-3.5-turbo"

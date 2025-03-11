@@ -27,20 +27,26 @@ async def test_decision_agent_roll_action(mock_langgraph_context):
 @pytest.mark.asyncio
 async def test_web_search_integration(mock_langgraph_context):
     user_input = HumanMessage(content="search AI trends")
-    result = await _web_search(user_input, **mock_langgraph_context)
-    assert "error" not in result["name"]
+    with patch("src.agents.web_search_agent.requests.get", new_callable=AsyncMock) as mock_get:
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"organic_results": [{"snippet": "AI trends are evolving."}]}
+        mock_get.return_value = mock_response
+        result = await _web_search(user_input.content, **mock_langgraph_context)
+        assert "AI trends are evolving" in result.content
 
 @pytest.mark.asyncio
 async def test_writer_agent_continuation(mock_langgraph_context):
     user_input = HumanMessage(content="Continue the adventure")
-    result = await _generate_story(user_input, **mock_langgraph_context)
-    assert result.content.strip()
+    result = await _generate_story(user_input.content, **mock_langgraph_context)
+    assert result.strip()
 
 @pytest.mark.asyncio
 async def test_storyboard_editor_agent(mock_langgraph_context):
     user_input = HumanMessage(content="Generate a storyboard")
-    result = await _generate_storyboard(user_input, **mock_langgraph_context)
-    assert result.content.strip()
+    with patch("src.image_generation.generate_image_async", new_callable=AsyncMock) as mock_generate_image:
+        mock_generate_image.return_value = b"image_bytes"
+        result = await _generate_storyboard(user_input.content, **mock_langgraph_context)
+        assert result.strip()
 
 @pytest.mark.asyncio
 async def test_dice_agent():
