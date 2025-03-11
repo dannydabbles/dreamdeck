@@ -1,6 +1,9 @@
 from src.config import config
 import os
 import logging
+import random  # Import random
+from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
+from chainlit import Image as CLImage  # Import Image from Chainlit
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
 from langchain_core.messages import ToolMessage
