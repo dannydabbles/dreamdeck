@@ -105,18 +105,15 @@ def parse_size(size_str: str) -> int:
             return int(num * units[suffix])
     raise ValueError(f"Invalid size format: {size_str}")
 
-def load_config() -> ConfigSchema:
+def load_config(force_reload=False):
     """Load and validate configuration from YAML file.
 
     Returns:
         ConfigSchema: Validated configuration object
     """
-    try:
-        config_data = ConfigSchema.model_validate(config_yaml)  # USE VALIDATOR
-    except ValidationError as e:
-        cl_logger.error(f"Validation failed: {e.errors()}")  # BETTER ERROR REPORTING
-        raise
-    return config_data  # Ensure returns the validated model
+    if force_reload or not hasattr(config, '_cached'):
+        config._cached = ConfigSchema.model_validate(config_yaml)
+    return config._cached
 
 # Load the config when the module is imported
 config = load_config()

@@ -98,11 +98,14 @@ def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
         try:
             count = int(count_str) if count_str else 1
             sides = int(sides_str)
-            if count < 1 or sides < 2:  # Ensure count is at least 1 and sides are at least 2
+            if count < 1 or sides < 2:
                 raise ValueError("Invalid dice specification")
             dice_list.append((sides, count))
         except ValueError as e:
             cl_logger.error(f"Invalid dice specification: {e}")
-            raise ValueError("Invalid dice specification") from e
+            # Gracefully skip invalid entries instead of raising
+            continue  # Skip bad entries
+    
+    return dice_list
 
 dice_agent = dice_roll

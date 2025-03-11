@@ -20,7 +20,8 @@ async def test_decision_agent_roll_action(mock_langgraph_context):
     with patch('src.agents.decision_agent.ChatOpenAI.agenerate', 
               new_callable=AsyncMock) as mock_agenerate:
         mock_generations = [Generation(text="The user wants to roll dice.")]
-        mock_result = LLMResult(generations=[[mock_generations]])
+        # Correct structure: list of lists of Generation instances
+        mock_result = LLMResult(generations=[[mock_generations[0]]])  
         mock_agenerate.return_value = mock_result
         
         result = await _decide_action(user_input, **mock_langgraph_context)
@@ -33,8 +34,11 @@ async def test_web_search_integration(mock_langgraph_context):
         mock_response = MagicMock()
         mock_response.json.return_value = {"organic_results": [{"snippet": "AI trends are evolving."}]}
         mock_get.return_value = mock_response
-        result = await _web_search(user_input.content, **mock_langgraph_context)
-        assert "AI trends are evolving" in result.content
+        
+        # Force-enable web search for this test
+        with patch.dict('src.config.__dict__', {'WEB_SEARCH_ENABLED': True}):  
+            result = await _web_search(user_input.content, **mock_langgraph_context)
+            assert "AI trends are evolving" in result.content
 
 @pytest.mark.asyncio
 async def test_writer_agent_continuation(mock_langgraph_context):
