@@ -44,22 +44,22 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
         data = response.json()
         if "error" in data:
             raise ValueError(f"Search error: {data['error']}")
-        return AIMessage(
+        return [AIMessage(
             content=data.get("organic_results", [{}])[0].get("snippet", "No results found."),
             name="web_search",
-        )
+        )]
     except requests.exceptions.RequestException as e:
         cl_logger.error(f"Web search failed: {e}")
-        return AIMessage(
+        return [AIMessage(
             content=f"Web search failed: {str(e)}",
             name="error",
-        )
+        )]
     except ValueError as e:
         cl_logger.error(f"Web search failed: {e}")
-        return AIMessage(
+        return [AIMessage(
             content=f"Web search failed: {str(e)}",
             name="error",
-        )
+        )]
 
 @task
 async def web_search(state: ChatState) -> list[BaseMessage]:

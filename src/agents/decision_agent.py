@@ -56,7 +56,7 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
         decision = response.generations[0][0].text.strip()
 
         if "roll" in decision.lower():
-            result = AIMessage(content="Rolling dice...", name="roll")
+            result = AIMessage(content="Rolling dice...", name="dice_roll")
         elif "search" in decision.lower():
             result = AIMessage(content="Searching the web...", name="web_search")
         else:

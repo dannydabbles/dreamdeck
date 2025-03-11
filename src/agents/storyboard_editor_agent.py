@@ -7,7 +7,7 @@ from chainlit import Image as CLImage  # Import Image from Chainlit
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
 from ..models import ChatState
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, AIMessage
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from src.image_generation import generate_image_async, generate_image_generation_prompts
@@ -19,6 +19,7 @@ from ..config import (
     LLM_TIMEOUT,
     STORYBOARD_GENERATION_PROMPT,
 )
+
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -60,7 +61,7 @@ async def _generate_storyboard(state: ChatState) -> list[BaseMessage]:
         return []
     except Exception as e:
         cl_logger.error(f"Storyboard generation failed: {e}")
-        return "Error generating storyboard."
+        return [AIMessage(content="Error generating storyboard.", name="error")]
 
 @task
 async def generate_storyboard(state: ChatState, **kwargs) -> list[BaseMessage]:

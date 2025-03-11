@@ -7,7 +7,7 @@ from langchain_core.messages import ToolMessage
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from ..config import WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_AGENT_STREAMING, WRITER_AGENT_VERBOSE, LLM_TIMEOUT, AI_WRITER_PROMPT
-
+from ..models import ChatState
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
@@ -27,9 +27,9 @@ async def _generate_story(state: ChatState) -> str:
     """
     try:
         formatted_prompt = AI_WRITER_PROMPT.format(
-            recent_chat_history=previous.get_recent_history_str(),
-            memories=previous.get_memories_str(),
-            tool_results=previous.get_tool_results_str()
+            recent_chat_history=state.get_recent_history_str(),
+            memories=state.get_memories_str(),
+            tool_results=state.get_tool_results_str()
         )
 
         # Initialize the LLM
