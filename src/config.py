@@ -2,7 +2,8 @@ import os
 from pathlib import Path
 import yaml
 import logging
-from pydantic import BaseModel, Field, ValidationError, ConfigDict, ClassVar
+from pydantic import BaseModel, Field, ValidationError, ConfigDict
+from typing import ClassVar
 from logging.handlers import RotatingFileHandler
 
 # Initialize logging
