@@ -49,6 +49,16 @@ async def chat_workflow(
     Returns:
         ChatState: The updated chat state.
     """
+
+    # Call _chat_workflow with the correct arguments
+    return await _chat_workflow(messages, store, previous)
+
+async def _chat_workflow(
+    messages: List[BaseMessage],
+    store: BaseStore,
+    previous: Optional[ChatState] = None,
+) -> ChatState:
+
     state = previous or ChatState()
     state.messages.extend(messages)
 

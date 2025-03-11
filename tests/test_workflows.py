@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-from src.workflows import chat_workflow
+from src.workflows import _chat_workflow
 from src.state import ChatState
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from src.stores import VectorStore
@@ -26,7 +26,7 @@ async def test_chat_workflow(mock_chat_state):
         mock_storyboard_editor_agent.return_value = "Storyboard generated."
 
         store = VectorStore()
-        updated_state = await chat_workflow([HumanMessage(content="Continue the adventure")], store, previous=mock_chat_state)
+        updated_state = await _chat_workflow([HumanMessage(content="Continue the adventure")], store, previous=mock_chat_state)
 
         assert len(updated_state.messages) > len(mock_chat_state.messages)
         assert isinstance(updated_state.messages[-1], AIMessage)
