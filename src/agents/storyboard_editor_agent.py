@@ -25,6 +25,7 @@ cl_logger = logging.getLogger("chainlit")
 
 async def _generate_storyboard(state: ChatState) -> list[BaseMessage]:
     """Generate a storyboard based on the input content.
+    content = state.messages[-1].content if state.messages else ""
 
     Args:
         content (str): The input content for the storyboard.
@@ -62,8 +63,8 @@ async def _generate_storyboard(state: ChatState) -> list[BaseMessage]:
         return "Error generating storyboard."
 
 @task
-async def generate_storyboard(content: str) -> list[BaseMessage]:
-    return await _generate_storyboard(content, **kwargs)
+async def generate_storyboard(state: ChatState, **kwargs) -> list[BaseMessage]:
+    return await _generate_storyboard(state)
 
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
     """Process storyboard into images and send to chat.

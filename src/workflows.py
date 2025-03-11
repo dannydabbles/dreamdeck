@@ -70,9 +70,8 @@ async def _chat_workflow(
             cl_logger.info("No human message found, defaulting to continue_story")
             action = "continue_story"
         else:
-            state.messages += decide_action(state).result()
-            decision_response = state.messages[-1].content
-            action = decision_response.get("name", "continue_story")
+            decision_response = decide_action(state).result()[0]
+            action = decision_response.name
 
         if "roll" in action:
             state.messages += dice_roll(state).result()

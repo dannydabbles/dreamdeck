@@ -68,8 +68,8 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
     return [result]
 
 @task
-async def decide_action(user_message: HumanMessage, **kwargs) -> dict:
-    return await _decide_action(user_message)
+async def decide_action(state: ChatState, **kwargs) -> dict:
+    return await _decide_action(state)
 
 # Expose the function as decision_agent
 decision_agent = decide_action

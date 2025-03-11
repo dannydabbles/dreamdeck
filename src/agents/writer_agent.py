@@ -11,8 +11,11 @@ from ..config import WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_A
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _generate_story(content: str, store=None, previous=None) -> str:
+async def _generate_story(state: ChatState) -> str:
     """Generate a story segment based on the input content.
+    content = state.messages[-1].content if state.messages else ""
+    store = state.vector_memory
+    previous = state
 
     Args:
         content (str): The input content for the story.
@@ -48,7 +51,7 @@ async def _generate_story(content: str, store=None, previous=None) -> str:
         return "Error generating story."
 
 @task
-async def generate_story(content: str, **kwargs) -> str:
-    return await _generate_story(content)
+async def generate_story(state: ChatState, **kwargs) -> str:
+    return await _generate_story(state)
 
 writer_agent = generate_story  # Expose the function as writer_agent
