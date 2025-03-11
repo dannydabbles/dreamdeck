@@ -11,18 +11,20 @@ from ..config import (
     DECISION_AGENT_STREAMING,
     DECISION_AGENT_VERBOSE,
     LLM_TIMEOUT,
+    DECISION_PROMPT,
 )
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
+from langchain_core.messages import HumanMessage  # Import HumanMessage
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _decide_action(user_input: str, store=None, previous=None) -> dict:
+async def _decide_action(user_message: HumanMessage) -> dict:
     """Determine the next action based on user input.
 
     Args:
-        user_input (str): The user's input.
+        user_message (str): The user's input.
         store (BaseStore, optional): The store for chat state. Defaults to None.
         previous (ChatState, optional): Previous chat state. Defaults to None.
 
@@ -30,10 +32,18 @@ async def _decide_action(user_input: str, store=None, previous=None) -> dict:
         dict: The next action to take.
     """
     try:
-        if "roll" in user_input.lower():
+        formatted_prompt = DECISION_PROMPT.format(
+            user_input=user_message.content
+        )
+
+        # TODO: Implement decision logic
+
+        if "roll" in user_message.content.lower():
             return {"name": "roll", "args": {}}
-        elif "search" in user_input.lower():
+        elif "search" in user_message.content.lower():
             return {"name": "search", "args": {}}
+        elif "writer" in user_message.content.lower():
+            return {"name": "continue_story", "args": {}}
         else:
             return {"name": "continue_story", "args": {}}
     except Exception as e:
@@ -41,8 +51,8 @@ async def _decide_action(user_input: str, store=None, previous=None) -> dict:
         return {"name": "continue_story", "args": {}}
 
 @task
-async def decide_action(user_input: str, **kwargs) -> dict:
-    return await _decide_action(user_input)
+async def decide_action(user_message: HumanMessage, **kwargs) -> dict:
+    return await _decide_action(user_message)
 
 # Expose the function as decision_agent
 decision_agent = decide_action

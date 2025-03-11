@@ -353,3 +353,6 @@ caching:
 chainlit:
   project_name: "Dreamdeck"
   db: "sqlite:///./chainlit.db"
+
+chat:
+  start_message: "Hello! What kind of story would you like to create today?"

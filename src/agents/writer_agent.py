@@ -23,7 +23,7 @@ async def _generate_story(content: str, store=None, previous=None) -> str:
         str: The generated story segment.
     """
     try:
-        # Placeholder for story generation logic
+        # TODO: Implement story generation logic based on writer prompt in config.yaml
         return content
     except Exception as e:
         cl_logger.error(f"Story generation failed: {e}")

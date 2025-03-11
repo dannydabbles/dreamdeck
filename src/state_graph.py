@@ -12,7 +12,6 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage
 )
-from chainlit import Message as CLMessage  # Import Chainlit's UI-facing message
 from .state import ChatState
 from .agents.decision_agent import decide_action  # Import decide_action
 from .agents.dice_agent import dice_roll  # Import dice_roll
@@ -27,11 +26,13 @@ from .models import ChatState
 from .memory_management import save_chat_memory
 from .stores import BaseStore  # Import BaseStore
 
+from .config import DECISION_PROMPT
+
+import chainlit as cl
+
+
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
-
-
-
 
 @entrypoint(checkpointer=MemorySaver())
 async def chat_workflow(
@@ -54,18 +55,13 @@ async def chat_workflow(
 
     try:
         # Determine action
-        last_human_message = next(
-            (msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)),
-            None,
-        )
+        human_messages = [msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)]
+        last_human_message = human_messages[0] if human_messages else None
         if not last_human_message:
             cl_logger.info("No human message found, defaulting to continue_story")
             action = "continue_story"
         else:
-            formatted_prompt = DECISION_PROMPT.format(
-                user_input=last_human_message.content
-            )
-            decision_response = await decide_action(formatted_prompt).result()
+            decision_response = await decide_action(user_message=last_human_message)
             action = decision_response.get("name", "continue_story")
 
         action_map = {
@@ -75,42 +71,32 @@ async def chat_workflow(
         }
         mapped_task = action_map.get(action, generate_story)
 
-        if mapped_task == dice_roll:
-            result = await dice_roll(last_human_message.content).result()
-            tool_message = ToolMessage(content=result.content, name="dice_roll")
+        if action == "roll":
+            roll_result = await dice_roll(last_human_message.content)
+            tool_message = ToolMessage(content=roll_result.content, name="dice_roll")
             state.add_tool_message(tool_message)
             state.messages.append(tool_message)
 
-        elif mapped_task == web_search:
-            result = await web_search(last_human_message.content).result()
-            tool_message = ToolMessage(content=result.content, name="web_search")
+        elif action == "search":
+            search_result = await web_search(last_human_message.content)
+            tool_message = ToolMessage(content=search_result.content, name="web_search")
             state.add_tool_message(tool_message)
             state.messages.append(tool_message)
 
-        else:
-            ai_response = await generate_story(last_human_message.content).result()
+        elif action in ["continue_story", "writer"]:
+            ai_response = await generate_story(last_human_message.content)
             state.messages.append(AIMessage(content=ai_response))
 
-        # Generate storyboard if needed and image generation is enabled
-        if IMAGE_GENERATION_ENABLED:
-            storyboard_result = await storyboard_editor_agent.generate_storyboard(
-                last_human_message.content, state=state
-            ).result()
-            if storyboard_result:
-                state.metadata["storyboard"] = storyboard_result
+            # Generate storyboard if needed and image generation is enabled
+            if IMAGE_GENERATION_ENABLED:
+                storyboard_result = await storyboard_editor_agent.generate_storyboard(
+                    last_human_message.content, state=state
+                )
+                if storyboard_result:
+                    state.metadata["storyboard"] = storyboard_result
 
-        # Convert LangGraph messages to Chainlit-compatible format for display
-        cl_messages = [
-            CLMessage(
-                content=msg.content,
-                author="ai" if isinstance(msg, AIMessage) else "user" if isinstance(msg, HumanMessage) else "tool",
-                tool_call_id=msg.tool_call_id if isinstance(msg, ToolMessage) else None,
-            )
-            for msg in state.messages
-        ]
-        # Send to Chainlit UI
-        for cl_msg in cl_messages:
-            await cl_msg.send()
+        else:
+            cl_logger.error(f"Unknown action: {action}")
 
         # Save state
         await save_chat_memory(state, store)

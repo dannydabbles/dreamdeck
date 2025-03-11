@@ -93,6 +93,7 @@ class ConfigSchema(BaseModel):
     storyboard_generation_prompt_postfix: str = ""  # Fixed here (added 'str = ')
     _env_prefix: ClassVar[str] = "APP_"  # NEW: Enable env var loading with prefix
     model_config = ConfigDict(extra='forbid')  # ENFORCE strict validation
+    chat: dict
 
 def parse_size(size_str: str) -> int:
     """Parse size strings like '10MB' to bytes."""
@@ -164,6 +165,10 @@ MONITORING_SETTINGS = config.monitoring
 CACHING_SETTINGS = config.caching
 AGENTS = config.agents
 CHAINLIT_SETTINGS = config.chainlit
+START_MESSAGE = config.chat.get('start_message', 'Hello! How can I help you today?')
+DECISION_PROMPT = config.prompts.get('decision_prompt', 'What would you like to do next?')
+AI_WRITER_PROMPT = config.prompts.get('ai_writer_prompt', 'Write a story.')
+STORYBOARD_GENERATION_PROMPT = config.prompts.get('storyboard_generation_prompt', 'Generate a storyboard.')
 
 # Ensure SERPAPI_KEY is set from environment variable first, then config file
 SERPAPI_KEY = os.getenv('SERPAPI_KEY', config.search.get('serpapi_key', ''))

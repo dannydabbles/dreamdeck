@@ -90,5 +90,3 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
         cl_logger.error(f"Failed to process storyboard images: {str(e)}")
 
 storyboard_editor_agent = generate_storyboard  # Expose the function as storyboard_editor_agent
-
-storyboard_editor_agent = generate_storyboard  # Expose the function as storyboard_editor_agent

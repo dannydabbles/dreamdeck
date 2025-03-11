@@ -24,21 +24,16 @@ class VectorStore(BaseStore):
             embedding_function=self.embeddings, persist_directory="chroma_db"
         )
 
-    def get(self, key: tuple, field: str) -> List[Document]:
+    def get(self, field: str) -> List[Document]:
         """Get relevant documents using ChromaDB.
 
         Args:
-            key (tuple): The key for the document.
             field (str): The field to search.
 
         Returns:
             List[Document]: The relevant documents.
         """
         try:
-            thread_id = key[0] if key else cl.context.session.id
-            if not thread_id:
-                return []
-
             # Get relevant documents using embeddings
             try:
                 query_embedding = self.embeddings.embed_query(field)
@@ -55,29 +50,16 @@ class VectorStore(BaseStore):
             cl.logger.error(f"Error in vector store get operation: {e}")
             return []
 
-    def put(self, key: tuple, field: str, value: Dict[str, Any]) -> None:
+    def put(self, content: str) -> None:
         """Store new content in ChromaDB.
 
         Args:
-            key (tuple): The key for the document.
             field (str): The field to store.
             value (Dict[str, Any]): The content to store.
         """
         try:
-            thread_id = key[0] if key else cl.context.session.id
-            content = value.get("content", "")
-            if not content:
-                return
-
             # Create and add document
-            doc = Document(
-                page_content=content,
-                metadata={
-                    "thread_id": thread_id,
-                    "timestamp": os.getenv("TIMESTAMP", ""),
-                    "field": field,
-                },
-            )
+            doc = Document(page_content=content)
             self.vectorstore.add_documents([doc])
             self.vectorstore.persist()
 
