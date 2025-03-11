@@ -35,11 +35,6 @@ import src.config  # Import src.config at the top
 async def test_web_search_integration(mock_langgraph_context):
     user_input = HumanMessage(content="search AI trends")
     
-    # Set environment variable and reload config
-    os.environ["APP_FEATURES_WEB_SEARCH"] = "true"
-    from src import config
-    config.config = config.load_config()  # Force reload
-    
     with patch("src.agents.web_search_agent.requests.get", new_callable=AsyncMock) as mock_get:
         mock_response = MagicMock()
         mock_response.json.return_value = {"organic_results": [{"snippet": "AI trends are evolving."}]}

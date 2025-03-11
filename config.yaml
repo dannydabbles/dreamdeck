@@ -282,7 +282,7 @@ agents:
       dice_roll:
         sides: 20
       web_search:
-        enabled: false
+        enabled: true
   writer_agent:
     temperature: 0.7
     max_tokens: 8000
@@ -329,7 +329,7 @@ api:
 
 features:
   image_generation: true
-  web_search: false
+  web_search: true
   dice_rolling: true
 
 rate_limits:

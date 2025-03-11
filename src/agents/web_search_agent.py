@@ -25,11 +25,8 @@ async def _web_search(query: str, store=None, previous=None) -> ToolMessage:
         ToolMessage: The search result.
     """
     if not SERPAPI_KEY:
-        return ToolMessage(
-            content="SERPAPI_KEY environment variable not set.",
-            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
-            name="error",
-        )
+        # Print a warning if the API key is missing
+        cl_logger.warning("SerpAPI key is missing.")
     if not WEB_SEARCH_ENABLED:
         return ToolMessage(
             content="Web search is disabled.",
@@ -39,7 +36,7 @@ async def _web_search(query: str, store=None, previous=None) -> ToolMessage:
 
     url = f"https://serpapi.com/search.json?q={query}&api_key={SERPAPI_KEY}"
     try:
-        response = requests.get(url)
+        response = await requests.get(url)
         response.raise_for_status()
         data = response.json()
         if "error" in data:
