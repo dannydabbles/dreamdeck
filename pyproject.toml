@@ -14,8 +14,7 @@ packages = [
 python = "^3.12"
 openai = "^1.14.3"
 chromadb = "^0.4.24"
-langchain-community = { version = "^0.3.12", exclude = ["embeddings"] }
-chromadb-utils = "0.4.24"
+langchain-community = "^0.3.12"
 pydantic = "^2.10.1"
 langchain-core = "^0.3.25"
 aiohttp = "^3.11.10"
