@@ -1,6 +1,6 @@
 from langchain_core.documents import Document
 from langchain_core.stores import BaseStore
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 from chromadb import PersistentClient
 from typing import Dict, Any, List, Sequence, Tuple, Optional, Iterator  # Import Optional and Iterator
 import os
@@ -18,8 +18,8 @@ class VectorStore(BaseStore):
     """
 
     def __init__(self):
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        self.embeddings = SentenceTransformerEmbeddingFunction(
+            model_name="all-MiniLM-L6-v2"
         )
         self.client = PersistentClient(path="chroma_db")
         self.collection = self.client.get_or_create_collection(
