@@ -23,14 +23,21 @@ async def _generate_storyboard(content: str, store=None, previous=None) -> str:
         str: The generated storyboard.
     """
     try:
-        # Placeholder for storyboard generation logic
-        return content
+        prompt_template = config.prompts.get('storyboard_generation_prompt', '')
+        formatted_prompt = prompt_template.format(
+            recent_chat_history=previous.get_recent_history_str(),
+            memories=previous.get_memories_str(),
+            tool_results=previous.get_tool_results_str()
+        )
+        storyboard_result = formatted_prompt
+        await process_storyboard_images(storyboard_result, message_id=previous.thread_id)
+        return storyboard_result
     except Exception as e:
         cl_logger.error(f"Storyboard generation failed: {e}")
         return "Error generating storyboard."
-    
+
 @task
-async def generate_storyboard(content: str) -> str:
-    return await _generate_storyboard(content)
+async def generate_storyboard(content: str, **kwargs) -> str:
+    return await _generate_storyboard(content, **kwargs)
 
 storyboard_editor_agent = generate_storyboard  # Expose the function as storyboard_editor_agent
