@@ -23,7 +23,6 @@ from .config import (
     DECISION_PROMPT,  # Import DECISION_PROMPT
 )
 from .models import ChatState
-from .memory_management import save_chat_memory
 from .stores import BaseStore  # Import BaseStore
 
 from .config import DECISION_PROMPT
@@ -98,8 +97,7 @@ async def chat_workflow(
         else:
             cl_logger.error(f"Unknown action: {action}")
 
-        # Save state
-        await save_chat_memory(state, store)
+        return state
 
     except Exception as e:
         cl_logger.error(f"Critical error in chat workflow: {str(e)}", exc_info=True)

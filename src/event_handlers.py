@@ -175,7 +175,8 @@ async def on_message(message: cl.Message):
         vector_memory.put(content=message.content)
 
         # Generate AI response using the chat workflow
-        await chat_workflow(state.messages, store=cl.user_session.get("vector_memory"), previous=state)
+        state = await chat_workflow(state.messages, store=cl.user_session.get("vector_memory"), previous=state)
+        cl.user_session.set("state", state)
 
     except Exception as e:
         cl.element.logger.error(f"Runnable stream failed: {e}", exc_info=True)
