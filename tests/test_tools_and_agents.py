@@ -13,10 +13,7 @@ from src.agents.storyboard_editor_agent import _generate_storyboard
 
 @pytest.fixture
 def mock_langgraph_context():
-    return {
-        "config": {"configurable": {"thread_id": "test-thread-id"}},
-        "previous": ChatState(),
-    }
+    return {}
 
 @pytest.mark.asyncio
 async def test_decision_agent_roll_action(mock_langgraph_context):
