@@ -6,7 +6,7 @@ from langgraph.func import task
 from langchain_core.messages import ToolMessage
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
-from ..config import WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_AGENT_STREAMING, WRITER_AGENT_VERBOSE, LLM_TIMEOUT
+from ..config import WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_AGENT_STREAMING, WRITER_AGENT_VERBOSE, LLM_TIMEOUT, AI_WRITER_PROMPT
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -23,8 +23,26 @@ async def _generate_story(content: str, store=None, previous=None) -> str:
         str: The generated story segment.
     """
     try:
-        # TODO: Implement story generation logic based on writer prompt in config.yaml
-        return content
+        formatted_prompt = AI_WRITER_PROMPT.format(
+            recent_chat_history=previous.get_recent_history_str(),
+            memories=previous.get_memories_str(),
+            tool_results=previous.get_tool_results_str()
+        )
+
+        # Initialize the LLM
+        llm = ChatOpenAI(
+            temperature=WRITER_AGENT_TEMPERATURE,
+            max_tokens=WRITER_AGENT_MAX_TOKENS,
+            streaming=WRITER_AGENT_STREAMING,
+            verbose=WRITER_AGENT_VERBOSE,
+            timeout=LLM_TIMEOUT
+        )
+
+        # Generate the story
+        response = await llm.agenerate([formatted_prompt])
+        story_segment = response.generations[0][0].text.strip()
+
+        return story_segment
     except Exception as e:
         cl_logger.error(f"Story generation failed: {e}")
         return "Error generating story."

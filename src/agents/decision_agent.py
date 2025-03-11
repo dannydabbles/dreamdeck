@@ -24,9 +24,7 @@ async def _decide_action(user_message: HumanMessage) -> dict:
     """Determine the next action based on user input.
 
     Args:
-        user_message (str): The user's input.
-        store (BaseStore, optional): The store for chat state. Defaults to None.
-        previous (ChatState, optional): Previous chat state. Defaults to None.
+        user_message (HumanMessage): The user's input.
 
     Returns:
         dict: The next action to take.
@@ -36,14 +34,23 @@ async def _decide_action(user_message: HumanMessage) -> dict:
             user_input=user_message.content
         )
 
-        # TODO: Implement decision logic
+        # Initialize the LLM
+        llm = ChatOpenAI(
+            temperature=DECISION_AGENT_TEMPERATURE,
+            max_tokens=DECISION_AGENT_MAX_TOKENS,
+            streaming=DECISION_AGENT_STREAMING,
+            verbose=DECISION_AGENT_VERBOSE,
+            timeout=LLM_TIMEOUT
+        )
 
-        if "roll" in user_message.content.lower():
+        # Generate the decision
+        response = await llm.agenerate([formatted_prompt])
+        decision = response.generations[0][0].text.strip()
+
+        if "roll" in decision.lower():
             return {"name": "roll", "args": {}}
-        elif "search" in user_message.content.lower():
+        elif "search" in decision.lower():
             return {"name": "search", "args": {}}
-        elif "writer" in user_message.content.lower():
-            return {"name": "continue_story", "args": {}}
         else:
             return {"name": "continue_story", "args": {}}
     except Exception as e:

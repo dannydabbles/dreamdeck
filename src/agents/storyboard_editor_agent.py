@@ -10,7 +10,14 @@ from langchain_core.messages import ToolMessage
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from src.image_generation import generate_image_async, generate_image_generation_prompts
-from ..config import STORYBOARD_EDITOR_AGENT_TEMPERATURE, STORYBOARD_EDITOR_AGENT_MAX_TOKENS, STORYBOARD_EDITOR_AGENT_STREAMING, STORYBOARD_EDITOR_AGENT_VERBOSE, LLM_TIMEOUT
+from ..config import (
+    STORYBOARD_EDITOR_AGENT_TEMPERATURE,
+    STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
+    STORYBOARD_EDITOR_AGENT_STREAMING,
+    STORYBOARD_EDITOR_AGENT_VERBOSE,
+    LLM_TIMEOUT,
+    STORYBOARD_GENERATION_PROMPT,
+)
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -27,13 +34,25 @@ async def _generate_storyboard(content: str, store=None, previous=None) -> str:
         str: The generated storyboard.
     """
     try:
-        prompt_template = config.prompts.get('storyboard_generation_prompt', '')
-        formatted_prompt = prompt_template.format(
+        formatted_prompt = STORYBOARD_GENERATION_PROMPT.format(
             recent_chat_history=previous.get_recent_history_str(),
             memories=previous.get_memories_str(),
             tool_results=previous.get_tool_results_str()
         )
-        storyboard_result = formatted_prompt
+
+        # Initialize the LLM
+        llm = ChatOpenAI(
+            temperature=STORYBOARD_EDITOR_AGENT_TEMPERATURE,
+            max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
+            streaming=STORYBOARD_EDITOR_AGENT_STREAMING,
+            verbose=STORYBOARD_EDITOR_AGENT_VERBOSE,
+            timeout=LLM_TIMEOUT
+        )
+
+        # Generate the storyboard
+        response = await llm.agenerate([formatted_prompt])
+        storyboard_result = response.generations[0][0].text.strip()
+
         await process_storyboard_images(storyboard_result, message_id=previous.thread_id)
         return storyboard_result
     except Exception as e:
