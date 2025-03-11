@@ -5,7 +5,6 @@ from src.state import ChatState
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from src.stores import VectorStore
 from unittest.mock import MagicMock
-from langgraph.config import get_config, ensure_config
 
 @pytest.fixture
 def mock_chat_state():
