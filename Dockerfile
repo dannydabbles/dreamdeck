@@ -27,12 +27,16 @@ ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+RUN pip install poetry
 
 WORKDIR /app
 
-COPY ./src ./
+COPY ./src ./src
 COPY ./.chainlit ./.chainlit
 COPY ./config.yaml ./
 COPY chainlit.md ./
+COPY ./pyproject.toml ./
 
-CMD ["chainlit", "run", "/app/app.py", "-w", "-h", "--host", "0.0.0.0", "--port", "8080", "--debug"]
+ENV PYTHONPATH=/app
+
+CMD ["poetry", "run", "chainlit", "run", "/app/src/app.py", "-w", "-h", "--host", "0.0.0.0", "--port", "8080", "--debug"]
