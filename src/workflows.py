@@ -93,18 +93,14 @@ async def _chat_workflow(
 
         elif action in ["continue_story", "writer"]:
             writer_response = await writer_agent(state)
-            new_message = writer_response[0]
-            state.messages.append(new_message)
-
-            gm_message = cl.Message(content=new_message.content)
-            await gm_message.send()
+            if writer_response:
+                new_message = writer_response[0]
+                state.messages.append(new_message)
 
             # Generate storyboard if needed and image generation is enabled
+            gm_message: CLMessage = cl.user_session.get("gm_message")
             if IMAGE_GENERATION_ENABLED:
-                storyboard_response = await storyboard_editor_agent(state=state, gm_message_id=gm_message.id)
-                if not storyboard_response:
-                    raise Exception("Storyboard generation failed.")
-                storyboard = storyboard_response[0].content
+                storyboard_editor_agent(state=state, gm_message_id=gm_message.id)
 
         else:
             cl_logger.error(f"Unknown action: {action}")

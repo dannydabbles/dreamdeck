@@ -8,6 +8,9 @@ from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from ..config import WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_AGENT_STREAMING, WRITER_AGENT_VERBOSE, LLM_TIMEOUT, AI_WRITER_PROMPT
 from ..models import ChatState
+
+import chainlit as cl
+
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
@@ -43,13 +46,23 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
         )
 
         # Generate the story
-        response = llm.invoke([('system', formatted_prompt)])
-        story_segment = AIMessage(content=response.content.strip(), name="writer")
+        gm_message: cl.Message = cl.Message(content="")
+        cl.user_session.set("gm_message", gm_message)
+
+        cb = cl.AsyncLangchainCallbackHandler(
+            to_ignore=["ChannelRead", "RunnableLambda", "ChannelWrite", "__start__", "_execute"],
+        )
+
+        async for chunk in llm.astream([('system', formatted_prompt)]):
+            await gm_message.stream_token(chunk.content)
+        await gm_message.send()
+
+        story_segment = AIMessage(content=gm_message.content.strip(), name="writer")
 
         return [story_segment]
     except Exception as e:
         cl_logger.error(f"Story generation failed: {e}")
-        return "Error generating story."
+        return []
 
 @task
 async def generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:

@@ -160,6 +160,7 @@ async def on_chat_resume(thread: ThreadDict):
     # Initialize thread in Chainlit with a start message
     messages = []
     image_generation_memory = []
+    cl.user_session.set("gm_message", cl.Message(content="", author="Game Master"))
 
     # Reconstruct messages from thread history
     for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
@@ -222,7 +223,7 @@ async def on_message(message: cl.Message):
             }
         }
 
-        cb = cl.LangchainCallbackHandler(
+        cb = cl.AsyncLangchainCallbackHandler(
             to_ignore=["ChannelRead", "RunnableLambda", "ChannelWrite", "__start__", "_execute"],
         )
         #state = await chat_workflow.ainvoke(input={"messages": state.messages, "store": cl.user_session.get("vector_memory"), "previous": state}, config=thread_config)

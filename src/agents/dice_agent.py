@@ -27,11 +27,10 @@ async def _dice_roll(state: ChatState) -> list[BaseMessage]:
         ToolMessage: The result of the dice roll.
     """
     messages = state.messages
-    input_str = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None)
+    input_str = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None).content
     if not DICE_ROLLING_ENABLED:
         return AIMessage(
             content="Dice rolling is disabled in the configuration.",
-            tool_call_id=str(uuid4()),  # Generate a unique ID for the tool call
             name="error",
         )
 
