@@ -3,7 +3,7 @@ import os
 import logging
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import BaseMessage, AIMessage
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from ..config import WRITER_AGENT_TEMPERATURE, WRITER_AGENT_MAX_TOKENS, WRITER_AGENT_STREAMING, WRITER_AGENT_VERBOSE, LLM_TIMEOUT, AI_WRITER_PROMPT
@@ -11,7 +11,7 @@ from ..models import ChatState
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _generate_story(state: ChatState) -> str:
+async def _generate_story(state: ChatState) -> list[BaseMessage]:
     """Generate a story segment based on the input content.
     content = state.messages[-1].content if state.messages else ""
     store = state.vector_memory
@@ -34,6 +34,7 @@ async def _generate_story(state: ChatState) -> str:
 
         # Initialize the LLM
         llm = ChatOpenAI(
+            base_url="http://192.168.1.111:5000/v1",
             temperature=WRITER_AGENT_TEMPERATURE,
             max_tokens=WRITER_AGENT_MAX_TOKENS,
             streaming=WRITER_AGENT_STREAMING,
@@ -42,16 +43,16 @@ async def _generate_story(state: ChatState) -> str:
         )
 
         # Generate the story
-        response = await llm.agenerate([formatted_prompt])
-        story_segment = response.generations[0][0].text.strip()
+        response = llm.invoke([('system', formatted_prompt)])
+        story_segment = AIMessage(content=response.content.strip(), name="writer")
 
-        return story_segment
+        return [story_segment]
     except Exception as e:
         cl_logger.error(f"Story generation failed: {e}")
         return "Error generating story."
 
 @task
-async def generate_story(state: ChatState, **kwargs) -> str:
+async def generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
     return await _generate_story(state)
 
 writer_agent = generate_story  # Expose the function as writer_agent

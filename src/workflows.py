@@ -5,6 +5,7 @@ from typing import List, Optional
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint.memory import MemorySaver
+from chainlit import Message as CLMessage
 from langchain_core.messages import (
     BaseMessage,
     AIMessage,
@@ -69,6 +70,7 @@ async def _chat_workflow(
         # Determine action
         human_messages = [msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)]
         last_human_message = human_messages[0] if human_messages else None
+        new_message = None
         if not last_human_message:
             cl_logger.info("No human message found, defaulting to continue_story")
             action = "continue_story"
@@ -76,22 +78,33 @@ async def _chat_workflow(
             decision_response = await decision_agent(state)
             action = decision_response[0].name
             cl_logger.info(f"Action: {action}")
+            new_message = AIMessage(content=decision_response[0].name, name="decision")
+            state.messages.append(new_message)
 
         if "roll" in action:
-            state.messages += dice_agent(state).result()
+            dice_response = await dice_agent(state)
+            new_message = dice_response[0]
+            state.messages.append(new_message)
 
         elif "search" in action:
-            state.messages += web_search_agent(state).result()
+            web_search_response = await web_search_agent(state)
+            new_message = web_search_response[0]
+            state.messages.append(new_message)
 
         elif action in ["continue_story", "writer"]:
-            state.messages += writer_agent(state).result()
-            last_human_message = [msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)][0]
+            writer_response = await writer_agent(state)
+            new_message = writer_response[0]
+            state.messages.append(new_message)
+
+            gm_message = cl.Message(content=new_message.content)
+            await gm_message.send()
 
             # Generate storyboard if needed and image generation is enabled
             if IMAGE_GENERATION_ENABLED:
-                storyboard_result = storyboard_editor_agent(state=state).result()
-                if storyboard_result:
-                    state.metadata["storyboard"] = storyboard_result
+                storyboard_response = await storyboard_editor_agent(state=state, gm_message_id=gm_message.id)
+                if not storyboard_response:
+                    raise Exception("Storyboard generation failed.")
+                storyboard = storyboard_response[0].content
 
         else:
             cl_logger.error(f"Unknown action: {action}")

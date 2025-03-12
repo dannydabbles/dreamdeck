@@ -216,7 +216,7 @@ prompts:
   storyboard_generation_prompt_postfix: "" #"source_anime, source_cartoon"
 
 image_generation_payload:
-  url: "https://example.com/sdapi"  # Add this line
+  url: "http://192.168.1.4:7860"
   steps: 30
   sampler_name: "Euler"
   scheduler: "Simple"
@@ -230,7 +230,7 @@ image_generation_payload:
   hr_upscaler: "SwinIR 4x"
   denoising_strength: 0.6
   hr_second_pass_steps: 10
-  negative_prompt: ""  # Add this line
+  negative_prompt: ""
 
 timeouts:
   image_generation_timeout: 180

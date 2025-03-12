@@ -24,7 +24,7 @@ from ..config import (
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _generate_storyboard(state: ChatState) -> list[BaseMessage]:
+async def _generate_storyboard(state: ChatState, gm_message_id: str) -> list[BaseMessage]:
     """Generate a storyboard based on the input content.
     content = state.messages[-1].content if state.messages else ""
 
@@ -39,13 +39,14 @@ async def _generate_storyboard(state: ChatState) -> list[BaseMessage]:
     messages = state.messages
     try:
         formatted_prompt = STORYBOARD_GENERATION_PROMPT.format(
-            recent_chat_history=messages.get_recent_history_str(),
-            memories=messages.get_memories_str(),
-            tool_results=messages.get_tool_results_str()
+            recent_chat_history=state.get_recent_history_str(),
+            memories=state.get_memories_str(),
+            tool_results=state.get_tool_results_str()
         )
 
         # Initialize the LLM
         llm = ChatOpenAI(
+            base_url="http://192.168.1.111:5000/v1",
             temperature=STORYBOARD_EDITOR_AGENT_TEMPERATURE,
             max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
             streaming=STORYBOARD_EDITOR_AGENT_STREAMING,
@@ -54,18 +55,18 @@ async def _generate_storyboard(state: ChatState) -> list[BaseMessage]:
         )
 
         # Generate the storyboard
-        response = await llm.agenerate([formatted_prompt])
-        storyboard_result = response.generations[0][0].text.strip()
+        storyboard_response = llm.invoke([('system', formatted_prompt)])
+        storyboard = storyboard_response.content.strip()
 
-        await process_storyboard_images(storyboard_result, message_id=state.thread_id)
+        await process_storyboard_images(storyboard, message_id=gm_message_id)
         return []
     except Exception as e:
         cl_logger.error(f"Storyboard generation failed: {e}")
         return [AIMessage(content="Error generating storyboard.", name="error")]
 
 @task
-async def generate_storyboard(state: ChatState, **kwargs) -> list[BaseMessage]:
-    return await _generate_storyboard(state)
+async def generate_storyboard(state: ChatState, gm_message_id: str) -> list[BaseMessage]:
+    return await _generate_storyboard(state, gm_message_id)
 
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
     """Process storyboard into images and send to chat.

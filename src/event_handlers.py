@@ -158,10 +158,10 @@ async def on_chat_resume(thread: ThreadDict):
     cl.user_session.set("vector_memory", vector_memory)
 
     # Initialize thread in Chainlit with a start message
-    await cl.Message(content=START_MESSAGE, author="system").send()
+    await cl.Message(content=START_MESSAGE, author="Game Master").send()
     vector_memory.put(content=START_MESSAGE)
 
-    messages = [AIMessage(content=START_MESSAGE, type="system")]
+    messages = [AIMessage(content=START_MESSAGE)]
     image_generation_memory = []
 
     # Reconstruct messages from thread history
@@ -229,12 +229,12 @@ async def on_message(message: cl.Message):
             to_ignore=["ChannelRead", "RunnableLambda", "ChannelWrite", "__start__", "_execute"],
         )
         #state = await chat_workflow.ainvoke(input={"messages": state.messages, "store": cl.user_session.get("vector_memory"), "previous": state}, config=thread_config)
-        response = cl.Message(content="")
+        #gm_message = cl.Message(content="")
+
         inputs = {"messages": state.messages, "previous": state}
         state = await chat_workflow.ainvoke(inputs, config=RunnableConfig(callbacks=[cb], **thread_config))
 
-        await response.send()
-
+        #await gm_message.send()
         cl.user_session.set("state", state)
 
     except Exception as e:

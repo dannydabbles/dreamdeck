@@ -261,7 +261,7 @@ cl_logger.info(
 )
 
 # Expose Stable Diffusion API URL
-STABLE_DIFFUSION_API_URL = config.image_generation_payload.get("url", "https://example.com/sdapi")
+STABLE_DIFFUSION_API_URL = config.image_generation_payload.get("url", os.environ.get("STABLE_DIFFUSION_API_URL"))
 
 CFG_SCALE = config.image_generation_payload.get("cfg_scale", 3.5)
 DENOISING_STRENGTH = config.image_generation_payload.get("denoising_strength", 0.6)
