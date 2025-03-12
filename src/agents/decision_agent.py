@@ -44,6 +44,7 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
 
         # Initialize the LLM
         llm = ChatOpenAI(
+            base_url="http://192.168.1.111:5000/v1",
             temperature=DECISION_AGENT_TEMPERATURE,
             max_tokens=DECISION_AGENT_MAX_TOKENS,
             streaming=DECISION_AGENT_STREAMING,
@@ -52,8 +53,8 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
         )
 
         # Generate the decision
-        response = await llm.agenerate([formatted_prompt])
-        decision = response.generations[0][0].text.strip()
+        response = llm.invoke([("system", formatted_prompt)])
+        decision = response.content.strip()
 
         if "roll" in decision.lower():
             result = AIMessage(content="Rolling dice...", name="dice_roll")
