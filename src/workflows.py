@@ -13,17 +13,17 @@ from langchain_core.messages import (
     ToolMessage
 )
 from .models import ChatState
-from .agents.decision_agent import decide_action  # Import decide_action
-from .agents.dice_agent import dice_roll  # Import dice_roll
-from .agents.web_search_agent import web_search  # Import web_search
-from .agents.writer_agent import generate_story  # Import generate_story
+from .agents.decision_agent import decision_agent  # Import decide_action
+from .agents.dice_agent import dice_agent  # Import dice_roll
+from .agents.web_search_agent import web_search_agent  # Import web_search
+from .agents.writer_agent import writer_agent  # Import generate_story
 from .agents.storyboard_editor_agent import storyboard_editor_agent
 from .config import (
     IMAGE_GENERATION_ENABLED,
     DECISION_PROMPT,  # Import DECISION_PROMPT
 )
 from .models import ChatState
-from .stores import BaseStore  # Import BaseStore
+from langchain_core.stores import BaseStore
 
 from .config import DECISION_PROMPT
 
@@ -35,31 +35,34 @@ cl_logger = logging.getLogger("chainlit")
 
 @entrypoint(checkpointer=MemorySaver())
 async def chat_workflow(
-    messages: List[BaseMessage],
-    store: BaseStore,
-    previous: Optional[ChatState] = None,
+    inputs: dict,
 ) -> ChatState:
     """Main chat workflow handling messages and state.
 
     Args:
         messages (List[BaseMessage]): List of incoming messages.
-        store (BaseStore): The store for chat state.
         previous (Optional[ChatState], optional): Previous chat state. Defaults to None.
 
     Returns:
         ChatState: The updated chat state.
     """
+    messages = inputs.get("messages", [])
+    previous = inputs.get("previous", None)
+
+    cl_logger.info(f"Received {len(messages)} messages.")
 
     # Call _chat_workflow with the correct arguments
-    return await _chat_workflow(messages, store, previous)
+    return await _chat_workflow(messages=messages, previous=previous)
 
 async def _chat_workflow(
     messages: List[BaseMessage],
-    store: BaseStore,
-    previous: Optional[ChatState] = None,
+    previous: ChatState,
 ) -> ChatState:
+    
+    cl_logger.info(f"Messages: {messages}")
+    cl_logger.info(f"Previous state: {previous}")
 
-    state = previous or ChatState()
+    state = previous
     state.messages.extend(messages)
 
     try:
@@ -70,17 +73,18 @@ async def _chat_workflow(
             cl_logger.info("No human message found, defaulting to continue_story")
             action = "continue_story"
         else:
-            decision_response = decide_action(state).result()[0]
-            action = decision_response.name
+            decision_response = await decision_agent(state)
+            action = decision_response[0].name
+            cl_logger.info(f"Action: {action}")
 
         if "roll" in action:
-            state.messages += dice_roll(state).result()
+            state.messages += dice_agent(state).result()
 
         elif "search" in action:
-            state.messages += web_search(state).result()
+            state.messages += web_search_agent(state).result()
 
-        elif ["continue_story", "writer"] in action:
-            state.messages += generate_story(state).result()
+        elif action in ["continue_story", "writer"]:
+            state.messages += writer_agent(state).result()
             last_human_message = [msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)][0]
 
             # Generate storyboard if needed and image generation is enabled

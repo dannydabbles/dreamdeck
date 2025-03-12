@@ -54,6 +54,8 @@ from src.agents.dice_agent import dice_roll_agent
 from src.agents.web_search_agent import web_search_agent
 from chainlit import user_session as cl_user_session  # Import cl_user_session
 
+from langchain_core.stores import BaseStore
+
 import chainlit as cl
 
 # Centralized logging configuration
@@ -128,9 +130,6 @@ async def on_chat_start():
         # Initialize vector store
         cl.user_session.set("vector_memory", VectorStore())
 
-        # Setup runnable
-        cl.user_session.set("runnable", chat_workflow)
-
         # Load knowledge documents
         await load_knowledge_documents()
 
@@ -195,9 +194,6 @@ async def on_chat_resume(thread: ThreadDict):
     cl.user_session.set("image_generation_memory", image_generation_memory)
     cl.user_session.set("ai_message_id", None)
 
-    # Setup runnable
-    cl.user_session.set("runnable", chat_workflow)
-
     # Load knowledge documents
     await load_knowledge_documents()
 
@@ -209,28 +205,43 @@ async def on_message(message: cl.Message):
     Args:
         message (cl.Message): The incoming message.
     """
-    state = cl.user_session.get("state")
+    state: ChatState = cl.user_session.get("state")
 
     if message.type != "user_message":
         return
 
     try:
         # Add user message to state
-        state.messages.append({"content": message.content, "type": "user"})
+        state.messages.append(HumanMessage(content=message.content))
 
         # Add user message to vector memory
-        vector_memory = cl.user_session.get("vector_memory")
+        vector_memory: BaseStore = cl.user_session.get("vector_memory")
         vector_memory.put(content=message.content)
 
         # Generate AI response using the chat workflow
-        chat_workflow(state.messages, store=cl.user_session.get("vector_memory"), previous=state)
+        thread_config = {
+            "configurable": {
+                "thread_id": state.thread_id,
+            }
+        }
+
+        cb = cl.LangchainCallbackHandler(
+            to_ignore=["ChannelRead", "RunnableLambda", "ChannelWrite", "__start__", "_execute"],
+        )
+        #state = await chat_workflow.ainvoke(input={"messages": state.messages, "store": cl.user_session.get("vector_memory"), "previous": state}, config=thread_config)
+        response = cl.Message(content="")
+        inputs = {"messages": state.messages, "previous": state}
+        state = await chat_workflow.ainvoke(inputs, config=RunnableConfig(callbacks=[cb], **thread_config))
+
+        await response.send()
+
         cl.user_session.set("state", state)
 
     except Exception as e:
         cl.element.logger.error(f"Runnable stream failed: {e}", exc_info=True)
         cl.element.logger.error(
-            f"State metadata: {state.metadata}"
-        )  # Log the state's metadata
+            f"State: {state}"
+        )  # Log the state
         await cl.Message(
             content="⚠️ An error occurred while generating the response. Please try again later."
         ).send()
