@@ -1,4 +1,5 @@
 import os
+import logging
 import asyncio
 import random
 import base64
@@ -18,7 +19,7 @@ from langchain_community.document_loaders import (
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema.runnable import RunnableConfig  # Import RunnableConfig
-from .config import (
+from config import (
     NEGATIVE_PROMPT,
     STEPS,
     SAMPLER_NAME,
@@ -35,21 +36,34 @@ from .config import (
     STORYBOARD_GENERATION_PROMPT_PREFIX,
     STORYBOARD_GENERATION_PROMPT_POSTFIX,
     AI_WRITER_PROMPT,
-    MAX_RETRIES,
-    RETRY_DELAY,
     IMAGE_GENERATION_ENABLED,
     WEB_SEARCH_ENABLED,
     DICE_ROLLING_ENABLED,
     START_MESSAGE
 )
-from .state import ChatState
-from .workflows import chat_workflow
-from .agents.dice_agent import handle_dice_roll  # Import handle_dice_roll
-from .initialization import DatabasePool  # Import DatabasePool
-from .stores import VectorStore
+from src.initialization import init_db, DatabasePool
+from src.models import ChatState
+from src.workflows import chat_workflow
+from src.initialization import DatabasePool  # Import DatabasePool
+
+from src.stores import VectorStore  # Import VectorStore
+from src.agents.decision_agent import decision_agent
+from src.agents.writer_agent import writer_agent
+from src.agents.storyboard_editor_agent import storyboard_editor_agent
+from src.agents.dice_agent import dice_roll_agent
+from src.agents.web_search_agent import web_search_agent
+from chainlit import user_session as cl_user_session  # Import cl_user_session
 
 import chainlit as cl
 
+# Centralized logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(), logging.FileHandler("chainlit.log")],
+)
+
+cl_logger = logging.getLogger("chainlit")
 
 # Define an asynchronous range generator
 async def async_range(end):
@@ -63,36 +77,70 @@ async def async_range(end):
         await asyncio.sleep(0.1)
         yield i
 
+@cl.password_auth_callback
+def auth_callback(username: str, password: str):
+    # Fetch the user matching username from your database
+    # and compare the hashed password with the value stored in the database
+    if (username, password) == ("admin", "admin"):
+        return cl.User(
+            identifier="admin", metadata={"role": "admin", "provider": "credentials"}
+        )
+    elif (username, password) == ("test", "test"):
+        return cl.User(
+            identifier="test", metadata={"role": "test", "provider": "credentials"}
+        )
+    else:
+        return None
+
 @cl.on_chat_start
 async def on_chat_start():
     """Initialize new chat session with Chainlit integration.
 
     Sets up the user session, initializes the chat state, and sends initial messages.
     """
+    try:
+        # Initialize vector store
+        vector_memory = VectorStore()
+        cl.user_session.set("vector_memory", vector_memory)
 
-    # Initialize thread in Chainlit with a start message
-    await cl.Message(content=START_MESSAGE, author="Game Master").send()
+        # Initialize agents
+        cl_user_session.set("decision_agent", decision_agent)
+        cl_user_session.set("writer_agent", writer_agent)
+        cl_user_session.set("storyboard_editor_agent", storyboard_editor_agent)
+        cl_user_session.set("dice_roll_agent", dice_roll_agent)
+        cl_user_session.set("web_search_agent", web_search_agent)
+        
+        # Initialize thread in Chainlit with a start message
+        await cl.Message(content=START_MESSAGE, author="Game Master").send()
 
-    # Create initial state
-    state = ChatState(
-        messages=[AIMessage(content=START_MESSAGE)],
-        thread_id=cl.user_session.context.session.id,
-        user_preferences=cl.user_session.get("user_session", {}).get("preferences", {})
-    )
+        # Create initial state
+        state = ChatState(
+            messages=[AIMessage(content=START_MESSAGE)],
+            thread_id=cl.context.session.thread_id,
+            user_preferences=cl.user_session.get("user_session", {}).get("preferences", {})
+        )
 
-    # Store state
-    cl.user_session.set("state", state)
-    cl.user_session.set("image_generation_memory", [])
-    cl.user_session.set("ai_message_id", None)
+        # Store state
+        cl.user_session.set("state", state)
+        cl.user_session.set("image_generation_memory", [])
+        cl.user_session.set("ai_message_id", None)
 
-    # Initialize vector store
-    cl.user_session.set("vector_memory", VectorStore())
+        # Initialize vector store
+        cl.user_session.set("vector_memory", VectorStore())
 
-    # Setup runnable
-    cl.user_session.set("runnable", chat_workflow)
+        # Setup runnable
+        cl.user_session.set("runnable", chat_workflow)
 
-    # Load knowledge documents
-    await load_knowledge_documents()
+        # Load knowledge documents
+        await load_knowledge_documents()
+
+    except Exception as e:
+        cl_logger.error(f"Application failed to start: {e}", exc_info=True)
+        raise
+    finally:
+        # Close database pool
+        await DatabasePool.close()
+
 
 @cl.on_chat_resume
 async def on_chat_resume(thread: ThreadDict):

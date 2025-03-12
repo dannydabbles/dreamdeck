@@ -37,6 +37,6 @@ COPY ./config.yaml ./
 COPY chainlit.md ./
 COPY ./pyproject.toml ./
 
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app:/app/src
 
 CMD ["poetry", "run", "chainlit", "run", "/app/src/app.py", "-w", "-h", "--host", "0.0.0.0", "--port", "8080", "--debug"]
