@@ -1,5 +1,5 @@
 from src.config import config
-import os
+import asyncio
 import logging
 import random  # Import random
 from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
@@ -66,7 +66,8 @@ async def _generate_storyboard(state: ChatState, gm_message_id: str) -> list[Bas
 
 @task
 async def generate_storyboard(state: ChatState, gm_message_id: str) -> list[BaseMessage]:
-    return await _generate_storyboard(state, gm_message_id)
+    asyncio.create_task(_generate_storyboard(state, gm_message_id))
+    return []
 
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
     """Process storyboard into images and send to chat.

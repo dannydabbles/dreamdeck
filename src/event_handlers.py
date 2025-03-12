@@ -158,10 +158,7 @@ async def on_chat_resume(thread: ThreadDict):
     cl.user_session.set("vector_memory", vector_memory)
 
     # Initialize thread in Chainlit with a start message
-    await cl.Message(content=START_MESSAGE, author="Game Master").send()
-    vector_memory.put(content=START_MESSAGE)
-
-    messages = [AIMessage(content=START_MESSAGE)]
+    messages = []
     image_generation_memory = []
 
     # Reconstruct messages from thread history
