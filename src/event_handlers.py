@@ -223,7 +223,7 @@ async def on_message(message: cl.Message):
         vector_memory.put(content=message.content)
 
         # Generate AI response using the chat workflow
-        state = await chat_workflow(state.messages, store=cl.user_session.get("vector_memory"), previous=state)
+        chat_workflow(state.messages, store=cl.user_session.get("vector_memory"), previous=state)
         cl.user_session.set("state", state)
 
     except Exception as e:
@@ -277,7 +277,7 @@ async def load_knowledge_documents():
         cl.element.logger.info(
             f"Adding {len(documents)} documents to the vector store."
         )
-        vector_memory.vectorstore.add_documents(documents)
+        vector_memory.add_documents(documents)
         # TODO: Should we persist the ChromaDB vector store here?
     else:
         cl.element.logger.info("No documents found to add to the vector store.")
