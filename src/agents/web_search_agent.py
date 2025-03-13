@@ -15,51 +15,58 @@ from ..models import ChatState
 cl_logger = logging.getLogger("chainlit")
 
 async def _web_search(state: ChatState) -> list[BaseMessage]:
-    """Perform a web search using SerpAPI.
-
-    Args:
-        query (str): The search query.
-        store (BaseStore, optional): The store for chat state. Defaults to None.
-        previous (ChatState, optional): Previous chat state. Defaults to None.
-
-    Returns:
-        ToolMessage: The search result.
-    """
-    if not SERPAPI_KEY:
-        # Print a warning if the API key is missing
-        cl_logger.warning("SerpAPI key is missing.")
+    """Execute web search using natural language processing"""
     if not WEB_SEARCH_ENABLED:
-        return AIMessage(
-            content="Web search is disabled.",
-            name="error",
-        )
+        return [AIMessage(content="Web search is disabled.", name="error")]
     
-    # Query is last human message
-    query = next((m for m in reversed(state.messages) if isinstance(m, HumanMessage)), None)
-
-    url = f"https://serpapi.com/search.json?q={query}&api_key={SERPAPI_KEY}"
+    # Get user input and context
+    user_query = next((m for m in reversed(state.messages) if isinstance(m, HumanMessage)), "")
+    recent_chat = state.get_recent_history_str(n=5)
+    
+    # Generate search query using LLM
+    formatted_prompt = WEB_SEARCH_PROMPT.format(
+        user_query=user_query.content,
+        recent_chat_history=recent_chat
+    )
+    
+    llm = ChatOpenAI(
+        base_url=config.openai.base_url,
+        temperature=0.2,
+        max_tokens=50,
+        streaming=False,
+        verbose=True,
+        timeout=config.llm.timeout
+    )
+    
     try:
-        response = await requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        if "error" in data:
-            raise ValueError(f"Search error: {data['error']}")
-        return [AIMessage(
-            content=data.get("organic_results", [{}])[0].get("snippet", "No results found."),
-            name="web_search",
-        )]
-    except requests.exceptions.RequestException as e:
-        cl_logger.error(f"Web search failed: {e}")
-        return [AIMessage(
-            content=f"Web search failed: {str(e)}",
-            name="error",
-        )]
-    except ValueError as e:
-        cl_logger.error(f"Web search failed: {e}")
-        return [AIMessage(
-            content=f"Web search failed: {str(e)}",
-            name="error",
-        )]
+        response = llm.invoke([('system', formatted_prompt)])
+        search_query = response.content.strip()
+        
+        # Proceed with search execution
+        url = f"https://serpapi.com/search.json?q={search_query}&api_key={SERPAPI_KEY}"
+        resp = await requests.get(url)
+        data = resp.json()
+        
+        # Format results
+        results = data.get("organic_results", [{"snippet": "No results"}])
+        summary = "\n\n".join([f"{i+1}. {item['snippet']}" for i,item in enumerate(results[:3])])
+        
+        # Send Chainlit message
+        cl_msg = CLMessage(
+            content=f"**Search Results for \"{search_query}\":**\n\n{summary}",
+            parent_id=None
+        )
+        await cl_msg.send()
+        
+        return [
+            AIMessage(
+                content=f"Search results for '{search_query}':\n{summary}",
+                name="web_search"
+            )
+        ]
+    except Exception as e:
+        cl_logger.error(f"Search failed: {str(e)}")
+        return [AIMessage(content=f"Search failed: {str(e)}", name="error")]
 
 @task
 async def web_search(state: ChatState) -> list[BaseMessage]:
