@@ -2,8 +2,8 @@ import os  # Import os at the top
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from langchain_core.messages import HumanMessage
-from langchain_core.outputs import Generation, LLMResult
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.outputs import Generation
 from src.models import ChatState  # Import ChatState
 from src.agents.decision_agent import _decide_action
 from src.agents.web_search_agent import _web_search
@@ -17,11 +17,9 @@ async def test_decision_agent_roll_action():
     state = ChatState(messages=[user_input], thread_id="test-thread-id")
     
     # Mock the LLM's response to return "roll" explicitly
-    with patch('src.agents.decision_agent.ChatOpenAI.agenerate', 
+    with patch('src.agents.decision_agent.ChatOpenAI.invoke', 
               new_callable=AsyncMock) as mock_agenerate:
-        mock_generations = [Generation(text="The user wants to roll dice.")]
-        # Correct structure: list of lists of Generation instances
-        mock_result = LLMResult(generations=[[mock_generations[0]]])  
+        mock_result = AIMessage(content="roll")  
         mock_agenerate.return_value = mock_result
         
         result = await _decide_action(state)

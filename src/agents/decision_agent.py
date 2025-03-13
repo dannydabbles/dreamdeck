@@ -53,7 +53,7 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
         )
 
         # Generate the decision
-        response = llm.invoke([("system", formatted_prompt)])
+        response = await llm.invoke([("system", formatted_prompt)])
         decision = response.content.strip()
 
         if "roll" in decision.lower():

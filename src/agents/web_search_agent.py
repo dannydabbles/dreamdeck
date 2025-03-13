@@ -32,7 +32,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
     )
     
     llm = ChatOpenAI(
-        base_url=config.openai.base_url,
+        base_url=config.openai["base_url"],
         temperature=0.2,
         max_tokens=50,
         streaming=False,
