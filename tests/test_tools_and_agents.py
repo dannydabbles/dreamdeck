@@ -43,7 +43,7 @@ async def test_web_search_integration():
         mock_get.return_value = mock_response
         
         # Mock cl.Message and its send() method
-        mock_cl_instance = MagicMock()
+        mock_cl_instance = AsyncMock()  # Use AsyncMock
         mock_cl_message.return_value = mock_cl_instance
         mock_cl_instance.send.return_value = None  # Simulate successful send
 
@@ -55,7 +55,7 @@ async def test_web_search_integration():
         result = await _web_search(state)
         
         # Verify the mocked send was called with correct args
-        mock_cl_instance.assert_called_once_with(
+        mock_cl_message.assert_called_once_with(
             content=f"**Search Results for \"AI trends\":**\n\n1. AI trends are evolving",
             parent_id=None
         )

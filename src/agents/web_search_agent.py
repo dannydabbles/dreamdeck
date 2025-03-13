@@ -41,25 +41,25 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
     )
     
     try:
-        response = llm.invoke([('system', formatted_prompt)])
+        response = await llm.invoke([('system', formatted_prompt)])  # Add 'await'
         search_query = response.content.strip()
-        
+            
         # Proceed with search execution
         url = f"https://serpapi.com/search.json?q={search_query}&api_key={SERPAPI_KEY}"
         resp = await requests.get(url)
         data = resp.json()
-        
+            
         # Format results
         results = data.get("organic_results", [{"snippet": "No results"}])
         summary = "\n\n".join([f"{i+1}. {item['snippet']}" for i,item in enumerate(results[:3])])
-        
+            
         # Send Chainlit message
         cl_msg = cl.Message(
             content=f"**Search Results for \"{search_query}\":**\n\n{summary}",
             parent_id=None
         )
         await cl_msg.send()
-        
+            
         return [
             AIMessage(
                 content=f"Search results for '{search_query}':\n{summary}",
