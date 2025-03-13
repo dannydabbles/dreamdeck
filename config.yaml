@@ -23,11 +23,11 @@ prompts:
     </goal>
 
     <input>
-    {{user_query}}
+    {user_query}
     </input>
 
     <context>
-    Recent chat history: {{recent_chat}}
+    Recent chat history: {recent_chat_history}
     </context>
 
     <output>
