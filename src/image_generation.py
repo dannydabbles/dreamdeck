@@ -54,14 +54,25 @@ async def async_range(end):
 async def generate_image_async(
     image_generation_prompt: str, seed: int
 ) -> Optional[bytes]:
-    """Generate an image asynchronously using the Stable Diffusion API.
+    """Generates image via remote API call.
 
     Args:
-        image_generation_prompt (str): The image generation prompt.
-        seed (int): The seed for the image generation.
+        image_generation_prompt (str): Detailed visual description
+        seed (int): Randomness seed for reproducibility
 
     Returns:
-        Optional[bytes]: The image bytes, or None if generation fails.
+        bytes: PNG image data if successful, None on failure
+
+    API Details:
+        Endpoint: POST /sdapi/v1/txt2img
+        Timeout: Controlled by IMAGE_GENERATION_TIMEOUT constant
+        Parameters:
+            - cfg_scale: Controls creativity vs fidelity tradeoff
+            - denoising_strength: Influences upscaling intensity
+
+    Error Handling:
+        - Network errors retried 3 times with exponential backoff
+        - Validation errors return None immediately
     """
     if not IMAGE_GENERATION_ENABLED:
         cl_element.logger.warning("Image generation is disabled in the configuration.")
