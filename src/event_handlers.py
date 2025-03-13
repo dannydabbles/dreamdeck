@@ -204,17 +204,21 @@ async def on_message(message: cl.Message):
         message (cl.Message): The incoming message.
     """
     state: ChatState = cl.user_session.get("state")
+    vector_memory: VectorStore = cl.user_session.get("vector_memory")
 
     if message.type != "user_message":
         return
 
     try:
         # Add user message to state
-        state.messages.append(HumanMessage(content=message.content))
+        state.messages.append(HumanMessage(content=message.content, name="Player"))
 
         # Add user message to vector memory
-        vector_memory: BaseStore = cl.user_session.get("vector_memory")
         vector_memory.put(content=message.content)
+        
+        # Put messages relevant to the player message into state.memories list for AI to use from the vector memory
+        state.memories = [str(m) for m in vector_memory.get(message.content)]
+
 
         # Generate AI response using the chat workflow
         thread_config = {

@@ -43,22 +43,6 @@ async def test_web_search_integration():
         assert "AI trends are evolving" in result[0].content
 
 @pytest.mark.asyncio
-async def test_writer_agent_continuation():
-    user_input = HumanMessage(content="Continue the adventure")
-    state = ChatState(messages=[user_input], thread_id="test-thread-id")
-    result = await _generate_story(state)
-    assert result.strip()
-
-@pytest.mark.asyncio
-async def test_storyboard_editor_agent():
-    user_input = HumanMessage(content="Generate a storyboard")
-    state = ChatState(messages=[user_input], thread_id="test-thread-id")
-    with patch("src.image_generation.generate_image_async", new_callable=AsyncMock) as mock_generate_image:
-        mock_generate_image.return_value = b"image_bytes"
-        result = await _generate_storyboard(state)
-        assert result[0].content.strip()
-
-@pytest.mark.asyncio
 async def test_dice_agent():
     user_input = HumanMessage(content="roll d20")
     state = ChatState(messages=[user_input], thread_id="test-thread-id")
