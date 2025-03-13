@@ -40,7 +40,7 @@ async def _generate_storyboard(state: ChatState, gm_message_id: str) -> list[Bas
     try:
         formatted_prompt = STORYBOARD_GENERATION_PROMPT.format(
             recent_chat_history=state.get_recent_history_str(),
-            memories=state.get_memories_str(),
+            memories=state.get_memories_str(),  # Now dynamically queried
             tool_results=state.get_tool_results_str()
         )
 
