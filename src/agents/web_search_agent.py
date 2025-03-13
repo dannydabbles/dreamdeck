@@ -1,11 +1,11 @@
-from src.config import config
+from src.config import config, WEB_SEARCH_PROMPT
 import os
 import requests
 import logging
 from uuid import uuid4  # Import uuid4
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage  # Use LangChain's standard messages
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage, CLMessage  # Use LangChain's standard messages
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from ..config import SERPAPI_KEY, WEB_SEARCH_ENABLED
