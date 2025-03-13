@@ -1,19 +1,3 @@
-web_search_prompt: |
-  <goal>
-    You are a search query generator. Given the user's input and recent chat history, craft the optimal search query to retrieve relevant information. Output ONLY the search query string without any explanations or formatting.
-  </goal>
-
-  <input>
-  {user_query}
-  </input>
-
-  <context>
-  Recent chat history: {recent_chat_history}
-  </context>
-
-  <output>
-  Only output the raw search query string. No quotes, no markdown.
-  </output>
 llm:
   temperature: 0.6
   max_tokens: 8000
@@ -28,6 +12,22 @@ llm:
 search_enabled: false
 
 prompts:
+  web_search_prompt: |
+    <goal>
+      You are a search query generator. Given the user's input and recent chat history, craft the optimal search query to retrieve relevant information. Output ONLY the search query string without any explanations or formatting.
+    </goal>
+
+    <input>
+    {user_query}
+    </input>
+
+    <context>
+    Recent chat history: {recent_chat_history}
+    </context>
+
+    <output>
+    Only output the raw search query string. No quotes, no markdown.
+    </output>
   dice_processing_prompt: |
     <goal>
       You are a dice processing assistant. Given the user's input and recent chat history, determine which dice rolls are needed and why. Output a JSON object with two arrays: "specs" listing dice notation (like "2d6"), and "reasons" explaining each roll's purpose. Separate the arrays with commas, no markdown.

@@ -5,11 +5,13 @@ import logging
 from uuid import uuid4  # Import uuid4
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage, CLMessage  # Use LangChain's standard messages
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage  # Use LangChain's standard messages
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from ..config import SERPAPI_KEY, WEB_SEARCH_ENABLED
 from ..models import ChatState
+
+import chainlit as cl
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -52,7 +54,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
         summary = "\n\n".join([f"{i+1}. {item['snippet']}" for i,item in enumerate(results[:3])])
         
         # Send Chainlit message
-        cl_msg = CLMessage(
+        cl_msg = cl.Message(
             content=f"**Search Results for \"{search_query}\":**\n\n{summary}",
             parent_id=None
         )
