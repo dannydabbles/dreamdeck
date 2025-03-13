@@ -32,12 +32,31 @@ async def test_web_search_integration():
     user_input = HumanMessage(content="search AI trends")
     state = ChatState(messages=[user_input], thread_id="test-thread-id")
     
-    with patch("src.agents.web_search_agent.requests.get", new_callable=AsyncMock) as mock_get:
+    with (
+        patch('src.agents.web_search_agent.requests.get', new_callable=AsyncMock) as mock_get,
+        patch('src.agents.web_search_agent.cl.Message', new_callable=MagicMock) as mock_cl_message,
+    ):
+        # Mock the HTTP GET response
         mock_response = MagicMock()
         mock_response.json.return_value = {"organic_results": [{"snippet": "AI trends are evolving."}]}
         mock_get.return_value = mock_response
         
+        # Mock cl.Message and its send() method
+        mock_cl_instance = MagicMock()
+        mock_cl_message.return_value = mock_cl_instance
+        mock_cl_instance.send.return_value = None  # Simulate successful send
+        
+        # Run the function under test
         result = await _web_search(state)
+        
+        # Verify the mocked send was called with correct args
+        mock_cl_instance.assert_called_once_with(
+            content=f"**Search Results for \"AI trends\":**\n\n1. AI trends are evolving",
+            parent_id=None
+        )
+        mock_cl_instance.send.assert_called_once()
+        
+        # Assert the result content includes the expected snippet
         assert "AI trends are evolving" in result[0].content
 
 @pytest.mark.asyncio
