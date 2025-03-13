@@ -85,6 +85,7 @@ async def _chat_workflow(
     state = previous
     state.messages.extend(messages)
 
+    try:
         vector_memory = cl.user_session.get("vector_memory")  # Retrieve vector store
 
         if "roll" in action:
