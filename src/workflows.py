@@ -85,20 +85,7 @@ async def _chat_workflow(
     state = previous
     state.messages.extend(messages)
 
-    try:
-        # Determine action
-        human_messages = [msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)]
-        last_human_message = human_messages[0] if human_messages else None
-        new_message = None
-        if not last_human_message:
-            cl_logger.info("No human message found, defaulting to continue_story")
-            action = "continue_story"
-        else:
-            decision_response = await decision_agent(state)
-            action = decision_response[0].name
-            cl_logger.info(f"Action: {action}")
-            new_message = AIMessage(content=decision_response[0].name, name="decision")
-            state.messages.append(new_message)
+        vector_memory = cl.user_session.get("vector_memory")  # Retrieve vector store
 
         if "roll" in action:
             dice_response = await dice_agent(state)
@@ -107,10 +94,6 @@ async def _chat_workflow(
             if vector_memory:
                 vector_memory.put(content=new_message.content)
 
-        elif "search" in action:
-            web_search_response = await web_search_agent(state)
-            new_message = web_search_response[0]
-            state.messages.append(new_message)
             if vector_memory:
                 vector_memory.put(content=new_message.content)
 
