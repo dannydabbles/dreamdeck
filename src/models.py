@@ -45,9 +45,9 @@ class ChatState(BaseModel):
     def get_memories_str(self) -> str:
         return "\n".join(self.memories) if self.memories else ""
 
-    def get_recent_history_str(self) -> str:
-        # TODO: Summarize messages past cutoff
-        recent_messages = self.messages[-500:]
+    def get_recent_history_str(self, n: int = 5) -> str:
+        """Return last N messages as formatted strings."""
+        recent_messages = self.messages[-n:] if self.messages else []
         filtered = [
             msg 
             for msg in recent_messages 
