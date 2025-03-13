@@ -24,6 +24,8 @@ Dreamdeck is an AI-powered application designed to provide a Holodeck-like exper
 - **Dice Roll Tool:** Add an element of chance to your game with the `/roll` command.
 - **Knowledge Management:** Load and use knowledge documents to enrich the narrative.
 
+<img src="images/dreamdeck-demo-1.png" alt="DreamDeck Example Image" class="inline"/>
+
 ## Getting Started
 
 ### Prerequisites
