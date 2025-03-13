@@ -44,8 +44,12 @@ class VectorStore(BaseStore):
 
     def yield_keys(self, prefix: str = None) -> Iterator[str]:
         """Iterate over keys matching a prefix."""
-        for doc in self.collection.search(prefix):
-            yield doc.id
+        results = self.collection.query(
+            where_document={'$contains': prefix} if prefix else {},
+            limit=1000  # Adjust as needed
+        )
+        for doc in results['ids']:
+            yield doc
 
     def get(self, field: str) -> List[Document]:
         """Get relevant documents using ChromaDB.
@@ -56,7 +60,8 @@ class VectorStore(BaseStore):
         Returns:
             List[Document]: The relevant documents.
         """
-        return self.collection.search(field)
+        results = self.collection.query(query_texts=[field], n_results=5)
+        return [Document(page_content=result['documents'][0]) for result in results['matches']]
 
     def put(self, content: str) -> None:
         """Store new content in ChromaDB."""
