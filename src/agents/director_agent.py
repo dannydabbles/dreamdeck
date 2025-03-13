@@ -1,5 +1,5 @@
 from langgraph.func import entrypoint, task
-from .gm_agent import gm_agent  # Adjust path as needed
+from .writer_agent import writer_agent  # Adjust path as needed
 
 @task
 def director_decision(user_input: str) -> str:
@@ -10,7 +10,7 @@ def director_decision(user_input: str) -> str:
 def director_agent(user_input: str, *, previous: dict = None) -> dict:
     state = previous or {}
     directive = director_decision(user_input).result()
-    gm_response = gm_agent(f"Directive: {directive}").result()
+    gm_response = writer_agent(f"Directive: {directive}").result()
     state["directive"] = directive
     state["gm_response"] = gm_response
     return entrypoint.final(value=state, save=state)
