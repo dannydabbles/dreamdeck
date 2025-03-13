@@ -94,9 +94,6 @@ async def _chat_workflow(
             if vector_memory:
                 vector_memory.put(content=new_message.content)
 
-            if vector_memory:
-                vector_memory.put(content=new_message.content)
-
         elif action in ["continue_story", "writer"]:
             writer_response = await writer_agent(state)
             if writer_response:
