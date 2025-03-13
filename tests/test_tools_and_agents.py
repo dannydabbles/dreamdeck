@@ -56,7 +56,7 @@ async def test_web_search_integration():
         
         # Verify the mocked send was called with correct args
         mock_cl_message.assert_called_once_with(
-            content=f"**Search Results for \"AI trends\":**\n\n1. AI trends are evolving",
+            content=f"**Search Results for \"AI trends\":**\n\n1. AI trends are evolving.",
             parent_id=None
         )
         mock_cl_instance.send.assert_called_once()
