@@ -67,7 +67,28 @@ class FeatureConfig(BaseModel):
     image_generation: bool
 
 class ConfigSchema(BaseModel):
-    """Pydantic model for the configuration schema."""
+    """Central configuration container for the application.
+
+    Structure:
+        llm: Language model parameters (temperature, token limits)
+        agents: Configuration blocks for each agent type
+        features: Enabled/disabled capabilities (dice/web/images)
+        logging: Verbosity and output targets
+        api: External service connection details
+        security: Authentication/secrets management
+        caching: Performance optimization parameters
+
+    Loading Process:
+        1. Reads config.yaml from package root
+        2. Merges with environment variables (prefix APP_)
+        3. Validates against Pydantic schema
+        4. Exports key values as global constants
+
+    Important Notes:
+        - Uses strict validation (extra='forbid')
+        - Nested structures require explicit model definitions
+        - Environment variables override YAML values
+    """
     llm: LlmConfig
     prompts: dict
     image_generation_payload: dict

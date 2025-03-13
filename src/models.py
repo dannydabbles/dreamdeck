@@ -12,6 +12,23 @@ import chainlit as cl
 
 
 class ChatState(BaseModel):
+    """Represents the conversational state of a user interaction.
+
+    Attributes:
+        messages (List[BaseMessage]): Conversation history including user/system messages
+        is_last_step (bool): Indicates if this is terminal state (unused currently)
+        thread_id (str): Unique identifier for the conversation thread
+        metadata (dict): Arbitrary state data for plugins/extensions
+        current_message_id (Optional[str]): Reference to ongoing message (async ops)
+        error_count (int): Number of consecutive errors encountered
+        memories (List[str]): Extracted contextual info from prior messages
+        user_preferences (dict): User-specific settings like tone preference
+        thread_data (dict): Metadata about the conversation thread
+
+    State Transitions:
+        - Messages are immutable - new states are created with .copy_with_updates()
+        - Memories are automatically populated from vector store queries
+    """
     messages: List[BaseMessage] = []
     is_last_step: bool = False
     thread_id: str = ...

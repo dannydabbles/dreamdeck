@@ -17,14 +17,22 @@ from ..models import ChatState
 cl_logger = logging.getLogger("chainlit")
 
 async def _dice_roll(state: ChatState) -> list[BaseMessage]:
-    """Roll dice based on user input.
+    """Process dice rolling requests from users.
 
     Args:
-        input_str (str, optional): The dice specification (e.g., "d3", "2d6").
-                                 Defaults to "d20" if not specified.
+        state (ChatState): Current conversation state containing user input
 
     Returns:
-        ToolMessage: The result of the dice roll.
+        list[BaseMessage]: Result messages containing dice outcome or errors
+
+    Parsing Logic:
+        - Defaults to 20-sided die if no input
+        - Supports formats like "3d6", "d100", "2d4+modifier"
+        - Invalid formats default to standard d20 roll
+
+    Error Handling:
+        - Captures all exceptions to prevent crashes
+        - Logs detailed errors with stack traces
     """
     messages = state.messages
     input_str = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None).content

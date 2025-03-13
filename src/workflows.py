@@ -59,6 +59,25 @@ async def _chat_workflow(
     messages: List[BaseMessage],
     previous: ChatState,
 ) -> ChatState:
+    """Core logic for processing user input and generating responses.
+
+    Args:
+        messages (List[BaseMessage]): Incoming messages from the user.
+        previous (ChatState): Previous state of the conversation.
+
+    Returns:
+        ChatState: Updated conversation state after processing.
+
+    Workflow Steps:
+        1. Update state with new messages
+        2. Determine action via decision_agent
+        3. Execute selected action (dice/web/story)
+        4. Append results to conversation
+        5. Trigger storyboard generation if enabled
+
+    Raises:
+        Exception: Critical errors during processing are logged but don't halt execution
+    """
     
     cl_logger.info(f"Messages: {messages}")
     cl_logger.info(f"Previous state: {previous}")
