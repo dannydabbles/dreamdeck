@@ -24,7 +24,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
     
     # Get user input and context
     user_query = next((m for m in reversed(state.messages) if isinstance(m, HumanMessage)), "")
-    recent_chat = state.get_recent_history_str(n=5)
+    recent_chat = state.get_recent_history_str()
     
     # Generate search query using LLM
     template = Template(config.prompts['web_search_prompt'])

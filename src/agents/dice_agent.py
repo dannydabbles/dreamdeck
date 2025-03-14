@@ -24,7 +24,7 @@ cl_logger = logging.getLogger("chainlit")
 async def _dice_roll(state: ChatState) -> List[BaseMessage]:
     """Process dice rolling requests from users."""
     input_str = next((m for m in reversed(state.messages) if isinstance(m, HumanMessage)), None).content
-    recent_chat = state.get_recent_history_str(n=5)  # Fetch last 5 messages
+    recent_chat = state.get_recent_history_str()
     
     try:
         template = Template(config.prompts['dice_processing_prompt'])

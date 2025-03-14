@@ -166,18 +166,8 @@ async def on_chat_resume(thread: ThreadDict):
     for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
         if step["type"] == "user_message":
             messages.append(HumanMessage(content=step["output"], name="Player"))
-        elif step["type"] == "ai_message":
+        elif step["type"] == "assistant_message":
             messages.append(AIMessage(content=step["output"], name="GM"))
-        elif step["type"] == "tool":
-            tool_call = step.get("output")
-            messages.append(
-                ToolMessage(
-                    content=step['output'],
-                    tool_call_id=step['id']
-                )
-            )
-        elif step["type"] == "image_generation":
-            image_generation_memory.append(step["output"])
 
     # Create state
     state = ChatState(
