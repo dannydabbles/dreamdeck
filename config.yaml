@@ -249,7 +249,7 @@ prompts:
     </input>
 
     Analyze the input and respond with the most appropriate action. If unsure, use "continue_story".
-  storyboard_generation_prompt_prefix: "" #"masterpiece,best quality,amazing quality"
+  storyboard_generation_prompt_prefix: "" #"masterpiece, best quality, amazing quality"
 
   storyboard_generation_prompt_postfix: "" #"source_anime, source_cartoon"
 
