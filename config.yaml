@@ -47,7 +47,8 @@ prompts:
     </context>
 
     <output>
-    Only output the JSON object. No explanations.
+    ONLY RETURN THE RAW JSON OBJECT. NO TEXT BEFORE OR AFTER. EXAMPLE:
+    {"specs":["2d6"],"reasons":["Attack roll"]}
     </output>
   ai_writer_prompt: |
   ai_writer_prompt: |
