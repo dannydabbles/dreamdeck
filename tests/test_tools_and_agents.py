@@ -33,7 +33,7 @@ async def test_web_search_integration():
     state = ChatState(messages=[user_input], thread_id="test-thread-id")
     
     with (
-        patch('src.agents.web_search_agent.requests.get', new_callable=AsyncMock) as mock_get,
+        patch('src.agents.web_search_agent.requests.get', new_callable=MagicMock) as mock_get,
         patch('src.agents.web_search_agent.cl.Message', new_callable=MagicMock) as mock_cl_message,
         patch('src.agents.decision_agent.ChatOpenAI.invoke', new_callable=MagicMock) as mock_invoke
     ):
