@@ -60,7 +60,7 @@ class ChatState(BaseModel):
         except Exception:
             return ""
 
-    def get_recent_history_str(self, n: int = 50) -> str:
+    def get_recent_history_str(self, n: int = 500) -> str:
         """Return last N messages as formatted strings, excluding non-chat messages."""
         recent_messages = self.messages[-n:] if self.messages else []
         filtered = [
@@ -74,7 +74,7 @@ class ChatState(BaseModel):
         ])
 
     def get_tool_results_str(self) -> str:
-        recent_messages = self.messages[-50:]
+        recent_messages = self.messages[-500:]
         # Go through recent messages and find the last AIMessage with name in ["dice_roll", "web_search"]
         recent_agent_messages = [
             msg for msg in reversed(recent_messages) if isinstance(msg, AIMessage) and msg.name in ["dice_roll", "web_search"]
@@ -83,5 +83,5 @@ class ChatState(BaseModel):
         tool_msgs = recent_agent_messages[:1]
         return "\n".join([f"{msg.name}: {msg.content}" for msg in tool_msgs]) if tool_msgs else ""
 
-    def get_recent_history(self, n: int = 50) -> List[BaseMessage]:
+    def get_recent_history(self, n: int = 500) -> List[BaseMessage]:
         return self.messages[-n:] if len(self.messages) > n else self.messages
