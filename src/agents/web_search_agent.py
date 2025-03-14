@@ -1,4 +1,4 @@
-from src.config import config, WEB_SEARCH_PROMPT
+from src.config import config
 import os
 import requests
 import logging
@@ -26,7 +26,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
     recent_chat = state.get_recent_history_str(n=5)
     
     # Generate search query using LLM
-    formatted_prompt = WEB_SEARCH_PROMPT.format(
+    formatted_prompt = config.prompts['web_search_prompt'].format(
         user_query=user_query.content,
         recent_chat_history=recent_chat
     )

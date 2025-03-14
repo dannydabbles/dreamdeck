@@ -25,7 +25,7 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
     
     try:
         # New LLM prompt construction
-        formatted_prompt = config.prompts.dice_processing_prompt.format(
+        formatted_prompt = config.prompts['dice_processing_prompt'].format(
             user_query=input_str,
             recent_chat=recent_chat
         )
