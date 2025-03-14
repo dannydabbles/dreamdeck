@@ -60,7 +60,7 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
             await gm_message.stream_token(chunk.content)
         await gm_message.send()
 
-        story_segment = AIMessage(content=gm_message.content.strip(), name="writer")
+        story_segment = AIMessage(content=gm_message.content.strip(), name="Game Master")
 
         return [story_segment]
     except Exception as e:

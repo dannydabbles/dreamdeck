@@ -19,7 +19,7 @@ async def test_decision_agent_roll_action():
     # Mock the LLM's response to return "roll" explicitly
     with patch('src.agents.decision_agent.ChatOpenAI.invoke', 
               new_callable=MagicMock) as mock_invoke:
-        mock_result = AIMessage(content="roll")  
+        mock_result = AIMessage(content="roll", name="dice_roll")  
         mock_invoke.return_value = mock_result
         
         result = await _decide_action(state)
@@ -48,7 +48,7 @@ async def test_web_search_integration():
         mock_cl_instance.send.return_value = None  # Simulate successful send
 
         # Mock the LLM's response to return "AI trends" explicitly
-        mock_result = AIMessage(content="AI trends")
+        mock_result = AIMessage(content="AI trends", name="web_search")
         mock_invoke.return_value = mock_result
         
         # Run the function under test
@@ -68,7 +68,7 @@ async def test_web_search_integration():
 async def test_dice_agent():
     with patch('src.agents.decision_agent.ChatOpenAI.invoke', 
               new_callable=MagicMock) as mock_invoke:
-        mock_result = AIMessage(content="roll")  
+        mock_result = AIMessage(content="roll", name="dice_roll")  
         mock_invoke.return_value = mock_result
         user_input = HumanMessage(content="roll d20")
         state = ChatState(messages=[user_input], thread_id="test-thread-id")

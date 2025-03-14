@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 @pytest.fixture
 def mock_chat_state():
     return ChatState(
-        messages=[AIMessage(content="Hello, I'm the GM!")],
+        messages=[AIMessage(content="Hello, I'm the GM!", name="Game Master")],
         thread_id="test-thread-id",
         error_count=0,
     )

@@ -23,7 +23,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
         return [AIMessage(content="Web search is disabled.", name="error")]
     
     # Get user input and context
-    user_query = next((m for m in reversed(state.messages) if isinstance(m, HumanMessage)), "")
+    user_query = state.get_last_human_message()
     recent_chat = state.get_recent_history_str()
     
     # Generate search query using LLM

@@ -23,13 +23,13 @@ cl_logger = logging.getLogger("chainlit")
 
 async def _dice_roll(state: ChatState) -> List[BaseMessage]:
     """Process dice rolling requests from users."""
-    input_str = next((m for m in reversed(state.messages) if isinstance(m, HumanMessage)), None).content
+    input_msg = state.get_last_human_message()
     recent_chat = state.get_recent_history_str()
     
     try:
         template = Template(config.prompts['dice_processing_prompt'])
         formatted_prompt = template.render(
-            user_query=input_str,
+            user_query=input_msg.content,
             recent_chat=recent_chat
         )
         cl_logger.debug(f"Formatted prompt: {formatted_prompt}")

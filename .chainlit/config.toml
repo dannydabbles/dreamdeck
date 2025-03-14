@@ -44,7 +44,7 @@ edit_message = true
 
 [UI]
 # Name of the assistant.
-name = "Assistant"
+name = "Game Master"
 
 # default_theme = "dark"
 

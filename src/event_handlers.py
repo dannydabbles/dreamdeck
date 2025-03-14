@@ -4,7 +4,8 @@ import asyncio
 import random
 import base64
 import httpx
-from typing import List, Optional, Dict as ThreadDict
+from typing import List, Optional
+from chainlit.types import ThreadDict
 from tenacity import (
     retry,
     wait_exponential,
@@ -91,6 +92,10 @@ def auth_callback(username: str, password: str):
         return cl.User(
             identifier="test", metadata={"role": "test", "provider": "credentials"}
         )
+    elif (username, password) == ("guest", "guest"):
+        return cl.User(
+            identifier="guest", metadata={"role": "guest", "provider": "credentials"}
+        )
     else:
         return None
 
@@ -117,7 +122,7 @@ async def on_chat_start():
 
         # Create initial state
         state = ChatState(
-            messages=[AIMessage(content=START_MESSAGE)],
+            messages=[AIMessage(content=START_MESSAGE, name="Game Master")],
             thread_id=cl.context.session.thread_id,
             user_preferences=cl.user_session.get("user_session", {}).get("preferences", {})
         )
@@ -168,7 +173,7 @@ async def on_chat_resume(thread: ThreadDict):
             messages.append(HumanMessage(content=step["output"], name="Player"))
             vector_memory.put(content=step["output"])
         elif step["type"] == "assistant_message":
-            messages.append(AIMessage(content=step["output"], name="GM"))
+            messages.append(AIMessage(content=step["output"], name=step["name"]))
             vector_memory.put(content=step["output"])
 
     # Create state
@@ -209,7 +214,8 @@ async def on_message(message: cl.Message):
         vector_memory.put(content=message.content)
         
         # Put messages relevant to the player message into state.memories list for AI to use from the vector memory
-        state.memories = [str(m) for m in vector_memory.get(message.content)]
+        state.memories = [str(m.page_content) for m in vector_memory.get(message.content)]
+        cl_logger.info(f"Memories: {state.memories}")
 
 
         # Generate AI response using the chat workflow
@@ -237,7 +243,8 @@ async def on_message(message: cl.Message):
             f"State: {state}"
         )  # Log the state
         await cl.Message(
-            content="⚠️ An error occurred while generating the response. Please try again later."
+            content="⚠️ An error occurred while generating the response. Please try again later.",
+            
         ).send()
         return
 

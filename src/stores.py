@@ -1,5 +1,4 @@
 from langchain_core.documents import Document
-from langchain_core.stores import BaseStore
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 from chromadb import PersistentClient
 from typing import Dict, Any, List, Sequence, Tuple, Optional, Iterator  # Import Optional and Iterator
@@ -8,7 +7,7 @@ import chainlit as cl
 import asyncio
 from src.config import parse_size, CACHING_SETTINGS  # Import parse_size and CACHING_SETTINGS
 
-class VectorStore(BaseStore):
+class VectorStore:
     """Custom vector store implementation using ChromaDB for persistent storage.
 
     Attributes:
@@ -23,44 +22,20 @@ class VectorStore(BaseStore):
         )
         self.client = PersistentClient(path="chroma_db")
         self.collection = self.client.get_or_create_collection(
-            name="my_collection",
+            name=cl.context.session.thread_id,
             embedding_function=self.embeddings
         )
 
-    # Required abstract methods from BaseStore
-    def mget(self, keys: Sequence[str]) -> List[Optional[Document]]:
-        """Batch-get documents by IDs."""
-        return [self.collection.get(id=key) for key in keys]
-
-    def mset(self, key_value_pairs: Sequence[Tuple[str, Document]]) -> None:
-        """Batch-set documents."""
-        for key, doc in key_value_pairs:
-            self.collection.insert(doc.page_content, id=key)
-
-    def mdelete(self, keys: Sequence[str]) -> None:
-        """Batch-delete documents by IDs."""
-        for key in keys:
-            self.collection.delete(id=key)
-
-    def yield_keys(self, prefix: str = None) -> Iterator[str]:
-        """Iterate over keys matching a prefix."""
-        results = self.collection.query(
-            where_document={'$contains': prefix} if prefix else {},
-            limit=1000  # Adjust as needed
-        )
-        for doc in results['ids']:
-            yield doc
-
-    def get(self, field: str) -> List[Document]:
+    def get(self, content: str) -> List[Document]:
         """Get relevant documents using ChromaDB.
 
         Args:
-            field (str): The field to search.
+            content (str): The content to search.
 
         Returns:
             List[Document]: The relevant documents.
         """
-        results = self.collection.query(query_texts=[field], n_results=5)
+        results = self.collection.query(query_texts=[content], n_results=5)
         documents_flat = results.get('documents', [[]])[0]  # Get first query's results
         return [Document(page_content=doc) for doc in documents_flat]
 
@@ -68,38 +43,13 @@ class VectorStore(BaseStore):
         """Store new content in ChromaDB."""
         self.collection.add(ids=[str(uuid.uuid4())], documents=[content])
 
-    async def batch(self, operations: Sequence[Tuple[str, tuple, str, Any]]) -> None:
-        """Execute multiple operations in batch asynchronously.
-
-        Args:
-            operations (Sequence[Tuple[str, tuple, str, Any]]): The operations to execute.
-        """
-        await asyncio.gather(
-            *[self._async_operation(*op) for op in operations]
-        )
-
-    async def _async_operation(
-        self, op: str, key: tuple, field: str, value: Any
-    ) -> None:
-        """Helper method for async batch operations.
-
-        Args:
-            op (str): The operation type.
-            key (tuple): The key for the document.
-            field (str): The field to operate on.
-            value (Any): The value to store.
-        """
-        if op == "get":
-            self.get(key, field)
-        elif op == "put":
-            self.put(key, field, value)
+    async def batch(self, docs: List[Document]) -> None:
+        """Store a batch of documents in ChromaDB."""
+        for doc in docs:
+            self.put(doc.page_content)
 
     async def add_documents(self, docs: List[Document]) -> None:
-        """Add multiple documents to the store.
-
-        Args:
-            docs (List[Document]): The documents to add.
-        """
+        """Store a list of documents in ChromaDB."""
         for doc in docs:
             self.put(doc.page_content)
 

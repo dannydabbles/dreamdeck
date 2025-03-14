@@ -43,22 +43,14 @@ class ChatState(BaseModel):
         self.error_count += 1
 
     def get_memories_str(self) -> str:
-        latest_user_msg = next(
-            (msg for msg in reversed(self.messages) if isinstance(msg, HumanMessage)),
-            None
-        )
-        if not latest_user_msg or not hasattr(cl.user_session, "vector_memory"):
-            return ""
-        
-        vector_memory = cl.user_session.get("vector_memory")
-        if not vector_memory:
-            return ""
-        
         try:
-            relevant_docs = vector_memory.get(latest_user_msg.content)[:5]  # Top 5 results
-            return "\n".join([doc.page_content for doc in relevant_docs])
+            return "\n".join([doc for doc in self.memories[:3]])
         except Exception:
             return ""
+        
+    def get_last_human_message(self) -> str:
+        human_messages = [msg for msg in reversed(self.messages) if isinstance(msg, HumanMessage)]
+        return human_messages[0] if human_messages else None
 
     def get_recent_history_str(self, n: int = 500) -> str:
         """Return last N messages as formatted strings, excluding non-chat messages."""
