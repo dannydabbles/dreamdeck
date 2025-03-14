@@ -2,6 +2,7 @@ from src.config import config
 import os
 import requests
 import logging
+from jinja2 import Template
 from uuid import uuid4  # Import uuid4
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
@@ -26,7 +27,8 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
     recent_chat = state.get_recent_history_str(n=5)
     
     # Generate search query using LLM
-    formatted_prompt = config.prompts['web_search_prompt'].format(
+    template = Template(config.prompts['web_search_prompt'])
+    formatted_prompt = template.render(
         user_query=user_query.content,
         recent_chat_history=recent_chat
     )

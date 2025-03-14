@@ -1,6 +1,7 @@
 from src.config import config
 import asyncio
 import logging
+from jinja2 import Template
 import random  # Import random
 from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
 from chainlit import Image as CLImage  # Import Image from Chainlit
@@ -38,9 +39,11 @@ async def _generate_storyboard(state: ChatState, gm_message_id: str) -> list[Bas
     """
     messages = state.messages
     try:
-        formatted_prompt = STORYBOARD_GENERATION_PROMPT.format(
+        # Format STORYBOARD_GENERATION_PROMPT as jinja2
+        template = Template(STORYBOARD_GENERATION_PROMPT)
+        formatted_prompt = template.render(
             recent_chat_history=state.get_recent_history_str(),
-            memories=state.get_memories_str(),  # Now dynamically queried
+            memories=state.get_memories_str(),
             tool_results=state.get_tool_results_str()
         )
 

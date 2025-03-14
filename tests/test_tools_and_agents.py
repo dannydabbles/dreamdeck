@@ -66,7 +66,11 @@ async def test_web_search_integration():
 
 @pytest.mark.asyncio
 async def test_dice_agent():
-    user_input = HumanMessage(content="roll d20")
-    state = ChatState(messages=[user_input], thread_id="test-thread-id")
-    result = await _dice_roll(state)
-    assert "roll" in result[0].content.lower()
+    with patch('src.agents.decision_agent.ChatOpenAI.invoke', 
+              new_callable=MagicMock) as mock_invoke:
+        mock_result = AIMessage(content="roll")  
+        mock_invoke.return_value = mock_result
+        user_input = HumanMessage(content="roll d20")
+        state = ChatState(messages=[user_input], thread_id="test-thread-id")
+        result = await _dice_roll(state)
+        assert "roll" in result[0].content.lower()

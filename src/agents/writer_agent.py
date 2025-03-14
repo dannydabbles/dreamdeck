@@ -1,6 +1,7 @@
 from src.config import config
 import os
 import logging
+from jinja2 import Template
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
 from langchain_core.messages import BaseMessage, AIMessage
@@ -29,7 +30,9 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
         str: The generated story segment.
     """
     try:
-        formatted_prompt = AI_WRITER_PROMPT.format(
+        # Format AI_WRITER_PROMPT as jinja2
+        template = Template(AI_WRITER_PROMPT)
+        formatted_prompt = template.render(
             recent_chat_history=state.get_recent_history_str(),
             memories=state.get_memories_str(),
             tool_results=state.get_tool_results_str()

@@ -3,6 +3,7 @@ import json
 import random
 import logging
 import re
+from jinja2 import Template
 from typing import Dict, List, Tuple, Optional
 from json import loads
 from uuid import uuid4  # Import uuid4
@@ -15,6 +16,8 @@ from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from ..models import ChatState
 
+import chainlit as cl
+
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
@@ -24,21 +27,23 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
     recent_chat = state.get_recent_history_str(n=5)  # Fetch last 5 messages
     
     try:
-        # New LLM prompt construction
-        formatted_prompt = config.prompts['dice_processing_prompt'].format(
+        template = Template(config.prompts['dice_processing_prompt'])
+        formatted_prompt = template.render(
             user_query=input_str,
             recent_chat=recent_chat
         )
+        cl_logger.debug(f"Formatted prompt: {formatted_prompt}")
         
         # Invoke LLM to get structured output
         llm = ChatOpenAI(
-            base_url=config.openai.base_url,
+            base_url=config.openai['base_url'],
             temperature=0.7,  # Adjust temperature as needed
             max_tokens=100,
             streaming=False,
             verbose=True,
             timeout=config.llm.timeout
         )
+
         response = llm.invoke([('system', formatted_prompt)])
         cl_logger.debug(f"Raw LLM response: {response.content}")  # Log raw output
 
@@ -47,14 +52,13 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
             json_output = json.loads(response.content.strip())
         except json.JSONDecodeError as e:
             cl_logger.error(f"Invalid JSON response: {response.content}. Error: {str(e)}")
-            raise ValueError("Malformed JSON response from dice_processing_prompt")
 
         # Validate required fields
         specs = json_output.get('specs', [])  # Use .get() with default
         reasons = json_output.get('reasons', [])
 
         if not specs or len(specs) != len(reasons):
-            raise ValueError("Missing 'specs' or mismatched array lengths")
+            cl_logger.error(f"Invalid dice roll output: {json_output}")
 
         # Perform actual dice rolls
         results = []

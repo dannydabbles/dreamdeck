@@ -1,6 +1,7 @@
 from src.config import config
 import os
 import logging
+from jinja2 import Template
 from langgraph.func import task
 from langgraph.prebuilt import create_react_agent
 from .dice_agent import dice_roll  # Import the tool, not the agent
@@ -38,7 +39,8 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
     user_input = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None)
 
     try:
-        formatted_prompt = DECISION_PROMPT.format(
+        template = Template(DECISION_PROMPT)
+        formatted_prompt = template.render(
             user_input=user_input.content
         )
 

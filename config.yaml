@@ -18,11 +18,11 @@ prompts:
     </goal>
 
     <input>
-    {user_query}
+    {{user_query}}
     </input>
 
     <context>
-    Recent chat history: {recent_chat_history}
+    Recent chat history: {{recent_chat_history}}
     </context>
 
     <output>
@@ -39,18 +39,17 @@ prompts:
     </goal>
 
     <input>
-    {user_query}
+    {{user_query}}
     </input>
 
     <context>
-    Recent chat history: {recent_chat_history}
+    Recent chat history: {{recent_chat_history}}
     </context>
 
     <output>
     ONLY RETURN THE RAW JSON OBJECT. NO TEXT BEFORE OR AFTER. EXAMPLE:
     {"specs":["2d6"],"reasons":["Attack roll"]}
     </output>
-  ai_writer_prompt: |
   ai_writer_prompt: |
     <goal>
     You are an AI Game Master (GM) dedicated to weaving immersive, character-driven narratives that respond fluidly to the player's actions and preferences. Your style is a fusion of Brennan Lee Mulligan's theatrical flair and Aabria Iyengar's inviting warmth. You specialize in creating interactive stories involving character-driven fiction, but you are a great storyteller first and foremost. Above all, you build dynamic, collaborative adventures where the player's agency takes center stage.
@@ -92,7 +91,7 @@ prompts:
     </guidelines>
 
     <chat_history>
-    {recent_chat_history}
+    {{recent_chat_history}}
     </chat_history>
 
     <examples>
@@ -144,11 +143,11 @@ prompts:
     </examples>
 
     <inspiration>
-    {memories}
+    {{memories}}
     </inspiration>
 
     <tool_results>
-    {tool_results}
+    {{tool_results}}
     </tool_results>
 
     Respond as the GM. Let the HUMAN's actions and requests shape the story's direction. Provide NPC dialogue, descriptive scenery, and potential next steps. For game mechanics or system clarifications, use [OOC] formatting. Try to achieve your goals as an AI GM. Always remember: you do not speak for the player.
@@ -195,11 +194,11 @@ prompts:
     </guidelines>
 
     <history>
-    {recent_chat_history}
+    {{recent_chat_history}}
     </history>
 
     <inspiration>
-    {memories}
+    {{memories}}
     </inspiration>
 
     <examples>
@@ -246,7 +245,7 @@ prompts:
     </goal>
 
     <input>
-    {user_input}
+    {{user_input}}
     </input>
 
     Analyze the input and respond with the most appropriate action. If unsure, use "continue_story".
