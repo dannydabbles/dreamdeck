@@ -61,7 +61,8 @@ class VectorStore(BaseStore):
             List[Document]: The relevant documents.
         """
         results = self.collection.query(query_texts=[field], n_results=5)
-        return [Document(page_content=result['documents'][0]) for result in results['matches']]
+        documents_flat = results.get('documents', [[]])[0]  # Get first query's results
+        return [Document(page_content=doc) for doc in documents_flat]
 
     def put(self, content: str) -> None:
         """Store new content in ChromaDB."""
