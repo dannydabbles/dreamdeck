@@ -40,14 +40,21 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
             timeout=config.llm.timeout
         )
         response = llm.invoke([('system', formatted_prompt)])
-        json_output = loads(response.content.strip())
+        cl_logger.debug(f"Raw LLM response: {response.content}")  # Log raw output
 
-        # Validate and parse JSON response
-        specs = json_output.get('specs', [])
+        # Parse JSON response with explicit error handling
+        try:
+            json_output = json.loads(response.content.strip())
+        except json.JSONDecodeError as e:
+            cl_logger.error(f"Invalid JSON response: {response.content}. Error: {str(e)}")
+            raise ValueError("Malformed JSON response from dice_processing_prompt")
+
+        # Validate required fields
+        specs = json_output.get('specs', [])  # Use .get() with default
         reasons = json_output.get('reasons', [])
 
-        if len(specs) != len(reasons):
-            raise ValueError("Mismatched specs/reasons lengths")
+        if not specs or len(specs) != len(reasons):
+            raise ValueError("Missing 'specs' or mismatched array lengths")
 
         # Perform actual dice rolls
         results = []
