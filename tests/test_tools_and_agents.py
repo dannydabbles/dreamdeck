@@ -18,7 +18,7 @@ async def test_decision_agent_roll_action():
     
     # Mock the LLM's response to return "roll" explicitly
     with patch('src.agents.decision_agent.ChatOpenAI.invoke', 
-              new_callable=AsyncMock) as mock_invoke:
+              new_callable=MagicMock) as mock_invoke:
         mock_result = AIMessage(content="roll")  
         mock_invoke.return_value = mock_result
         
@@ -35,7 +35,7 @@ async def test_web_search_integration():
     with (
         patch('src.agents.web_search_agent.requests.get', new_callable=AsyncMock) as mock_get,
         patch('src.agents.web_search_agent.cl.Message', new_callable=MagicMock) as mock_cl_message,
-        patch('src.agents.decision_agent.ChatOpenAI.invoke', new_callable=AsyncMock) as mock_invoke
+        patch('src.agents.decision_agent.ChatOpenAI.invoke', new_callable=MagicMock) as mock_invoke
     ):
         # Mock the HTTP GET response
         mock_response = MagicMock()

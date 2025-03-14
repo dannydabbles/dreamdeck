@@ -41,7 +41,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
     )
     
     try:
-        response = await llm.invoke([('system', formatted_prompt)])  # Add 'await'
+        response = llm.invoke([('system', formatted_prompt)])  # Add 'await'
         search_query = response.content.strip()
             
         # Proceed with search execution
