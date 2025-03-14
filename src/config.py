@@ -10,6 +10,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)  # Add this line
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
+cl_logger.setLevel(logging.DEBUG)
 
 # Locate config.yaml relative to the package root
 CONFIG_FILE = Path(__file__).parent.parent / "config.yaml"
