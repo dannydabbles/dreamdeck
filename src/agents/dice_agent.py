@@ -68,23 +68,25 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
             sides = int(parts[1])
             rolls = [random.randint(1, sides) for _ in range(count)]
             total = sum(rolls)
+            rolls = [str(roll) for roll in rolls]
             
             results.append({
                 'spec': spec,
-                'outcome': f"{rolls} ({sum(rolls)})",
+                'rolls': f"{", ".join(rolls)}",
+                'total': f"{total}",
                 'reason': reasons[i]
             })
 
         # Prepare messages
         lang_graph_msg = "\n".join([
-            f"- {res['spec']} → {res['outcome']} ({res['reason']})"
+            f"- {res['reason']}: Rolling {res['spec']} → Rolls: {res['rolls']} → Total: {res['total']}"
             for res in results
         ])
 
         # Send ChainLit message
         cl_msg = CLMessage(
             content=f"**Dice Rolls:**\n\n" + "\n\n".join([
-                f"• **{res['spec']}** → {res['outcome']} ({res['reason']})"
+                f"• **{res['reason']}**: Rolling {res['spec']} → Rolls: {"".join(res['rolls'])} → Total: {res['total']}"
                 for res in results
             ]),
             parent_id=None  # Attach to current thread

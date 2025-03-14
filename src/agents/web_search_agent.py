@@ -48,7 +48,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
             
         # Proceed with search execution
         url = f"https://serpapi.com/search.json?q={search_query}&api_key={SERPAPI_KEY}"
-        resp = await requests.get(url)
+        resp = requests.get(url)
         data = resp.json()
             
         # Format results
