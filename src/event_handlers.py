@@ -166,8 +166,10 @@ async def on_chat_resume(thread: ThreadDict):
     for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
         if step["type"] == "user_message":
             messages.append(HumanMessage(content=step["output"], name="Player"))
+            vector_memory.put(content=step["output"])
         elif step["type"] == "assistant_message":
             messages.append(AIMessage(content=step["output"], name="GM"))
+            vector_memory.put(content=step["output"])
 
     # Create state
     state = ChatState(
