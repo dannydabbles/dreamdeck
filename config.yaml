@@ -3,7 +3,7 @@ llm:
   max_tokens: 8000
   model_name: "gpt-3.5-turbo"
   streaming: true
-  timeout: 180
+  timeout: 300
   presence_penalty: 0.1
   frequency_penalty: 0.1
   top_p: 1.0
