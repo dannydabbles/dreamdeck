@@ -162,7 +162,7 @@ WEB_SEARCH_ENABLED = (
     config.features.web_search
 )  # Already pulls from config.yaml/environment
 DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
-KNOWLEDGE_DIRECTORY = config.paths.get("knowledge", "./knowledge")
+KNOWLEDGE_DIRECTORY = os.path.abspath(config.paths.get("knowledge", "./knowledge"))
 LLM_MAX_TOKENS = config.llm.max_tokens
 LLM_TEMPERATURE = config.llm.temperature
 LLM_MODEL_NAME = config.llm.model_name

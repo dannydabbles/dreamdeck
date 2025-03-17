@@ -42,9 +42,17 @@ Dreamdeck is designed to:
 
 - **Add an Element of Chance:** Use the `/roll` command to roll a dice with a specified number of sides (default is 100).
 
-### Manage Knowledge
+### Knowledge Management
 
-- **Enrich the Narrative:** The app can load and use knowledge documents to provide background information, lore, and additional context to your story.
+- **Location**: The knowledge directory MUST reside at the root of your project (`./knowledge`). 
+- **Container Sync**: When running in Docker, ensure the `knowledge` folder is mounted or copied into the container.
+
+### Troubleshooting
+If the system reports the knowledge directory is missing:
+1. Confirm the `knowledge` folder exists in your project root.
+2. Check Docker builds include the folder (see Dockerfile edits above).
+3. Verify the path in `config.yaml` is set to `"knowledge"` (without leading slash).
+4. Restart services after making changes.
 
 ### Example Usage
 

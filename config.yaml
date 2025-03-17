@@ -349,7 +349,7 @@ logging:
 
 paths:
   storage: "public/storage"
-  knowledge: "./knowledge"
+  knowledge: "knowledge"  # No leading/trailing slashes
   db: "chainlit.db"
 
 error_handling:
