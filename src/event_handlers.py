@@ -26,7 +26,7 @@ from langchain_community.document_loaders import (
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema.runnable import RunnableConfig  # Import RunnableConfig
-from config import (
+from src.config import (
     NEGATIVE_PROMPT,
     STEPS,
     SAMPLER_NAME,

@@ -6,7 +6,7 @@ from langgraph.func import task
 from langgraph.prebuilt import create_react_agent
 from .dice_agent import dice_roll  # Import the tool, not the agent
 from .web_search_agent import web_search  # Import the tool, not the agent
-from ..config import (
+from src.config import (
     DECISION_AGENT_TEMPERATURE,
     DECISION_AGENT_MAX_TOKENS,
     DECISION_AGENT_STREAMING,
@@ -21,7 +21,7 @@ from langchain_core.messages import (
     AIMessage,
     BaseMessage,
 )  # Import HumanMessage
-from ..models import ChatState
+from src.models import ChatState
 
 
 # Initialize logging

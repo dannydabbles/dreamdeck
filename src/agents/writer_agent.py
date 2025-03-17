@@ -7,7 +7,7 @@ from langgraph.func import task
 from langchain_core.messages import BaseMessage, AIMessage
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
-from ..config import (
+from src.config import (
     WRITER_AGENT_TEMPERATURE,
     WRITER_AGENT_MAX_TOKENS,
     WRITER_AGENT_STREAMING,
@@ -15,7 +15,7 @@ from ..config import (
     LLM_TIMEOUT,
     AI_WRITER_PROMPT,
 )
-from ..models import ChatState
+from src.models import ChatState
 
 import chainlit as cl
 

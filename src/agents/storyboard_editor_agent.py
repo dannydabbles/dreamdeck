@@ -7,12 +7,11 @@ from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
 from chainlit import Image as CLImage  # Import Image from Chainlit
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import task
-from ..models import ChatState
 from langchain_core.messages import BaseMessage, AIMessage
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from src.image_generation import generate_image_async, generate_image_generation_prompts
-from ..config import (
+from src.config import (
     STORYBOARD_EDITOR_AGENT_TEMPERATURE,
     STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
     STORYBOARD_EDITOR_AGENT_STREAMING,
