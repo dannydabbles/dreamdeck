@@ -6,6 +6,7 @@ from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from src.stores import VectorStore
 from unittest.mock import MagicMock
 
+
 @pytest.fixture
 def mock_chat_state():
     return ChatState(
@@ -14,33 +15,46 @@ def mock_chat_state():
         error_count=0,
     )
 
+
 @pytest.mark.asyncio
 async def test_chat_workflow(mock_chat_state):
     if True:
-        return # Disable this test for now
+        return  # Disable this test for now
 
     with (
         patch("langgraph.config.get_config", return_value={}),
-        patch("src.agents.decision_agent.decide_action", new_callable=AsyncMock) as mock_decide_action,
-        patch("src.agents.dice_agent.dice_roll", new_callable=AsyncMock) as mock_dice_roll,
-        patch("src.agents.web_search_agent.web_search", new_callable=AsyncMock) as mock_web_search,
-        patch("src.agents.writer_agent.generate_story", new_callable=AsyncMock) as mock_generate_story,
-        patch("src.agents.storyboard_editor_agent.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_editor_agent,
+        patch(
+            "src.agents.decision_agent.decide_action", new_callable=AsyncMock
+        ) as mock_decide_action,
+        patch(
+            "src.agents.dice_agent.dice_roll", new_callable=AsyncMock
+        ) as mock_dice_roll,
+        patch(
+            "src.agents.web_search_agent.web_search", new_callable=AsyncMock
+        ) as mock_web_search,
+        patch(
+            "src.agents.writer_agent.generate_story", new_callable=AsyncMock
+        ) as mock_generate_story,
+        patch(
+            "src.agents.storyboard_editor_agent.storyboard_editor_agent",
+            new_callable=AsyncMock,
+        ) as mock_storyboard_editor_agent,
     ):
-        
-        mock_decide_action.return_value = [AIMessage(name="continue_story", content="The adventure continues...")]
+
+        mock_decide_action.return_value = [
+            AIMessage(name="continue_story", content="The adventure continues...")
+        ]
         mock_generate_story.return_value = "The adventure continues..."
         mock_storyboard_editor_agent.return_value = []
-        
+
         store = MagicMock()  # Use MagicMock instead of real VectorStore
         state = mock_chat_state
         state.messages.append(HumanMessage(content="Continue the adventure"))
-        updated_state = await _chat_workflow(
-            state.messages,
-            store,
-            previous=state
-        )
-        
+        updated_state = await _chat_workflow(state.messages, store, previous=state)
+
         assert len(updated_state.messages) > len(mock_chat_state.messages)
-        assert any(isinstance(msg, AIMessage) and "The adventure continues..." in msg.content for msg in updated_state.messages)
+        assert any(
+            isinstance(msg, AIMessage) and "The adventure continues..." in msg.content
+            for msg in updated_state.messages
+        )
         assert "The adventure continues..." in updated_state.messages[-1].content

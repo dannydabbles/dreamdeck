@@ -12,7 +12,13 @@ from tenacity import (
     stop_after_attempt,
     retry_if_exception_type,
 )
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, FunctionMessage, ToolMessage
+from langchain_core.messages import (
+    SystemMessage,
+    HumanMessage,
+    AIMessage,
+    FunctionMessage,
+    ToolMessage,
+)
 from langchain_community.document_loaders import (
     PyMuPDFLoader,
     TextLoader,
@@ -40,7 +46,7 @@ from config import (
     IMAGE_GENERATION_ENABLED,
     WEB_SEARCH_ENABLED,
     DICE_ROLLING_ENABLED,
-    START_MESSAGE
+    START_MESSAGE,
 )
 from src.initialization import init_db, DatabasePool
 from src.models import ChatState
@@ -68,6 +74,7 @@ logging.basicConfig(
 
 cl_logger = logging.getLogger("chainlit")
 
+
 # Define an asynchronous range generator
 async def async_range(end):
     """Asynchronous range generator.
@@ -80,6 +87,7 @@ async def async_range(end):
         await asyncio.sleep(0.1)
         yield i
 
+
 def _load_document(file_path):
     if file_path.endswith(".pdf"):
         return PyMuPDFLoader(file_path).load()
@@ -89,6 +97,7 @@ def _load_document(file_path):
         return UnstructuredMarkdownLoader(file_path).load()
     else:
         raise ValueError(f"Unsupported file type: {file_path}")
+
 
 @cl.password_auth_callback
 def auth_callback(username: str, password: str):
@@ -109,6 +118,7 @@ def auth_callback(username: str, password: str):
     else:
         return None
 
+
 @cl.on_chat_start
 async def on_chat_start():
     """Initialize new chat session with Chainlit integration.
@@ -126,7 +136,7 @@ async def on_chat_start():
         cl_user_session.set("storyboard_editor_agent", storyboard_editor_agent)
         cl_user_session.set("dice_roll_agent", dice_roll_agent)
         cl_user_session.set("web_search_agent", web_search_agent)
-        
+
         # Launch knowledge loading in the background
         asyncio.create_task(load_knowledge_documents())
 
@@ -137,7 +147,9 @@ async def on_chat_start():
         state = ChatState(
             messages=[AIMessage(content=START_MESSAGE, name="Game Master")],
             thread_id=cl.context.session.thread_id,
-            user_preferences=cl.user_session.get("user_session", {}).get("preferences", {})
+            user_preferences=cl.user_session.get("user_session", {}).get(
+                "preferences", {}
+            ),
         )
 
         # Store state
@@ -219,11 +231,12 @@ async def on_message(message: cl.Message):
 
         # Add user message to vector memory
         vector_memory.put(content=message.content)
-        
-        # Put messages relevant to the player message into state.memories list for AI to use from the vector memory
-        state.memories = [str(m.page_content) for m in vector_memory.get(message.content)]
-        cl_logger.info(f"Memories: {state.memories}")
 
+        # Put messages relevant to the player message into state.memories list for AI to use from the vector memory
+        state.memories = [
+            str(m.page_content) for m in vector_memory.get(message.content)
+        ]
+        cl_logger.info(f"Memories: {state.memories}")
 
         # Generate AI response using the chat workflow
         thread_config = {
@@ -233,27 +246,33 @@ async def on_message(message: cl.Message):
         }
 
         cb = cl.AsyncLangchainCallbackHandler(
-            to_ignore=["ChannelRead", "RunnableLambda", "ChannelWrite", "__start__", "_execute"],
+            to_ignore=[
+                "ChannelRead",
+                "RunnableLambda",
+                "ChannelWrite",
+                "__start__",
+                "_execute",
+            ],
         )
-        #state = await chat_workflow.ainvoke(input={"messages": state.messages, "store": cl.user_session.get("vector_memory"), "previous": state}, config=thread_config)
-        #gm_message = cl.Message(content="")
+        # state = await chat_workflow.ainvoke(input={"messages": state.messages, "store": cl.user_session.get("vector_memory"), "previous": state}, config=thread_config)
+        # gm_message = cl.Message(content="")
 
         inputs = {"messages": state.messages, "previous": state}
-        state = await chat_workflow.ainvoke(inputs, config=RunnableConfig(callbacks=[cb], **thread_config))
+        state = await chat_workflow.ainvoke(
+            inputs, config=RunnableConfig(callbacks=[cb], **thread_config)
+        )
 
-        #await gm_message.send()
+        # await gm_message.send()
         cl.user_session.set("state", state)
 
     except Exception as e:
         cl.element.logger.error(f"Runnable stream failed: {e}", exc_info=True)
-        cl.element.logger.error(
-            f"State: {state}"
-        )  # Log the state
+        cl.element.logger.error(f"State: {state}")  # Log the state
         await cl.Message(
             content="⚠️ An error occurred while generating the response. Please try again later.",
-            
         ).send()
         return
+
 
 async def load_knowledge_documents():
     """Load documents from the knowledge directory into the vector store."""
@@ -279,10 +298,14 @@ async def load_knowledge_documents():
             file_path = os.path.join(root, file)
             try:
                 # Offload CPU-heavy work to a thread
-                loaded_docs = await loop.run_in_executor(None, _load_document, file_path)
-                split_docs = await loop.run_in_executor(None, text_splitter.split_documents, loaded_docs)
+                loaded_docs = await loop.run_in_executor(
+                    None, _load_document, file_path
+                )
+                split_docs = await loop.run_in_executor(
+                    None, text_splitter.split_documents, loaded_docs
+                )
                 documents.extend(split_docs)
-                
+
                 # Periodically flush to vector store to prevent memory bloat
                 if len(documents) >= 500:
                     await vector_memory.add_documents(documents)

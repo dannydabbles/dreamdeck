@@ -11,7 +11,7 @@ from langchain_core.messages import (
     AIMessage,
     HumanMessage,
     SystemMessage,
-    ToolMessage
+    ToolMessage,
 )
 from .models import ChatState
 from .agents.decision_agent import decision_agent  # Import decide_action
@@ -34,6 +34,7 @@ import chainlit as cl
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
+
 @entrypoint(checkpointer=MemorySaver())
 async def chat_workflow(
     inputs: dict,
@@ -54,6 +55,7 @@ async def chat_workflow(
 
     # Call _chat_workflow with the correct arguments
     return await _chat_workflow(messages=messages, previous=previous)
+
 
 async def _chat_workflow(
     messages: List[BaseMessage],
@@ -78,7 +80,7 @@ async def _chat_workflow(
     Raises:
         Exception: Critical errors during processing are logged but don't halt execution
     """
-    
+
     cl_logger.info(f"Messages: {messages}")
     cl_logger.info(f"Previous state: {previous}")
 
@@ -87,7 +89,9 @@ async def _chat_workflow(
 
     try:
         # Determine action
-        human_messages = [msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)]
+        human_messages = [
+            msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)
+        ]
         last_human_message = human_messages[0] if human_messages else None
         new_message = None
         if not last_human_message:
@@ -136,8 +140,11 @@ async def _chat_workflow(
     except Exception as e:
         cl_logger.error(f"Critical error in chat workflow: {str(e)}", exc_info=True)
         state.increment_error_count()
-        state.messages.append(AIMessage(content="⚠️ A critical error occurred. Please try again later or restart the session.", name="error"))  
+        state.messages.append(
+            AIMessage(
+                content="⚠️ A critical error occurred. Please try again later or restart the session.",
+                name="error",
+            )
+        )
 
     return state
-
-

@@ -46,6 +46,7 @@ async def async_range(end):
         await asyncio.sleep(0.1)
         yield i
 
+
 @retry(
     wait=wait_exponential(multiplier=1, min=4, max=10),
     stop=stop_after_attempt(3),
@@ -105,11 +106,14 @@ async def generate_image_async(
             return image_bytes
 
     except httpx.RequestError as e:
-        cl_element.logger.error(f"Image generation failed after retries: {e}", exc_info=True)
+        cl_element.logger.error(
+            f"Image generation failed after retries: {e}", exc_info=True
+        )
         raise
     except (KeyError, IndexError, ValueError) as e:
         cl_element.logger.error(f"Error processing image data: {e}", exc_info=True)
         return None
+
 
 @retry(
     wait=wait_exponential(multiplier=1, min=4, max=10),
@@ -170,8 +174,6 @@ async def generate_image_generation_prompts(storyboard: str) -> List[str]:
     cl_element.logger.debug(f"Generated Image Generation Prompt: {image_gen_prompts}")
 
     return image_gen_prompts
-
-
 
 
 @task

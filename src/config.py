@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, ValidationError, ConfigDict
 from typing import ClassVar
 from logging.handlers import RotatingFileHandler
 import warnings  # Add this import
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)  # Add this line
 
 # Initialize logging
@@ -21,9 +22,12 @@ if not os.path.exists(CONFIG_FILE):
 with open(CONFIG_FILE, "r") as f:
     config_yaml = yaml.safe_load(f)
 
+
 class DiceConfig(BaseModel):
     """Pydantic model for dice configuration."""
+
     sides: int = Field(default=20, description="Number of sides for dice rolls")
+
 
 class DecisionAgentConfig(BaseModel):
     temperature: float
@@ -31,11 +35,13 @@ class DecisionAgentConfig(BaseModel):
     streaming: bool
     verbose: bool
 
+
 class WriterAgentConfig(BaseModel):
     temperature: float
     max_tokens: int
     streaming: bool
     verbose: bool
+
 
 class StoryboardEditorAgentConfig(BaseModel):
     temperature: float
@@ -43,13 +49,16 @@ class StoryboardEditorAgentConfig(BaseModel):
     streaming: bool
     verbose: bool
 
+
 class AgentsConfig(BaseModel):
     decision_agent: DecisionAgentConfig
     writer_agent: WriterAgentConfig
     storyboard_editor_agent: StoryboardEditorAgentConfig
 
+
 class DefaultsConfig(BaseModel):
     db_file: str = "chainlit.db"
+
 
 class LlmConfig(BaseModel):
     temperature: float
@@ -62,10 +71,12 @@ class LlmConfig(BaseModel):
     top_p: float
     verbose: bool
 
+
 class FeatureConfig(BaseModel):
     dice_rolling: bool
     web_search: bool
     image_generation: bool
+
 
 class ConfigSchema(BaseModel):
     """Central configuration container for the application.
@@ -90,6 +101,7 @@ class ConfigSchema(BaseModel):
         - Nested structures require explicit model definitions
         - Environment variables override YAML values
     """
+
     llm: LlmConfig
     prompts: dict
     image_generation_payload: dict
@@ -116,18 +128,20 @@ class ConfigSchema(BaseModel):
     storyboard_generation_prompt_prefix: str = ""  # Add this line
     storyboard_generation_prompt_postfix: str = ""  # Fixed here (added 'str = ')
     _env_prefix: ClassVar[str] = "APP_"  # NEW: Enable env var loading with prefix
-    model_config = ConfigDict(extra='forbid')  # ENFORCE strict validation
+    model_config = ConfigDict(extra="forbid")  # ENFORCE strict validation
     chat: dict
+
 
 def parse_size(size_str: str) -> int:
     """Parse size strings like '10MB' to bytes."""
-    units = {'KB': 1024, 'MB': 1024**2, 'GB': 1024**3}
+    units = {"KB": 1024, "MB": 1024**2, "GB": 1024**3}
     size = size_str.upper()
     for suffix in units:
         if size.endswith(suffix):
-            num = float(size[:-len(suffix)])
+            num = float(size[: -len(suffix)])
             return int(num * units[suffix])
     raise ValueError(f"Invalid size format: {size_str}")
+
 
 def load_config():
     """Load and validate configuration from YAML file.
@@ -137,15 +151,18 @@ def load_config():
     """
     return ConfigSchema.model_validate(config_yaml)
 
+
 # Load the config when the module is imported
 config = load_config()
 
 # Expose all required variables as module-level attributes
 DICE_ROLLING_ENABLED = config.features.dice_rolling
 DICE_SIDES = config.dice.sides  # Now dice is a DiceConfig instance
-WEB_SEARCH_ENABLED = config.features.web_search  # Already pulls from config.yaml/environment
+WEB_SEARCH_ENABLED = (
+    config.features.web_search
+)  # Already pulls from config.yaml/environment
 DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
-KNOWLEDGE_DIRECTORY = config.paths.get('knowledge', './knowledge')
+KNOWLEDGE_DIRECTORY = config.paths.get("knowledge", "./knowledge")
 LLM_MAX_TOKENS = config.llm.max_tokens
 LLM_TEMPERATURE = config.llm.temperature
 LLM_MODEL_NAME = config.llm.model_name
@@ -156,7 +173,7 @@ LLM_FREQUENCY_PENALTY = config.llm.frequency_penalty
 LLM_TOP_P = config.llm.top_p
 LLM_VERBOSE = config.llm.verbose
 IMAGE_GENERATION_ENABLED = config.features.image_generation
-WEB_SEARCH_PROMPT = config.prompts.get('web_search_prompt', '')
+WEB_SEARCH_PROMPT = config.prompts.get("web_search_prompt", "")
 DECISION_AGENT_TEMPERATURE = config.agents.decision_agent.temperature
 DECISION_AGENT_MAX_TOKENS = config.agents.decision_agent.max_tokens
 DECISION_AGENT_STREAMING = config.agents.decision_agent.streaming
@@ -185,25 +202,29 @@ MONITORING_SETTINGS = config.monitoring
 CACHING_SETTINGS = config.caching
 AGENTS = config.agents
 CHAINLIT_SETTINGS = config.chainlit
-START_MESSAGE = config.chat.get('start_message', 'Hello! How can I help you today?')
-DECISION_PROMPT = config.prompts.get('decision_prompt', 'What would you like to do next?')
-AI_WRITER_PROMPT = config.prompts.get('ai_writer_prompt', 'Write a story.')
-STORYBOARD_GENERATION_PROMPT = config.prompts.get('storyboard_generation_prompt', 'Generate a storyboard.')
+START_MESSAGE = config.chat.get("start_message", "Hello! How can I help you today?")
+DECISION_PROMPT = config.prompts.get(
+    "decision_prompt", "What would you like to do next?"
+)
+AI_WRITER_PROMPT = config.prompts.get("ai_writer_prompt", "Write a story.")
+STORYBOARD_GENERATION_PROMPT = config.prompts.get(
+    "storyboard_generation_prompt", "Generate a storyboard."
+)
 
 # Ensure SERPAPI_KEY is set from environment variable first, then config file
-SERPAPI_KEY = os.getenv('SERPAPI_KEY', config.search.get('serpapi_key', ''))
+SERPAPI_KEY = os.getenv("SERPAPI_KEY", config.search.get("serpapi_key", ""))
 
 # Configure logging using the loaded config
 logging.basicConfig(
-    level=LOGGING['level'],
-    format=LOGGING['format'],
+    level=LOGGING["level"],
+    format=LOGGING["format"],
     handlers=[
         RotatingFileHandler(
-            LOGGING['file'],
-            maxBytes=parse_size(LOGGING['max_size']),  # Use parse_size
-            backupCount=LOGGING['backup_count']
+            LOGGING["file"],
+            maxBytes=parse_size(LOGGING["max_size"]),  # Use parse_size
+            backupCount=LOGGING["backup_count"],
         ),
-        logging.StreamHandler() if LOGGING['console'] else None
+        logging.StreamHandler() if LOGGING["console"] else None,
     ],
 )
 
@@ -258,7 +279,9 @@ cl_logger.info(
 )
 
 # Timeouts
-IMAGE_GENERATION_TIMEOUT = TIMEOUTS.get("image_generation_timeout", 180)  # Default from config.yaml
+IMAGE_GENERATION_TIMEOUT = TIMEOUTS.get(
+    "image_generation_timeout", 180
+)  # Default from config.yaml
 cl_logger.info(f"Image generation timeout loaded: {IMAGE_GENERATION_TIMEOUT}")
 
 # Token limits
@@ -284,7 +307,9 @@ cl_logger.info(
 )
 
 # Expose Stable Diffusion API URL
-STABLE_DIFFUSION_API_URL = config.image_generation_payload.get("url", os.environ.get("STABLE_DIFFUSION_API_URL"))
+STABLE_DIFFUSION_API_URL = config.image_generation_payload.get(
+    "url", os.environ.get("STABLE_DIFFUSION_API_URL")
+)
 
 CFG_SCALE = config.image_generation_payload.get("cfg_scale", 3.5)
 DENOISING_STRENGTH = config.image_generation_payload.get("denoising_strength", 0.6)

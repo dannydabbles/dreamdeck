@@ -25,7 +25,10 @@ from ..config import (
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
-async def _generate_storyboard(state: ChatState, gm_message_id: str) -> list[BaseMessage]:
+
+async def _generate_storyboard(
+    state: ChatState, gm_message_id: str
+) -> list[BaseMessage]:
     """Generate a storyboard based on the input content.
     content = state.messages[-1].content if state.messages else ""
 
@@ -44,7 +47,7 @@ async def _generate_storyboard(state: ChatState, gm_message_id: str) -> list[Bas
         formatted_prompt = template.render(
             recent_chat_history=state.get_recent_history_str(),
             memories=state.get_memories_str(),
-            tool_results=state.get_tool_results_str()
+            tool_results=state.get_tool_results_str(),
         )
 
         # Initialize the LLM
@@ -54,11 +57,11 @@ async def _generate_storyboard(state: ChatState, gm_message_id: str) -> list[Bas
             max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
             streaming=STORYBOARD_EDITOR_AGENT_STREAMING,
             verbose=STORYBOARD_EDITOR_AGENT_VERBOSE,
-            timeout=LLM_TIMEOUT
+            timeout=LLM_TIMEOUT,
         )
 
         # Generate the storyboard
-        storyboard_response = await llm.ainvoke([('system', formatted_prompt)])
+        storyboard_response = await llm.ainvoke([("system", formatted_prompt)])
         storyboard = storyboard_response.content.strip()
 
         await process_storyboard_images(storyboard, message_id=gm_message_id)
@@ -67,10 +70,14 @@ async def _generate_storyboard(state: ChatState, gm_message_id: str) -> list[Bas
         cl_logger.error(f"Storyboard generation failed: {e}")
         return [AIMessage(content="Error generating storyboard.", name="error")]
 
+
 @task
-async def generate_storyboard(state: ChatState, gm_message_id: str) -> list[BaseMessage]:
+async def generate_storyboard(
+    state: ChatState, gm_message_id: str
+) -> list[BaseMessage]:
     asyncio.create_task(_generate_storyboard(state, gm_message_id))
     return []
+
 
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
     """Process storyboard into images and send to chat.
@@ -117,4 +124,7 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
     except Exception as e:
         cl_logger.error(f"Failed to process storyboard images: {str(e)}")
 
-storyboard_editor_agent = generate_storyboard  # Expose the function as storyboard_editor_agent
+
+storyboard_editor_agent = (
+    generate_storyboard  # Expose the function as storyboard_editor_agent
+)

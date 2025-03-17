@@ -16,12 +16,17 @@ from ..config import (
 )
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage  # Import HumanMessage
+from langchain_core.messages import (
+    HumanMessage,
+    AIMessage,
+    BaseMessage,
+)  # Import HumanMessage
 from ..models import ChatState
 
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
+
 
 async def _decide_action(state: ChatState) -> list[BaseMessage]:
     """Determine the next action based on user input.
@@ -36,13 +41,13 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
     result = []
 
     # Get last human message
-    user_input = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None)
+    user_input = next(
+        (m for m in reversed(messages) if isinstance(m, HumanMessage)), None
+    )
 
     try:
         template = Template(DECISION_PROMPT)
-        formatted_prompt = template.render(
-            user_input=user_input.content
-        )
+        formatted_prompt = template.render(user_input=user_input.content)
 
         # Initialize the LLM
         llm = ChatOpenAI(
@@ -51,7 +56,7 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
             max_tokens=DECISION_AGENT_MAX_TOKENS,
             streaming=DECISION_AGENT_STREAMING,
             verbose=DECISION_AGENT_VERBOSE,
-            timeout=LLM_TIMEOUT
+            timeout=LLM_TIMEOUT,
         )
 
         # Generate the decision
@@ -71,9 +76,11 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
 
     return [result]
 
+
 @task
 async def decide_action(state: ChatState, **kwargs) -> list[BaseMessage]:
     return await _decide_action(state)
+
 
 # Expose the function as decision_agent
 decision_agent = decide_action
