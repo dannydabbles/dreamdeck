@@ -44,7 +44,7 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
             timeout=config.llm.timeout
         )
 
-        response = llm.invoke([('system', formatted_prompt)])
+        response = await llm.ainvoke([('system', formatted_prompt)])
         cl_logger.debug(f"Raw LLM response: {response.content}")  # Log raw output
 
         # Parse JSON response with explicit error handling

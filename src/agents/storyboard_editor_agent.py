@@ -58,7 +58,7 @@ async def _generate_storyboard(state: ChatState, gm_message_id: str) -> list[Bas
         )
 
         # Generate the storyboard
-        storyboard_response = llm.invoke([('system', formatted_prompt)])
+        storyboard_response = await llm.ainvoke([('system', formatted_prompt)])
         storyboard = storyboard_response.content.strip()
 
         await process_storyboard_images(storyboard, message_id=gm_message_id)

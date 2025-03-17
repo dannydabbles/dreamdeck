@@ -55,7 +55,7 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
         )
 
         # Generate the decision
-        response = llm.invoke([("system", formatted_prompt)])
+        response = await llm.ainvoke([("system", formatted_prompt)])
         cl_logger.info(f"Decision response: {response.content}")
         decision = response.content.strip()
 
