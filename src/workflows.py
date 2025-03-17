@@ -19,14 +19,14 @@ from .agents.dice_agent import dice_agent  # Import dice_roll
 from .agents.web_search_agent import web_search_agent  # Import web_search
 from .agents.writer_agent import writer_agent  # Import generate_story
 from .agents.storyboard_editor_agent import storyboard_editor_agent
-from .config import (
+from src.config import (
     IMAGE_GENERATION_ENABLED,
     DECISION_PROMPT,  # Import DECISION_PROMPT
 )
 from .models import ChatState
 from langchain_core.stores import BaseStore
 
-from .config import DECISION_PROMPT
+from src.config import DECISION_PROMPT
 
 import chainlit as cl
 
