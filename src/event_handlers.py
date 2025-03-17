@@ -80,6 +80,16 @@ async def async_range(end):
         await asyncio.sleep(0.1)
         yield i
 
+def _load_document(file_path):
+    if file_path.endswith(".pdf"):
+        return PyMuPDFLoader(file_path).load()
+    elif file_path.endswith(".txt"):
+        return TextLoader(file_path).load()
+    elif file_path.endswith(".md"):
+        return UnstructuredMarkdownLoader(file_path).load()
+    else:
+        raise ValueError(f"Unsupported file type: {file_path}")
+
 @cl.password_auth_callback
 def auth_callback(username: str, password: str):
     # Fetch the user matching username from your database
@@ -117,6 +127,9 @@ async def on_chat_start():
         cl_user_session.set("dice_roll_agent", dice_roll_agent)
         cl_user_session.set("web_search_agent", web_search_agent)
         
+        # Launch knowledge loading in the background
+        asyncio.create_task(load_knowledge_documents())
+
         # Initialize thread in Chainlit with a start message
         await cl.Message(content=START_MESSAGE, author="Game Master").send()
 
@@ -131,12 +144,6 @@ async def on_chat_start():
         cl.user_session.set("state", state)
         cl.user_session.set("image_generation_memory", [])
         cl.user_session.set("ai_message_id", None)
-
-        # Initialize vector store
-        cl.user_session.set("vector_memory", VectorStore())
-
-        # Load knowledge documents
-        await load_knowledge_documents()
 
     except Exception as e:
         cl_logger.error(f"Application failed to start: {e}", exc_info=True)
@@ -263,33 +270,26 @@ async def load_knowledge_documents():
         return
 
     documents = []
-
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+
+    loop = asyncio.get_event_loop()
 
     for root, dirs, files in os.walk(KNOWLEDGE_DIRECTORY):
         for file in files:
             file_path = os.path.join(root, file)
-            if file.endswith(".pdf"):
-                loader = PyMuPDFLoader(file_path)
-            elif file.endswith(".txt"):
-                loader = TextLoader(file_path)
-            elif file.endswith(".md"):
-                loader = UnstructuredMarkdownLoader(file_path)
-            else:
-                cl.element.logger.warning(f"Unsupported file type: {file}. Skipping.")
-                continue
             try:
-                loaded_docs = loader.load()
-                split_docs = text_splitter.split_documents(loaded_docs)
+                # Offload CPU-heavy work to a thread
+                loaded_docs = await loop.run_in_executor(None, _load_document, file_path)
+                split_docs = await loop.run_in_executor(None, text_splitter.split_documents, loaded_docs)
                 documents.extend(split_docs)
+                
+                # Periodically flush to vector store to prevent memory bloat
+                if len(documents) >= 500:
+                    await vector_memory.add_documents(documents)
+                    documents = []
             except Exception as e:
-                cl.element.logger.error(f"Error loading document {file_path}: {e}")
+                cl.element.logger.error(f"Error processing {file_path}: {e}")
 
+    # Final flush of remaining documents
     if documents:
-        cl.element.logger.info(
-            f"Adding {len(documents)} documents to the vector store."
-        )
-        vector_memory.add_documents(documents)
-        # TODO: Should we persist the ChromaDB vector store here?
-    else:
-        cl.element.logger.info("No documents found to add to the vector store.")
+        await vector_memory.add_documents(documents)

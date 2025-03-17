@@ -39,19 +39,18 @@ class VectorStore:
         documents_flat = results.get('documents', [[]])[0]  # Get first query's results
         return [Document(page_content=doc) for doc in documents_flat]
 
-    def put(self, content: str) -> None:
+    async def put(self, content: str) -> None:
         """Store new content in ChromaDB."""
-        self.collection.add(ids=[str(uuid.uuid4())], documents=[content])
-
-    async def batch(self, docs: List[Document]) -> None:
-        """Store a batch of documents in ChromaDB."""
-        for doc in docs:
-            self.put(doc.page_content)
+        await asyncio.to_thread(
+            self.collection.add,
+            ids=[str(uuid.uuid4())],
+            documents=[content]
+        )
 
     async def add_documents(self, docs: List[Document]) -> None:
         """Store a list of documents in ChromaDB."""
         for doc in docs:
-            self.put(doc.page_content)
+            await self.put(doc.page_content)
 
 # Ensure max_size is parsed correctly
 max_cache_size = parse_size(CACHING_SETTINGS.get('max_size', '100MB'))
