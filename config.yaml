@@ -239,7 +239,7 @@ prompts:
   decision_prompt: |
     <goal>
     Determine the next action based on the user's input. You must choose one of these actions:
-    - roll: if the user wants to roll a dice
+    - roll: if the user wants to roll a dice; should not be used for single number input like "1" or "20"
     - search: if the user wants to perform a web search
     - continue_story: if the user wants to continue the story (default)
     </goal>
