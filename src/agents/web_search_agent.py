@@ -13,8 +13,8 @@ from langchain_core.messages import (
 )  # Use LangChain's standard messages
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
-from ..config import SERPAPI_KEY, WEB_SEARCH_ENABLED
-from ..models import ChatState
+from src.config import SERPAPI_KEY, WEB_SEARCH_ENABLED
+from src.models import ChatState
 
 import chainlit as cl
 

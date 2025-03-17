@@ -15,10 +15,10 @@ from langchain_core.messages import (
     BaseMessage,
 )  # Use LangChain's standard messages
 from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
-from ..config import DICE_ROLLING_ENABLED, DICE_SIDES
+from src.config import DICE_ROLLING_ENABLED, DICE_SIDES
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
-from ..models import ChatState
+from src.models import ChatState
 
 import chainlit as cl
 
