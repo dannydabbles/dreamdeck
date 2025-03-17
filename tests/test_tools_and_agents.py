@@ -17,10 +17,10 @@ async def test_decision_agent_roll_action():
     state = ChatState(messages=[user_input], thread_id="test-thread-id")
     
     # Mock the LLM's response to return "roll" explicitly
-    with patch('src.agents.decision_agent.ChatOpenAI.invoke', 
-              new_callable=MagicMock) as mock_invoke:
+    with patch('src.agents.decision_agent.ChatOpenAI.ainvoke',
+              new_callable=AsyncMock) as mock_ainvoke:
         mock_result = AIMessage(content="roll", name="dice_roll")  
-        mock_invoke.return_value = mock_result
+        mock_ainvoke.return_value = mock_result
         
         result = await _decide_action(state)
         assert result[0].name == "dice_roll"
@@ -35,7 +35,7 @@ async def test_web_search_integration():
     with (
         patch('src.agents.web_search_agent.requests.get', new_callable=MagicMock) as mock_get,
         patch('src.agents.web_search_agent.cl.Message', new_callable=MagicMock) as mock_cl_message,
-        patch('src.agents.decision_agent.ChatOpenAI.invoke', new_callable=MagicMock) as mock_invoke
+        patch('src.agents.decision_agent.ChatOpenAI.ainvoke', new_callable=AsyncMock) as mock_ainvoke
     ):
         # Mock the HTTP GET response
         mock_response = MagicMock()
@@ -49,7 +49,7 @@ async def test_web_search_integration():
 
         # Mock the LLM's response to return "AI trends" explicitly
         mock_result = AIMessage(content="AI trends", name="web_search")
-        mock_invoke.return_value = mock_result
+        mock_ainvoke.return_value = mock_result
         
         # Run the function under test
         result = await _web_search(state)
@@ -66,10 +66,10 @@ async def test_web_search_integration():
 
 @pytest.mark.asyncio
 async def test_dice_agent():
-    with patch('src.agents.decision_agent.ChatOpenAI.invoke', 
-              new_callable=MagicMock) as mock_invoke:
+    with patch('src.agents.decision_agent.ChatOpenAI.ainvoke',
+              new_callable=MagicMock) as mock_ainvoke:
         mock_result = AIMessage(content="roll", name="dice_roll")  
-        mock_invoke.return_value = mock_result
+        mock_ainvoke.return_value = mock_result
         user_input = HumanMessage(content="roll d20")
         state = ChatState(messages=[user_input], thread_id="test-thread-id")
         result = await _dice_roll(state)
