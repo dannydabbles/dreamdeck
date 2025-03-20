@@ -21,7 +21,7 @@ async def test_load_knowledge_documents(tmp_path, monkeypatch):
     # Mock dependencies
     vector_store_mock = MagicMock(spec=VectorStore)
     vector_store_mock.add_documents = AsyncMock()
-    monkeypatch.setattr("src.event_handlers.cl.user_session.get", lambda _: vector_store_mock)
+    monkeypatch.setattr("src.event_handlers.cl.user_session.get", lambda _, __: vector_store_mock)
     
     with patch("src.event_handlers._load_document") as load_doc_mock,\
          patch("src.event_handlers.RecursiveCharacterTextSplitter") as splitter_mock:
