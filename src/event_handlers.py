@@ -230,7 +230,7 @@ async def on_message(message: cl.Message):
         state.messages.append(HumanMessage(content=message.content, name="Player"))
 
         # Add user message to vector memory
-        vector_memory.put(content=message.content)
+        await vector_memory.put(content=message.content)
 
         # Put messages relevant to the player message into state.memories list for AI to use from the vector memory
         state.memories = [

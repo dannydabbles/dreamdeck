@@ -118,21 +118,21 @@ async def _chat_workflow(
             new_message = dice_response[0]
             state.messages.append(new_message)
             if vector_memory:
-                vector_memory.put(content=new_message.content)
+                await vector_memory.put(content=new_message.content)
 
         elif "search" in action:
             web_search_response = await web_search_agent(state)
             new_message = web_search_response[0]
             state.messages.append(new_message)
             if vector_memory:
-                vector_memory.put(content=new_message.content)
+                await vector_memory.put(content=new_message.content)
 
         writer_response = await writer_agent(state)
         if writer_response:
             new_message = writer_response[0]
             state.messages.append(new_message)
             if vector_memory:
-                vector_memory.put(content=new_message.content)
+                await vector_memory.put(content=new_message.content)
 
             # Generate storyboard if needed and image generation is enabled
             gm_message: CLMessage = cl.user_session.get("gm_message")
