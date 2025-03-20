@@ -22,7 +22,7 @@ build:
 	@docker-compose build
 
 test:
-	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest -v tests/ -k "not e2e" --asyncio-mode=strict
+	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest -v tests/ --cov=src --cov-report term-missing
 
 lint:
 	@echo "Linting the code..."
