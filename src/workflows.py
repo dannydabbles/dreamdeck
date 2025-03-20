@@ -84,8 +84,15 @@ async def _chat_workflow(
     cl_logger.info(f"Messages: {messages}")
     cl_logger.info(f"Previous state: {previous}")
 
-    state = previous
-    state.messages.extend(messages)
+    new_messages = previous.messages.copy()
+    new_messages.extend(messages)
+
+    state = ChatState(
+        messages=new_messages,
+        thread_id=previous.thread_id,
+        error_count=previous.error_count,
+        # Copy other fields as needed
+    )
 
     try:
         # Determine action
@@ -139,6 +146,7 @@ async def _chat_workflow(
 
     except Exception as e:
         cl_logger.error(f"Critical error in chat workflow: {str(e)}", exc_info=True)
+        state = state.copy(deep=True)
         state.increment_error_count()
         state.messages.append(
             AIMessage(

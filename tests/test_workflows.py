@@ -31,10 +31,11 @@ async def test_chat_workflow(mock_chat_state):
         mock_storyboard_editor_agent.return_value = []
 
         # Add a human message to the state
-        mock_chat_state.messages.append(HumanMessage(content="Continue the adventure"))
+        initial_state = mock_chat_state
+        new_messages = [HumanMessage(content="Continue the adventure")]
 
         # Run the chat workflow
-        updated_state = await _chat_workflow(mock_chat_state.messages, previous=mock_chat_state)
+        updated_state = await _chat_workflow(new_messages, previous=initial_state)
 
         # Assert the state has been updated correctly
         assert len(updated_state.messages) > len(mock_chat_state.messages)
