@@ -146,7 +146,7 @@ async def _chat_workflow(
 
     except Exception as e:
         cl_logger.error(f"Critical error in chat workflow: {str(e)}", exc_info=True)
-        state = state.copy(deep=True)
+        state = state.model_copy(deep=True)
         state.increment_error_count()
         state.messages.append(
             AIMessage(
