@@ -24,14 +24,14 @@ async def test_chat_workflow(mock_chat_state):
          patch("src.agents.storyboard_editor_agent.task", new=lambda f: f):
 
         with (
-            patch("src.agents.decision_agent.decision_agent", new_callable=AsyncMock) as mock_decision_agent,
+            patch("src.agents.decision_agent.decide_action", new_callable=AsyncMock) as mock_decide_action,
             patch("src.agents.dice_agent.dice_roll", new_callable=AsyncMock) as mock_dice_roll,
             patch("src.agents.web_search_agent.web_search", new_callable=AsyncMock) as mock_web_search,
             patch("src.agents.writer_agent.generate_story", new_callable=AsyncMock) as mock_write_story,
             patch("src.agents.storyboard_editor_agent.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_agent,
         ):
             # Mock agent outputs
-            mock_decision_agent.return_value = [AIMessage(name="continue_story", content="The adventure continues...", additional_kwargs={})]
+            mock_decide_action.return_value = [AIMessage(name="continue_story", content="The adventure continues...", additional_kwargs={})]
             mock_write_story.return_value = [AIMessage(content="The adventure continues...", name="game_master", additional_kwargs={})]
             mock_storyboard_agent.return_value = []
 
