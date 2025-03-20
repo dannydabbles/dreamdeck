@@ -35,8 +35,9 @@ COPY ./src ./src
 COPY ./.chainlit ./.chainlit
 COPY ./config.yaml ./
 COPY chainlit.md ./
-COPY ./knowledge ./knowledge  # Copies knowledge dir into container
 COPY ./pyproject.toml ./
+
+RUN mkdir -p /app/knowledge
 
 ENV PYTHONPATH=/app:/app/src
 
