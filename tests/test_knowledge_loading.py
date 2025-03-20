@@ -43,5 +43,5 @@ async def test_load_knowledge_documents(tmp_path, monkeypatch):
         # Verify vector store receives chunks
         add_call = vector_store_mock.add_documents.call_args_list[0]
         added_docs = add_call.args[0]
-        assert len(added_docs) == 2  # Two chunks from each file
+        assert len(added_docs) == 4  # 2 chunks/file × 2 files = 4 chunks
         assert "Chunk 1" in [doc.page_content for doc in added_docs]
