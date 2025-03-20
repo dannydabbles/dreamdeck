@@ -57,4 +57,5 @@ services:
       - 8080:8080
     volumes:
       - ./src:/opt/dreamdeck
+      - ./knowledge:/app/knowledge  # Mount the knowledge directory
     network_mode: bridge
