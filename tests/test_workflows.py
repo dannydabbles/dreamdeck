@@ -18,8 +18,31 @@ def mock_chat_state():
 
 @pytest.mark.asyncio
 async def test_chat_workflow(mock_chat_state):
-    if True:
-        return  # Disable this test for now
+    with (
+        patch("src.agents.decision_agent.decide_action", new_callable=AsyncMock) as mock_decide_action,
+        patch("src.agents.dice_agent.dice_roll", new_callable=AsyncMock) as mock_dice_roll,
+        patch("src.agents.web_search_agent.web_search", new_callable=AsyncMock) as mock_web_search,
+        patch("src.agents.writer_agent.generate_story", new_callable=AsyncMock) as mock_generate_story,
+        patch("src.agents.storyboard_editor_agent.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_editor_agent,
+    ):
+        # Mock the decision agent to return a specific action
+        mock_decide_action.return_value = [AIMessage(name="continue_story", content="The adventure continues...")]
+        mock_generate_story.return_value = [AIMessage(content="The adventure continues...")]
+        mock_storyboard_editor_agent.return_value = []
+
+        # Add a human message to the state
+        mock_chat_state.messages.append(HumanMessage(content="Continue the adventure"))
+
+        # Run the chat workflow
+        updated_state = await _chat_workflow(mock_chat_state.messages, previous=mock_chat_state)
+
+        # Assert the state has been updated correctly
+        assert len(updated_state.messages) > len(mock_chat_state.messages)
+        assert any(
+            isinstance(msg, AIMessage) and "The adventure continues..." in msg.content
+            for msg in updated_state.messages
+        )
+        assert "The adventure continues..." in updated_state.messages[-1].content
 
     with (
         patch("langgraph.config.get_config", return_value={}),
