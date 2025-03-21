@@ -17,8 +17,8 @@ async def test_chat_workflow(mock_chat_state):  # <-- NOW IT WORKS
     from unittest.mock import MagicMock  # Import MagicMock
 
     with (
-        patch("langgraph.func.task", new=lambda f: f),  # Fix module path
-        patch("src.langchain_openai.ChatOpenAI.ainvoke") as mock_llm_invoke,
+        patch("langgraph.func.task", new=lambda f: f),
+        patch("langchain_openai.ChatOpenAI.ainvoke") as mock_llm_invoke,  # Removed 'src.'
         patch("src.chainlit.user_session") as mock_cl_session
     ):
         mock_llm_invoke.return_value = MagicMock(content="continue_story")

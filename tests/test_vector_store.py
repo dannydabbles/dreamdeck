@@ -23,7 +23,7 @@ def mock_chainlit_context():
     mock_session.thread_id = "test-thread-id"
     mock_context = MagicMock(spec=cl.Context)
     mock_context.session = mock_session
-    cl.set_current_context(mock_context)  # Use cl.set_current_context()
+    cl.set_current_context(mock_context)  # Ensure proper context setup
     yield
     cl.set_current_context(original_context)
 
