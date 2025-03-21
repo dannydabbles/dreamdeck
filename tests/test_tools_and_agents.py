@@ -116,7 +116,7 @@ async def test_dice_agent():
 
 @pytest.mark.asyncio
 async def test_on_chat_start_initialization():
-    with patch("chainlit.providers.AuthProvider") as mock_auth:  # Assume AuthProvider is in chainlit.providers
+    with patch("chainlit.AuthProvider"):  # Removed '.providers'
         await on_chat_start()
         mock_auth.assert_called_once()
         # Verify session state setup

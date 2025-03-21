@@ -5,20 +5,23 @@ import base64  # Import base64
 
 @pytest.mark.asyncio
 async def test_image_prompt_generation():
-    # Mock async_range to return an async iterator
     async def mock_async_range(end):
         for i in range(end):
             yield i  # Return actual numbers
 
     with patch("src.image_generation.async_range", new=mock_async_range):
-        prompts = await generate_image_generation_prompts("Scene description\nNext scene")
+        # Use longer input strings exceeding 20 characters each
+        prompts = await generate_image_generation_prompts(
+            "A vast enchanted forest with glowing mushrooms\nA mystical castle floating in the clouds"
+        )
         assert len(prompts) == 2
 
 @pytest.mark.asyncio
 async def test_mocked_image_generation():
     with patch("httpx.AsyncClient.post") as mock_post:
         mock_response = MagicMock()
-        mock_response.json = AsyncMock(return_value={"images": ["dummy_base64"]})  # Coroutine mock
+        # Return value directly (not a coroutine)
+        mock_response.json.return_value = {"images": ["dummy_base64"]}
         mock_post.return_value = mock_response
 
         image_bytes = await generate_image_async("Test prompt", 123)

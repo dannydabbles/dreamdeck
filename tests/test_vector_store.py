@@ -18,12 +18,13 @@ def mock_chainlit_context():
 
 @pytest.fixture
 def mock_chainlit_context():
-    original_context = cl.get_current_context()  # Use cl.get_current_context()
+    original_context = cl.get_current_context()
     mock_session = MagicMock(spec=cl.Session)
     mock_session.thread_id = "test-thread-id"
     mock_context = MagicMock(spec=cl.Context)
     mock_context.session = mock_session
-    cl.set_current_context(mock_context)  # Ensure proper context setup
+    # Explicitly set the context
+    cl.set_current_context(mock_context)
     yield
     cl.set_current_context(original_context)
 

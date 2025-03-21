@@ -11,15 +11,15 @@ def mock_chat_state():
     return ChatState(messages=[], thread_id="test-thread-id")
 
 @pytest.mark.asyncio
-async def test_chat_workflow(mock_chat_state):  # <-- NOW IT WORKS
+async def test_chat_workflow(mock_chat_state):
     from src.agents.decision_agent import decide_action
-    from langgraph.func import task  # Ensure proper imports
-    from unittest.mock import MagicMock  # Import MagicMock
+    from langgraph.func import task
+    from unittest.mock import MagicMock
 
     with (
         patch("langgraph.func.task", new=lambda f: f),
-        patch("langchain_openai.ChatOpenAI.ainvoke") as mock_llm_invoke,  # Removed 'src.'
-        patch("src.chainlit.user_session") as mock_cl_session
+        patch("langchain_openai.ChatOpenAI.ainvoke") as mock_llm_invoke,
+        patch("chainlit.user_session") as mock_cl_session  # Removed 'src.'
     ):
         mock_llm_invoke.return_value = MagicMock(content="continue_story")
         mock_cl_session.get.return_value = MagicMock()  # Mock vector store
