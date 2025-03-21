@@ -26,15 +26,15 @@ def mock_chainlit_context():
     with patch("chainlit.context", mock_context):
         yield
 
-def test_vector_store_operations(mock_chainlit_context):  # <-- USE THE FIXTURE
+def test_vector_store_operations(mock_chainlit_context):  # Use the fixed fixture
     store = VectorStore()
     test_doc = Document(page_content="Test document content")
 
-    # Test storing documents
-    asyncio.run(store.add_documents([test_doc]))  # <-- ADJUST FOR ASYNC
+    # Explicitly run async methods with asyncio.run (or ensure event loop)
+    asyncio.run(store.add_documents([test_doc]))
     results = store.get("Test document")
     assert len(results) >= 1
 
-    # Test retrieval
+    # Verify retrieval
     query_results = store.get("document content")
     assert any("Test document" in doc.page_content for doc in query_results)
