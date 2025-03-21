@@ -100,3 +100,12 @@ async def test_dice_agent():
         state = ChatState(messages=[user_input], thread_id="test-thread-id")
         result = await _dice_roll(state)
         assert "roll" in result[0].content.lower()
+
+
+@pytest.mark.asyncio
+async def test_on_chat_start_initialization():
+    with patch("src.chainlit.AuthProvider") as mock_auth:
+        await on_chat_start()
+        mock_auth.assert_called_once()
+        # Verify session state setup
+        assert cl.user_session.get("vector_memory") is not None
