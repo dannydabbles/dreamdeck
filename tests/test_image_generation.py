@@ -21,7 +21,7 @@ async def test_mocked_image_generation():
     with patch("httpx.AsyncClient.post") as mock_post:
         mock_response = MagicMock()
         # Return value directly (not a coroutine)
-        mock_response.json.return_value = {"images": ["dummy_base64"]}
+        mock_response.json.return_value = {"images": ["SGVsbG8gd29ybGQ="]}  # Decodes to "Hello world"
         mock_post.return_value = mock_response
 
         image_bytes = await generate_image_async("Test prompt", 123)

@@ -60,6 +60,7 @@ from src.agents.storyboard_editor_agent import storyboard_editor_agent
 from src.agents.dice_agent import dice_roll_agent
 from src.agents.web_search_agent import web_search_agent
 from chainlit import user_session as cl_user_session  # Import cl_user_session
+from langchain_core.callbacks.manager import CallbackManagerForChainRun  # Import CallbackManagerForChainRun
 
 from langchain_core.stores import BaseStore
 
@@ -136,6 +137,10 @@ async def on_chat_start():
         cl_user_session.set("storyboard_editor_agent", storyboard_editor_agent)
         cl_user_session.set("dice_roll_agent", dice_roll_agent)
         cl_user_session.set("web_search_agent", web_search_agent)
+
+        # Add callback manager setup
+        callback_manager = CallbackManagerForChainRun()
+        cl.user_session.set("callback_manager", callback_manager)
 
         # Launch knowledge loading in the background
         asyncio.create_task(load_knowledge_documents())
