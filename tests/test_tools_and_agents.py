@@ -9,7 +9,10 @@ from src.agents.decision_agent import _decide_action
 from src.agents.web_search_agent import _web_search
 from src.agents.writer_agent import _generate_story
 from src.agents.storyboard_editor_agent import _generate_storyboard, process_storyboard_images
+from src.image_generation import generate_image_generation_prompts  # Import generate_image_generation_prompts
 from src.agents.dice_agent import _dice_roll
+from src.event_handlers import on_chat_start  # Import on_chat_start
+import chainlit as cl  # Import chainlit as cl
 
 
 @pytest.mark.asyncio
@@ -38,6 +41,15 @@ async def test_refused_prompts():
     with patch("src.image_generation.generate_image_async") as mock_gen:
         await generate_image_generation_prompts("This is a refusal phrase")
         mock_gen.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_on_chat_start_initialization():
+    with patch("src.chainlit.AuthProvider") as mock_auth:
+        await on_chat_start()
+        mock_auth.assert_called_once()
+        # Verify session state setup
+        assert cl.user_session.get("vector_memory") is not None
 
 
 import src.config  # Import src.config at the top
