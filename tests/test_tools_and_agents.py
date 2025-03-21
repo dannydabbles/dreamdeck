@@ -45,7 +45,7 @@ async def test_refused_prompts():
 
 @pytest.mark.asyncio
 async def test_on_chat_start_initialization():
-    with patch("src.chainlit.AuthProvider") as mock_auth:
+    with patch("chainlit.AuthProvider") as mock_auth:  # <-- CORRECTED PATH
         await on_chat_start()
         mock_auth.assert_called_once()
         # Verify session state setup

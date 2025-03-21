@@ -22,12 +22,44 @@ def test_missing_required_config():
 
 
 def test_edge_case_configs():
-    # Test minimal valid config
     minimal_config = {
-        "llm": {"temperature": 0.0},
-        "agents": {
-            "decision_agent": {"temperature": 0.0}
+        "llm": {
+            "temperature": 0.0,
+            "max_tokens": 8000,
+            "model_name": "gpt-3.5-turbo",
+            "streaming": True,
+            "timeout": 300,
+            "presence_penalty": 0.1,
+            "frequency_penalty": 0.1,
+            "top_p": 1.0,
+            "verbose": True
         },
-        "features": {"image_generation": False}
+        "agents": {
+            "decision_agent": {"temperature": 0.0, "max_tokens": 100, "streaming": True, "verbose": True},
+            "writer_agent": {"temperature": 0.7, "max_tokens": 8000, "streaming": True, "verbose": True},
+            "storyboard_editor_agent": {"temperature": 0.7, "max_tokens": 8000, "streaming": False, "verbose": True}
+        },
+        "features": {"image_generation": False},
+        "prompts": {},  # Required placeholder
+        "image_generation_payload": {},  # Required placeholder
+        "timeouts": {},  # Required placeholder
+        "refusal_list": [],
+        "defaults": {"db_file": "chainlit.db"},
+        "dice": {"sides": 20},
+        "paths": {},
+        "openai": {},
+        "search": {},
+        "error_handling": {},
+        "logging": {},
+        "api": {},
+        "security": {},
+        "monitoring": {},
+        "caching": {},
+        "chainlit": {},
+        "search_enabled": False,
+        "knowledge_directory": "./knowledge",
+        "image_settings": {},
+        "rate_limits": {},
+        "chat": {}
     }
     ConfigSchema.model_validate(minimal_config)

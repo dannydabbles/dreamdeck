@@ -5,8 +5,13 @@ from src.workflows import _chat_workflow
 from src.agents.decision_agent import decide_action
 from langgraph.func import task  # Ensure proper imports
 
+@pytest.fixture
+def mock_chat_state():
+    from src.models import ChatState
+    return ChatState(messages=[], thread_id="test-thread-id")
+
 @pytest.mark.asyncio
-async def test_chat_workflow(mock_chat_state):
+async def test_chat_workflow(mock_chat_state):  # <-- NOW IT WORKS
     from src.agents.decision_agent import decide_action
     from langgraph.func import task  # Ensure proper imports
 

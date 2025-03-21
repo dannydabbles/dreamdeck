@@ -1,15 +1,24 @@
 import pytest
-from src.stores import VectorStore
-from src.models import ChatState
-from langchain_core.documents import Document
+from unittest.mock import MagicMock
+from chainlit import Session, Context
 
-@pytest.mark.asyncio
-async def test_vector_store_operations():
+@pytest.fixture
+def mock_chainlit_context():
+    original_context = Context.get_current()
+    mock_session = MagicMock(spec=Session)
+    mock_session.thread_id = "test-thread-id"
+    mock_context = MagicMock(spec=Context)
+    mock_context.session = mock_session
+    Context.set_current(mock_context)
+    yield
+    Context.set_current(original_context)
+
+def test_vector_store_operations(mock_chainlit_context):  # <-- USE THE FIXTURE
     store = VectorStore()
     test_doc = Document(page_content="Test document content")
 
     # Test storing documents
-    await store.add_documents([test_doc])
+    asyncio.run(store.add_documents([test_doc]))  # <-- ADJUST FOR ASYNC
     results = store.get("Test document")
     assert len(results) >= 1
 
