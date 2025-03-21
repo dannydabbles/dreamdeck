@@ -18,9 +18,8 @@ def mock_chainlit_context():
 @pytest.fixture
 def mock_chainlit_context():
     original_context = cl.context
-    mock_session = MagicMock(spec=cl.context.session)
-    mock_session.thread_id = "test-thread-id"
-    mock_context = MagicMock(spec=cl.context)
+    mock_session = MagicMock(spec=cl.session.WebsocketSession)  # Use concrete class
+    mock_context = MagicMock(spec=cl.context.ChainlitContext)
     mock_context.session = mock_session
     cl.context = mock_context
     yield

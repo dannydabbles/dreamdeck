@@ -25,4 +25,4 @@ async def test_mocked_image_generation():
         mock_post.return_value = mock_response
 
         image_bytes = await generate_image_async("Test prompt", 123)
-        assert image_bytes == base64.b64decode("dummy_base64")
+        assert image_bytes == b"Hello world"  # Matches the mock's "Hello world" decoding
