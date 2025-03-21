@@ -16,7 +16,7 @@ import chainlit as cl  # Import chainlit as cl
 
 
 @pytest.mark.asyncio
-async def test_decision_agent_roll_action():
+async def test_decision_agent_roll_action(mock_chainlit_context):
     user_input = HumanMessage(content="roll 2d20")
     state = ChatState(messages=[user_input], thread_id="test-thread-id")
 
@@ -32,12 +32,12 @@ async def test_decision_agent_roll_action():
 
 
 @pytest.mark.asyncio
-async def test_empty_storyboard():
+async def test_empty_storyboard(mock_chainlit_context):
     await process_storyboard_images("", "msgid")  # Should exit early
 
 
 @pytest.mark.asyncio
-async def test_refused_prompts():
+async def test_refused_prompts(mock_chainlit_context):
     with patch("src.image_generation.generate_image_async") as mock_gen:
         await generate_image_generation_prompts("This is a refusal phrase")
         mock_gen.assert_not_called()
@@ -102,7 +102,7 @@ async def test_web_search_integration():
 
 
 @pytest.mark.asyncio
-async def test_dice_agent():
+async def test_dice_agent(mock_chainlit_context):
     with patch(
         "src.agents.decision_agent.ChatOpenAI.ainvoke", new_callable=MagicMock
     ) as mock_ainvoke:
