@@ -5,7 +5,12 @@ import base64  # Import base64
 
 @pytest.mark.asyncio
 async def test_image_prompt_generation():
-    with patch("src.image_generation.async_range", new=AsyncMock(return_value=[])):  # Mock async gen
+    # Mock async_range to return an async iterator
+    async def mock_async_range(end):
+        for i in range(end):
+            yield i  # Return actual numbers
+
+    with patch("src.image_generation.async_range", new=mock_async_range):
         prompts = await generate_image_generation_prompts("Scene description\nNext scene")
         assert len(prompts) == 2
 

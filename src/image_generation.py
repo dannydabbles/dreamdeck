@@ -36,14 +36,9 @@ import httpx  # Import httpx
 
 # Define an asynchronous range generator
 async def async_range(end):
-    """Asynchronous range generator.
-
-    Args:
-        end (int): The end value for the range.
-    """
     for i in range(end):
-        await asyncio.sleep(0)  # Make it async
-        yield i  # Use yield instead of return
+        await asyncio.sleep(0)  # Simulate async
+        yield i  # Use yield to create async generator
 
 
 @retry(
