@@ -1,6 +1,9 @@
 import pytest
 from unittest.mock import MagicMock
 from chainlit import Session, Context
+from src.stores import VectorStore  # Import VectorStore
+from langchain_core.documents import Document  # Import Document
+import asyncio  # Import asyncio
 
 @pytest.fixture
 def mock_chainlit_context():

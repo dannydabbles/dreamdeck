@@ -14,6 +14,7 @@ def mock_chat_state():
 async def test_chat_workflow(mock_chat_state):  # <-- NOW IT WORKS
     from src.agents.decision_agent import decide_action
     from langgraph.func import task  # Ensure proper imports
+    from unittest.mock import MagicMock  # Import MagicMock
 
     with (
         patch("src.agents.decision_agent.task", new=lambda f: f), 
