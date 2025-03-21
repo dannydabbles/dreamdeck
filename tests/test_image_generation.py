@@ -16,7 +16,10 @@ async def test_image_prompt_generation():
 
 @pytest.mark.asyncio
 async def test_mocked_image_generation():
-    with patch("httpx.AsyncClient.post") as mock_post:  # Fix module path
-        mock_post.return_value.json.return_value = {"images": ["dummy_base64"]}
+    with patch("httpx.AsyncClient.post") as mock_post:
+        mock_response = MagicMock()
+        mock_response.json = AsyncMock(return_value={"images": ["dummy_base64"]})  # Coroutine mock
+        mock_post.return_value = mock_response
+
         image_bytes = await generate_image_async("Test prompt", 123)
         assert image_bytes == base64.b64decode("dummy_base64")
