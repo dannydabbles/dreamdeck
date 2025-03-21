@@ -15,6 +15,8 @@ def mock_chainlit_context():
     cl.context = mock_context
     yield
 
+import unittest.mock as mock  # Import mock
+
 @pytest.fixture
 def mock_chainlit_context():
     mock_session = MagicMock()
@@ -23,7 +25,7 @@ def mock_chainlit_context():
     mock_context.session = mock_session
 
     # Use patch to replace the global context
-    with patch("chainlit.context", mock_context):
+    with mock.patch("chainlit.context", mock_context):
         yield
 
 def test_vector_store_operations(mock_chainlit_context):  # Use the fixed fixture
