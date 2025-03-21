@@ -8,7 +8,7 @@ from src.models import ChatState  # Import ChatState
 from src.agents.decision_agent import _decide_action
 from src.agents.web_search_agent import _web_search
 from src.agents.writer_agent import _generate_story
-from src.agents.storyboard_editor_agent import _generate_storyboard
+from src.agents.storyboard_editor_agent import _generate_storyboard, process_storyboard_images
 from src.agents.dice_agent import _dice_roll
 
 
@@ -26,6 +26,18 @@ async def test_decision_agent_roll_action():
 
         result = await _decide_action(state)
         assert result[0].name == "dice_roll"
+
+
+@pytest.mark.asyncio
+async def test_empty_storyboard():
+    await process_storyboard_images("", "msgid")  # Should exit early
+
+
+@pytest.mark.asyncio
+async def test_refused_prompts():
+    with patch("src.image_generation.generate_image_async") as mock_gen:
+        await generate_image_generation_prompts("This is a refusal phrase")
+        mock_gen.assert_not_called()
 
 
 import src.config  # Import src.config at the top
