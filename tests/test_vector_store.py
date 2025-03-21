@@ -1,20 +1,20 @@
 import pytest
 from unittest.mock import MagicMock
-from chainlit import Session, Context
+import chainlit as cl
 from src.stores import VectorStore  # Import VectorStore
 from langchain_core.documents import Document  # Import Document
 import asyncio  # Import asyncio
 
 @pytest.fixture
 def mock_chainlit_context():
-    original_context = Context.get_current()
-    mock_session = MagicMock(spec=Session)
+    original_context = cl.Context.get_current()
+    mock_session = MagicMock(spec=cl.Session)
     mock_session.thread_id = "test-thread-id"
-    mock_context = MagicMock(spec=Context)
+    mock_context = MagicMock(spec=cl.Context)
     mock_context.session = mock_session
-    Context.set_current(mock_context)
+    cl.Context.set_current(mock_context)
     yield
-    Context.set_current(original_context)
+    cl.Context.set_current(original_context)
 
 def test_vector_store_operations(mock_chainlit_context):  # <-- USE THE FIXTURE
     store = VectorStore()
