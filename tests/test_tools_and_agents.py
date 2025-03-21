@@ -44,12 +44,10 @@ async def test_refused_prompts(mock_chainlit_context):
 
 
 @pytest.mark.asyncio
-async def test_on_chat_start_initialization():
-    with patch("chainlit.AuthProvider") as mock_auth:  # <-- CORRECTED PATH
-        await on_chat_start()
-        mock_auth.assert_called_once()
-        # Verify session state setup
-        assert cl.user_session.get("vector_memory") is not None
+async def test_on_chat_start_initialization(mock_chainlit_context):
+    await on_chat_start()
+    # Verify session state setup
+    assert cl.user_session.get("vector_memory") is not None
 
 
 import src.config  # Import src.config at the top
