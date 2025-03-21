@@ -17,12 +17,14 @@ def mock_chainlit_context():
 
 @pytest.fixture
 def mock_chainlit_context():
-    original_context = cl.context
-    mock_session = MagicMock(spec=cl.session.WebsocketSession)  # Use concrete class
-    mock_context = MagicMock(spec=cl.context.ChainlitContext)
+    mock_session = MagicMock()
+    mock_session.thread_id = "test-thread-id"  # Set a valid thread ID
+    mock_context = MagicMock()
     mock_context.session = mock_session
-    cl.context = mock_context
-    yield
+
+    # Use patch to replace the global context
+    with patch("chainlit.context", mock_context):
+        yield
 
 def test_vector_store_operations(mock_chainlit_context):  # <-- USE THE FIXTURE
     store = VectorStore()
