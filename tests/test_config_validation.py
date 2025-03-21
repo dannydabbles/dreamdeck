@@ -39,7 +39,11 @@ def test_edge_case_configs():
             "writer_agent": {"temperature": 0.7, "max_tokens": 8000, "streaming": True, "verbose": True},
             "storyboard_editor_agent": {"temperature": 0.7, "max_tokens": 8000, "streaming": False, "verbose": True}
         },
-        "features": {"image_generation": False},
+        "features": {
+            "image_generation": False,
+            "web_search": False,
+            "dice_rolling": False
+        },
         "prompts": {},  # Required placeholder
         "image_generation_payload": {},  # Required placeholder
         "timeouts": {},  # Required placeholder

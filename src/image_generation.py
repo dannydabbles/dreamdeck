@@ -41,10 +41,9 @@ async def async_range(end):
     Args:
         end (int): The end value for the range.
     """
-    for i in range(0, end):
-        # Sleep for a short duration to simulate asynchronous operation
-        await asyncio.sleep(0.1)
-        yield i
+    for i in range(end):
+        await asyncio.sleep(0)  # Make it async
+        yield i  # Use yield instead of return
 
 
 @retry(
