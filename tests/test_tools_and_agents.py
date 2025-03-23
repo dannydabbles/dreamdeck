@@ -113,7 +113,7 @@ async def test_dice_agent(mock_chainlit_context):
 
 
 @pytest.mark.asyncio
-async def test_on_chat_start_initialization():
+async def test_on_chat_start_initialization(mock_chainlit_context):
     await on_chat_start()
     # Verify session state setup
     assert cl.user_session.get("vector_memory") is not None
