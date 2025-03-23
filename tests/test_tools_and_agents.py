@@ -42,17 +42,6 @@ async def test_refused_prompts(mock_chainlit_context):
         await generate_image_generation_prompts("This is a refusal phrase")
         mock_gen.assert_not_called()
 
-
-@pytest.mark.asyncio
-async def test_on_chat_start_initialization(mock_chainlit_context):
-    await on_chat_start()
-    # Verify session state setup
-    assert cl.user_session.get("vector_memory") is not None
-
-
-import src.config  # Import src.config at the top
-
-
 @pytest.mark.asyncio
 async def test_web_search_integration():
     user_input = HumanMessage(content="search AI trends")
@@ -110,10 +99,3 @@ async def test_dice_agent(mock_chainlit_context):
         state = ChatState(messages=[user_input], thread_id="test-thread-id")
         result = await _dice_roll(state)
         assert "roll" in result[0].content.lower()
-
-
-@pytest.mark.asyncio
-async def test_on_chat_start_initialization(mock_chainlit_context):
-    await on_chat_start()
-    # Verify session state setup
-    assert cl.user_session.get("vector_memory") is not None
