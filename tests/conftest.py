@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
-import warnings
 
 @pytest.fixture
 def mock_chainlit_context():
@@ -12,13 +11,6 @@ def mock_chainlit_context():
 
     with patch("chainlit.context", mock_context):
         yield
-
-# Suppress the specific deprecation warning
-warnings.filterwarnings(
-    "ignore",
-    category=DeprecationWarning,
-    message="datetime.datetime.utcnow\\(\\) is deprecated.*",
-)
 
 import pytest
 from src.config import (
