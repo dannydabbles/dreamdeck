@@ -1,4 +1,4 @@
-.PHONY: install run start build test lint format restart stop log aider-sonnet aider
+.PHONY: install run start build test lint format restart stop log aider-sonnet aider backup restore
 
 # Need to specify bash in order for conda activate to work.
 SHELL=/bin/bash
@@ -58,3 +58,59 @@ aider-dual:
 aider:
 	@echo "Running aider with local llm..."
 	@aider --multiline --architect --o1-mini --openai-api-base http://192.168.1.111:5000/v1 --timeout 500 --model-settings-file .aider.model.settings.yml
+
+.PHONY: backup restore
+
+backup:
+	mkdir -p backups
+	TIMESTAMP := $(shell date +%Y%m%d-%H%M%S)
+	BACKUP_DIR := backups/$${TIMESTAMP}
+	mkdir -p $$BACKUP_DIR
+	# Backup PostgreSQL data
+	cp -r ./.data/postgres $$BACKUP_DIR/postgres
+	# Backup knowledge directory
+	cp -r ./knowledge $$BACKUP_DIR/knowledge
+	# Backup LocalStack S3 data
+	cp -r ./my-localstack-data $$BACKUP_DIR/localstack
+	# Backup ChromaDB data
+	cp -r ./chroma_db $$BACKUP_DIR/chroma_db || true
+	# Collect app files and metadata
+	cp config.yaml $$BACKUP_DIR/
+	cp Dockerfile $$BACKUP_DIR/
+	git rev-parse HEAD > $$BACKUP_DIR/git_commit_sha.txt
+	echo "Backup Summary" > $$BACKUP_DIR/backup_summary.txt
+	echo "Commit SHA: $$(git rev-parse HEAD)" >> $$BACKUP_DIR/backup_summary.txt
+	echo "Timestamp: $${TIMESTAMP}" >> $$BACKUP_DIR/backup_summary.txt
+	echo "Included directories:" >> $$BACKUP_DIR/backup_summary.txt
+	echo "- postgres" >> $$BACKUP_DIR/backup_summary.txt
+	echo "- knowledge" >> $$BACKUP_DIR/backup_summary.txt
+	echo "- localstack" >> $$BACKUP_DIR/backup_summary.txt
+	echo "- chroma_db (if exists)" >> $$BACKUP_DIR/backup_summary.txt
+	echo "App files included: config.yaml, Dockerfile" >> $$BACKUP_DIR/backup_summary.txt
+	tar -czvf $$BACKUP_DIR.tar.gz -C backups $$TIMESTAMP
+	rm -rf $$BACKUP_DIR
+	mv $$BACKUP_DIR.tar.gz backups/
+
+restore:
+	if [ -z "$$1" ]; then \
+		LATEST_BACKUP=$$(ls -t backups/*.tar.gz | head -1); \
+	else \
+		LATEST_BACKUP=$$1; \
+	fi; \
+	mkdir -p restore_temp; \
+	tar -xzvf $$$$LATEST_BACKUP -C restore_temp; \
+	RESTORE_DIR=$$(find restore_temp -mindepth 1 -maxdepth 1 -type d); \
+	# Restore PostgreSQL data
+	rm -rf ./.data/postgres; \
+	cp -r $$$$RESTORE_DIR/postgres ./.data/postgres; \
+	# Restore knowledge
+	rm -rf ./knowledge; \
+	cp -r $$$$RESTORE_DIR/knowledge ./knowledge; \
+	# Restore LocalStack
+	rm -rf ./my-localstack-data; \
+	cp -r $$$$RESTORE_DIR/localstack ./my-localstack-data; \
+	# Restore ChromaDB
+	rm -rf ./chroma_db; \
+	cp -r $$$$RESTORE_DIR/chroma_db ./chroma_db || true; \
+	rm -rf restore_temp; \
+	echo "Restored from $$$$LATEST_BACKUP"
