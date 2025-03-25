@@ -59,4 +59,5 @@ services:
       - ./src:/app/src
       - ./config.yaml:/app/config.yaml
       - ./knowledge:/app/knowledge  # Mount the knowledge directory
+      - ./chroma_db:/app/chroma_db  # Add this line
     network_mode: bridge
