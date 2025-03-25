@@ -73,7 +73,7 @@ backup:
 	# Backup LocalStack S3 data
 	cp -r ./my-localstack-data $$BACKUP_DIR/localstack
 	# Backup ChromaDB data
-	cp -r ./chroma_db $$BACKUP_DIR/chroma_db || true
+	test -d ./chroma_db && cp -r ./chroma_db $$BACKUP_DIR/chroma_db || true
 	# Collect app files and metadata
 	cp config.yaml $$BACKUP_DIR/
 	cp Dockerfile $$BACKUP_DIR/
@@ -100,17 +100,19 @@ restore:
 	mkdir -p restore_temp; \
 	tar -xzvf $$$$LATEST_BACKUP -C restore_temp; \
 	RESTORE_DIR=$$(find restore_temp -mindepth 1 -maxdepth 1 -type d); \
-	# Restore PostgreSQL data
-	rm -rf ./.data/postgres; \
+
+	# Move existing data to /tmp before restoring
+	mv -f ./.data/postgres "/tmp/postgres_backup_$$(date +%s)" || true; \
 	cp -r $$$$RESTORE_DIR/postgres ./.data/postgres; \
-	# Restore knowledge
-	rm -rf ./knowledge; \
+
+	mv -f ./knowledge "/tmp/knowledge_backup_$$(date +%s)" || true; \
 	cp -r $$$$RESTORE_DIR/knowledge ./knowledge; \
-	# Restore LocalStack
-	rm -rf ./my-localstack-data; \
+
+	mv -f ./my-localstack-data "/tmp/localstack_backup_$$(date +%s)" || true; \
 	cp -r $$$$RESTORE_DIR/localstack ./my-localstack-data; \
-	# Restore ChromaDB
-	rm -rf ./chroma_db; \
+
+	mv -f ./chroma_db "/tmp/chroma_backup_$$(date +%s)" || true; \
 	cp -r $$$$RESTORE_DIR/chroma_db ./chroma_db || true; \
+
 	rm -rf restore_temp; \
 	echo "Restored from $$$$LATEST_BACKUP"
