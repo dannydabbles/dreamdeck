@@ -62,7 +62,8 @@ aider:
 backup:
 	mkdir -p backups; \
 	TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
-	BACKUP_DIR=backups/dreamdeck_snapshot_"$$TIMESTAMP"; \
+	SNAPSHOT_DIR=dreamdeck_snapshot_"$$TIMESTAMP"; \
+	BACKUP_DIR=backups/$$SNAPSHOT_DIR; \
 	mkdir -p "$$BACKUP_DIR"; \
 	cp -r ./.data/postgres "$$BACKUP_DIR/postgres"; \
 	cp -r ./knowledge "$$BACKUP_DIR/knowledge"; \
@@ -80,8 +81,8 @@ backup:
 	echo "- localstack" >> "$$BACKUP_DIR/backup_summary.txt"; \
 	echo "- chroma_db (if exists)" >> "$$BACKUP_DIR/backup_summary.txt"; \
 	echo "App files included: config.yaml, Dockerfile" >> "$$BACKUP_DIR/backup_summary.txt"; \
-	tar -czvf "$$BACKUP_DIR.tar.gz" -C backups "$$TIMESTAMP"; \
-	mv -f "$$BACKUP_DIR.tar.gz" backups/; \
+	tar -czvf "$$SNAPSHOT_DIR.tar.gz" -C backups "$$SNAPSHOT_DIR"; \
+	mv "$$SNAPSHOT_DIR.tar.gz" backups/; \
 	mv "$$BACKUP_DIR" /tmp/;
 
 restore:
