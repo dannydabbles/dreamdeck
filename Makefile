@@ -59,22 +59,15 @@ aider:
 	@echo "Running aider with local llm..."
 	@aider --multiline --architect --o1-mini --openai-api-base http://192.168.1.111:5000/v1 --timeout 500 --model-settings-file .aider.model.settings.yml
 
-.PHONY: backup restore
-
 backup:
 	mkdir -p backups; \
 	TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
 	BACKUP_DIR=backups/dreamdeck_snapshot_"$$TIMESTAMP"; \
 	mkdir -p "$$BACKUP_DIR"; \
-	# Backup PostgreSQL data \
 	cp -r ./.data/postgres "$$BACKUP_DIR/postgres"; \
-	# Backup knowledge directory \
 	cp -r ./knowledge "$$BACKUP_DIR/knowledge"; \
-	# Backup LocalStack S3 data \
 	cp -r ./my-localstack-data "$$BACKUP_DIR/localstack"; \
-	# Backup ChromaDB data \
 	test -d ./chroma_db && cp -r ./chroma_db "$$BACKUP_DIR/chroma_db" || true; \
-	# Collect app files and metadata \
 	cp config.yaml "$$BACKUP_DIR/"; \
 	cp Dockerfile "$$BACKUP_DIR/"; \
 	git rev-parse HEAD > "$$BACKUP_DIR/git_commit_sha.txt"; \
@@ -92,20 +85,18 @@ backup:
 	rm -rf "$$BACKUP_DIR";
 
 restore:
-ifndef RESTORE_FILE
+	ifndef RESTORE_FILE; \
 	LATEST_BACKUP=$$(ls -t backups/*.tar.gz | head -1); \
-else
+	else; \
 	LATEST_BACKUP=$$RESTORE_FILE; \
-endif
+    endif
 	mkdir -p restore_temp; \
 	tar -xzvf "$$LATEST_BACKUP" -C restore_temp; \
 	RESTORE_DIR=$$(find restore_temp -mindepth 1 -maxdepth 1 -type d); \
-	# Move existing data to temp locations \
 	mv -f ./.data/postgres "/tmp/postgres_backup_$$(date +%s)" || true; \
 	mv -f ./knowledge "/tmp/knowledge_backup_$$(date +%s)" || true; \
 	mv -f ./my-localstack-data "/tmp/localstack_backup_$$(date +%s)" || true; \
 	mv -f ./chroma_db "/tmp/chroma_backup_$$(date +%s)" || true; \
-	# Restore data from backup \
 	cp -r "$$RESTORE_DIR/postgres" ./.data/postgres; \
 	cp -r "$$RESTORE_DIR/knowledge" ./knowledge; \
 	cp -r "$$RESTORE_DIR/localstack" ./my-localstack-data; \
