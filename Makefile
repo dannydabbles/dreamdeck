@@ -82,7 +82,7 @@ backup:
 	echo "App files included: config.yaml, Dockerfile" >> "$$BACKUP_DIR/backup_summary.txt"; \
 	tar -czvf "$$BACKUP_DIR.tar.gz" -C backups "$$TIMESTAMP"; \
 	mv -f "$$BACKUP_DIR.tar.gz" backups/; \
-	rm -rf "$$BACKUP_DIR";
+	mv "$$BACKUP_DIR" /tmp/;
 
 restore:
 	mkdir -p restore_temp; \
@@ -101,5 +101,5 @@ restore:
 	cp -r "$$RESTORE_DIR/knowledge" ./knowledge; \
 	cp -r "$$RESTORE_DIR/localstack" ./my-localstack-data; \
 	cp -r "$$RESTORE_DIR/chroma_db" ./chroma_db || true; \
-	rm -rf restore_temp; \
+	mv restore_temp /tmp/; \
 	echo "Restored from $$LATEST_BACKUP";
