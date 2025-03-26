@@ -62,34 +62,34 @@ aider:
 .PHONY: backup restore
 
 backup:
-	mkdir -p backups
-	TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
-	BACKUP_DIR := backups/dreamdeck_snapshot_$${TIMESTAMP}
-	mkdir -p $$BACKUP_DIR
-	# Backup PostgreSQL data
-	cp -r ./.data/postgres $$BACKUP_DIR/postgres
-	# Backup knowledge directory
-	cp -r ./knowledge $$BACKUP_DIR/knowledge
-	# Backup LocalStack S3 data
-	cp -r ./my-localstack-data $$BACKUP_DIR/localstack
-	# Backup ChromaDB data
-	test -d ./chroma_db && cp -r ./chroma_db $$BACKUP_DIR/chroma_db || true
-	# Collect app files and metadata
-	cp config.yaml $$BACKUP_DIR/
-	cp Dockerfile $$BACKUP_DIR/
-	git rev-parse HEAD > $$BACKUP_DIR/git_commit_sha.txt
-	echo "Backup Summary" > $$BACKUP_DIR/backup_summary.txt
-	echo "Commit SHA: $$(git rev-parse HEAD)" >> $$BACKUP_DIR/backup_summary.txt
-	echo "Timestamp: $${TIMESTAMP}" >> $$BACKUP_DIR/backup_summary.txt
-	echo "Included directories:" >> $$BACKUP_DIR/backup_summary.txt
-	echo "- postgres" >> $$BACKUP_DIR/backup_summary.txt
-	echo "- knowledge" >> $$BACKUP_DIR/backup_summary.txt
-	echo "- localstack" >> $$BACKUP_DIR/backup_summary.txt
-	echo "- chroma_db (if exists)" >> $$BACKUP_DIR/backup_summary.txt
-	echo "App files included: config.yaml, Dockerfile" >> $$BACKUP_DIR/backup_summary.txt
-	tar -czvf $$BACKUP_DIR.tar.gz -C backups $$TIMESTAMP
-	rm -rf $$BACKUP_DIR
-	mv $$BACKUP_DIR.tar.gz backups/
+	mkdir -p backups; \
+	TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+	BACKUP_DIR=backups/dreamdeck_snapshot_"$$TIMESTAMP"; \
+	mkdir -p "$$BACKUP_DIR"; \
+	# Backup PostgreSQL data \
+	cp -r ./.data/postgres "$$BACKUP_DIR/postgres"; \
+	# Backup knowledge directory \
+	cp -r ./knowledge "$$BACKUP_DIR/knowledge"; \
+	# Backup LocalStack S3 data \
+	cp -r ./my-localstack-data "$$BACKUP_DIR/localstack"; \
+	# Backup ChromaDB data \
+	test -d ./chroma_db && cp -r ./chroma_db "$$BACKUP_DIR/chroma_db" || true; \
+	# Collect app files and metadata \
+	cp config.yaml "$$BACKUP_DIR/"; \
+	cp Dockerfile "$$BACKUP_DIR/"; \
+	git rev-parse HEAD > "$$BACKUP_DIR/git_commit_sha.txt"; \
+	echo "Backup Summary" > "$$BACKUP_DIR/backup_summary.txt"; \
+	echo "Commit SHA: $$(git rev-parse HEAD)" >> "$$BACKUP_DIR/backup_summary.txt"; \
+	echo "Timestamp: $$TIMESTAMP" >> "$$BACKUP_DIR/backup_summary.txt"; \
+	echo "Included directories:" >> "$$BACKUP_DIR/backup_summary.txt"; \
+	echo "- postgres" >> "$$BACKUP_DIR/backup_summary.txt"; \
+	echo "- knowledge" >> "$$BACKUP_DIR/backup_summary.txt"; \
+	echo "- localstack" >> "$$BACKUP_DIR/backup_summary.txt"; \
+	echo "- chroma_db (if exists)" >> "$$BACKUP_DIR/backup_summary.txt"; \
+	echo "App files included: config.yaml, Dockerfile" >> "$$BACKUP_DIR/backup_summary.txt"; \
+	tar -czvf "$$BACKUP_DIR.tar.gz" -C backups "$$TIMESTAMP"; \
+	mv -f "$$BACKUP_DIR.tar.gz" backups/; \
+	rm -rf "$$BACKUP_DIR";
 
 restore:
 	if [ -z "$$1" ]; then \
