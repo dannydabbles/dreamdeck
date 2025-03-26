@@ -63,8 +63,8 @@ aider:
 
 backup:
 	mkdir -p backups
-	TIMESTAMP := $(shell date +%Y%m%d-%H%M%S)
-	BACKUP_DIR := backups/$${TIMESTAMP}
+	TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
+	BACKUP_DIR := backups/dreamdeck_snapshot_$${TIMESTAMP}
 	mkdir -p $$BACKUP_DIR
 	# Backup PostgreSQL data
 	cp -r ./.data/postgres $$BACKUP_DIR/postgres
