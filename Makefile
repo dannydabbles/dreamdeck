@@ -85,12 +85,12 @@ backup:
 	rm -rf "$$BACKUP_DIR";
 
 restore:
-	ifndef RESTORE_FILE; \
-	LATEST_BACKUP=$$(ls -t backups/*.tar.gz | head -1); \
-	else; \
-	LATEST_BACKUP=$$RESTORE_FILE; \
-    endif
 	mkdir -p restore_temp; \
+	if [ -n "$$RESTORE_FILE" ]; then \
+		LATEST_BACKUP="$$RESTORE_FILE"; \
+	else \
+		LATEST_BACKUP=$$(ls -t backups/*.tar.gz | head -1); \
+	fi; \
 	tar -xzvf "$$LATEST_BACKUP" -C restore_temp; \
 	RESTORE_DIR=$$(find restore_temp -mindepth 1 -maxdepth 1 -type d); \
 	mv -f ./.data/postgres "/tmp/postgres_backup_$$(date +%s)" || true; \
