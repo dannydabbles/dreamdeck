@@ -92,27 +92,23 @@ backup:
 	rm -rf "$$BACKUP_DIR";
 
 restore:
-	if [ -z "$$1" ]; then \
-		LATEST_BACKUP=$$(ls -t backups/*.tar.gz | head -1); \
-	else \
-		LATEST_BACKUP=$$1; \
-	fi; \
+ifndef RESTORE_FILE
+	LATEST_BACKUP=$$(ls -t backups/*.tar.gz | head -1); \
+else
+	LATEST_BACKUP=$$RESTORE_FILE; \
+endif
 	mkdir -p restore_temp; \
-	tar -xzvf $$$$LATEST_BACKUP -C restore_temp; \
+	tar -xzvf "$$LATEST_BACKUP" -C restore_temp; \
 	RESTORE_DIR=$$(find restore_temp -mindepth 1 -maxdepth 1 -type d); \
-
-	# Move existing data to /tmp before restoring
+	# Move existing data to temp locations \
 	mv -f ./.data/postgres "/tmp/postgres_backup_$$(date +%s)" || true; \
-	cp -r $$$$RESTORE_DIR/postgres ./.data/postgres; \
-
 	mv -f ./knowledge "/tmp/knowledge_backup_$$(date +%s)" || true; \
-	cp -r $$$$RESTORE_DIR/knowledge ./knowledge; \
-
 	mv -f ./my-localstack-data "/tmp/localstack_backup_$$(date +%s)" || true; \
-	cp -r $$$$RESTORE_DIR/localstack ./my-localstack-data; \
-
 	mv -f ./chroma_db "/tmp/chroma_backup_$$(date +%s)" || true; \
-	cp -r $$$$RESTORE_DIR/chroma_db ./chroma_db || true; \
-
+	# Restore data from backup \
+	cp -r "$$RESTORE_DIR/postgres" ./.data/postgres; \
+	cp -r "$$RESTORE_DIR/knowledge" ./knowledge; \
+	cp -r "$$RESTORE_DIR/localstack" ./my-localstack-data; \
+	cp -r "$$RESTORE_DIR/chroma_db" ./chroma_db || true; \
 	rm -rf restore_temp; \
-	echo "Restored from $$$$LATEST_BACKUP"
+	echo "Restored from $$LATEST_BACKUP";
