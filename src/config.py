@@ -127,6 +127,8 @@ class ConfigSchema(BaseModel):
     rate_limits: dict  # Added
     storyboard_generation_prompt_prefix: str = ""  # Add this line
     storyboard_generation_prompt_postfix: str = ""  # Fixed here (added 'str = ')
+    todo_dir_path: str = "./helper"
+    todo_file_name: str = "todo.md"
     _env_prefix: ClassVar[str] = "APP_"  # NEW: Enable env var loading with prefix
     model_config = ConfigDict(extra="forbid")  # ENFORCE strict validation
     chat: dict
@@ -325,6 +327,9 @@ NEGATIVE_PROMPT = config.image_generation_payload.get("negative_prompt", "")
 # Expose storyboard generation prompt settings
 STORYBOARD_GENERATION_PROMPT_PREFIX = config.storyboard_generation_prompt_prefix
 STORYBOARD_GENERATION_PROMPT_POSTFIX = config.storyboard_generation_prompt_postfix
+# Expose todo settings
+TODO_DIR_PATH = config.todo_dir_path
+TODO_FILE_NAME = config.todo_file_name
 
 # Search settings
 cl_logger.info(f"Search settings loaded: serpapi_key={SERPAPI_KEY}")
