@@ -1,43 +1,48 @@
 # Project Enhancement Roadmap
 
-## Phase 1: Command-Based Agent Triggers
-### Goal: Allow `/roll`, `/search`, etc. to bypass normal decision agent flow
+### Phase 1: Command-Based Agent Triggers
+#### Goal: Allow `/roll`, `/search`, etc. to bypass normal decision agent flow
 
-#### Steps:
-1. **Add Chainlit Commands**
-   ```python
-   from chainlit import on_command
+- **Steps:**
+  1. **Add Chainlit Commands**
+  
+      ```python
+      from chainlit import on_command
 
-   @on_command("roll")
-   async def cmd_roll(session):
-       # Directly invoke dice_roll_agent with default parameters
-       state = session.get("state")
-       result = await dice_roll_agent(state)
-       await session.send(result[0].content)
+      @on_command("roll")
+      async def cmd_roll(session):
+          # Directly invoke dice_roll_agent with default parameters
+          state = session.get("state")
+          result = await dice_roll_agent(state)
+          await session.send(result[0].content)
 
-   @on_command("search")
-   async def cmd_search(session):
-       query = session.message.content.split("/search ")[1]
-       state = session.get("state")
-       state.messages.append(HumanMessage(content=query))  # Fake user input
-       result = await web_search_agent(state)
-       await session.send(result[0].content)
+      @on_command("search")
+      async def cmd_search(session):
+          query = session.message.content.split("/search ")[1]
+          state = session.get("state")
+          state.messages.append(HumanMessage(content=query))  # Fake user input
+          result = await web_search_agent(state)
+          await session.send(result[0].content)
+      ```
 
+  2. **Update event_handlers.py**
+     - Add command registration imports
+     - Modify on_message() to handle commands first:
+  
+       ```python
+       if message.content.startswith('/'):
+           await chainlit.handle_commands(message)
+           return
+       ```
 
- 2 Update event_handlers.py
-    • Add command registration imports
-    • Modify on_message() to handle commands first:
-
-      if message.content.startswith('/'):
-          await chainlit.handle_commands(message)
-          return
-
- 3 Modify src/agents/decision_agent.py
-    • Exclude command messages from normal processing:
-
-      user_input = next(...).content
-      if user_input.startswith('/'):
-          return []  # Bypass decision agent
+  3. **Modify src/agents/decision_agent.py**
+     - Exclude command messages from normal processing:
+  
+     ```python
+     user_input = next(...).content
+     if user_input.startswith('/'):
+         return []  # Bypass decision agent
+     ```
 
 
 
@@ -94,7 +99,7 @@ async def todo_agent(state: ChatState):
     with open(f"{todays_dir}/todo.md", "w") as f:
         f.write("\n".join(todos))
 
-    return [AIMessage(content=f"Updated todo list:\n{''.join(todos)})")]
+    return [AIMessage(content=f"Updated todo list:\n{''.join(todos)}")]
 
 
 2. Daily Data Summary Agent
@@ -109,10 +114,10 @@ async def data_summary_agent(state: ChatState, files: list):
         if file.startswith("http"):
             # Download URL content
             resp = httpx.get(file)
-            content = resp.text[:200] + "...'"
+            content = resp.text[:200] + "..."
         else:
             with open(file, 'r') as f:
-                content = f.read()[:200] + "'..."
+                content = f.read()[:200] + "..."
 
         summary.append(f"---\nSource: {file}\nPreview: {content}")
 
@@ -198,38 +203,42 @@ async def process_external_response(original_query, external_response):
 
                                                                          Key Areas:
 
- 1 Command Testing
-    • Verify /roll shows dice results instantly
-    • Test /search [term] produces proper search results
- 2 Helper Workflow Verification
-    • Manually trigger helper agents through CLI
-    • Check file creation/update in helper/ directories
-    • Confirm scheduled tasks execute at proper intervals
- 3 API Proxy Validation
-    • Mock external API responses
-    • Test PII redaction/re-insertion with sample data
-    • Measure latency improvements from parallel processing
+- **Command Testing**
+  - Verify `/roll` shows dice results instantly
+  - Test `/search [term]` produces proper search results
+
+- **Helper Workflow Verification**
+  - Manually trigger helper agents through CLI
+  - Check file creation/update in `helper/` directories
+  - Confirm scheduled tasks execute at proper intervals
+
+- **API Proxy Validation**
+  - Mock external API responses
+  - Test PII redaction/re-insertion with sample data
+  - Measure latency improvements from parallel processing
 
 
                                                                     Risk Mitigation Plan
 
- 1 Concurrency Control
-    • Use file locking mechanisms for shared resource access
-    • Implement atomic writes for critical files
- 2 Security Measures
-    • Add encryption for sensitive data in summaries
-    • Rate-limit external API calls to prevent abuse
- 3 Fallback Mechanisms
-    • Cache last-known-good state for helper workflows
-    • Implement retry logic for failed API calls
+- **Concurrency Control**
+  - Use file locking mechanisms for shared resource access
+  - Implement atomic writes for critical files
+
+- **Security Measures**
+  - Add encryption for sensitive data in summaries
+  - Rate-limit external API calls to prevent abuse
+
+- **Fallback Mechanisms**
+  - Cache last-known-good state for helper workflows
+  - Implement retry logic for failed API calls
 
 
                                                                          Next Steps
 
- 1 Implement command handlers first (Phase 1)
- 2 Develop helper workflow components (Phase 2)
- 3 Create API proxy architecture (Phase 3)
- 4 Establish automated testing framework extensions
- 5 Perform security audit focusing on PII handling
+- **Implement command handlers first (Phase 1)**
+- **Develop helper workflow components (Phase 2)**
+- **Create API proxy architecture (Phase 3)**
+- **Establish automated testing framework extensions**
+- **Perform security audit focusing on PII handling**
 
 
