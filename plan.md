@@ -50,19 +50,20 @@
 
                                                     Goal: Daily automation for todos and data summaries
 
-                                                                        Components:
+Components:
 
- 1 Todo Manager Agent
- 2 Daily Data Summary Agent
- 3 External Query Proxy Agent
+- Todo Manager Agent
+- Daily Data Summary Agent
+- External Query Proxy Agent
 
-                                                                    Directory Structure:
+Directory Structure:
 
-
+```
 helper/
 └── helper_for_{date}/
     ├── todo.md
     └── daily_data_summary.md
+```
 
 
                                                                    Implementation Steps:
@@ -162,40 +163,41 @@ async def job_runner():
 
                                                                       Implementation:
 
-1. Query Prep Agent
+- **Query Preparation Agent**
+  
+  ```python
+  @task
+  async def prepare_external_query(state: ChatState):
+      # Aggregate relevant info
+      context = "\n".join([
+          msg.content for msg in state.messages
+          if isinstance(msg, (HumanMessage, AIMessage))
+      ])
 
+      # Redact PII using regex patterns
+      sanitized = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN]', context)
 
-@task
-async def prepare_external_query(state: ChatState):
-    # Aggregate relevant info
-    context = "\n".join([
-        msg.content for msg in state.messages
-        if isinstance(msg, (HumanMessage, AIMessage))
-    ])
+      # Format query
+      query = f"CONTEXT:\n{sanitized}\nQUESTION:\n{state.last_user_input}"
 
-    # Redact PII using regex patterns
-    sanitized = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN]', context)
+      return query, state.last_user_input  # Return original for re-insertion
+  ```
 
-    # Format query
-    query = f"CONTEXT:\n{sanitized}\nQUESTION:\n{state.last_user_input}"
+- **Response Processing Agent**
+  
+  ```python
+  async def process_external_response(original_query, external_response):
+      # Re-insert PII using placeholder mapping
+      placeholder_map = {
+          "[SSN]": re.search(r'\b\d{3}-\d{2}-\d{4}\b', original_query).group()
+      }
 
-    return query, state.last_user_input  # Return original for re-insertion
+      processed = external_response
+      for placeholder, actual in placeholder_map.items():
+          processed = processed.replace(placeholder, actual)
 
-
-2. Response Processor
-
-
-async def process_external_response(original_query, external_response):
-    # Re-insert PII using placeholder mapping
-    placeholder_map = {
-        "[SSN]": re.search(r'\b\d{3}-\d{2}-\d{4}\b', original_query).group()
-    }
-
-    processed = external_response
-    for placeholder, actual in placeholder_map.items():
-        processed = processed.replace(placeholder, actual)
-
-    return processed
+      return processed
+  ```
 
 
 
