@@ -12,11 +12,11 @@ llm:
 search_enabled: false
 
 prompts:
-  web_search_prompt: src/prompts/web_search_prompt.j2
-  dice_processing_prompt: src/prompts/dice_processing_prompt.j2
-  ai_writer_prompt: src/prompts/ai_writer_prompt.j2
-  storyboard_generation_prompt: src/prompts/storyboard_generation_prompt.j2
-  decision_prompt: src/prompts/decision_prompt.j2
+  web_search_prompt: "web_search_prompt.j2"
+  dice_processing_prompt: "dice_processing_prompt.j2"
+  ai_writer_prompt: "ai_writer_prompt.j2"
+  storyboard_generation_prompt: "storyboard_generation_prompt.j2"
+  decision_prompt: "decision_prompt.j2"
 
 image_generation_payload:
   url: "http://192.168.1.4:7860"
@@ -81,17 +81,20 @@ agents:
     max_tokens: 100
     streaming: true
     verbose: true
+    base_url: "http://192.168.1.111:5000/v1"
     tools:
       dice_roll:
         sides: 20
       web_search:
         enabled: true
   writer_agent:
+    base_url: "http://192.168.1.111:5000/v1"
     temperature: 0.7
     max_tokens: 8000
     streaming: true
     verbose: true
   storyboard_editor_agent:
+    base_url: "http://192.168.1.111:5000/v1"
     temperature: 0.7
     max_tokens: 8000
     streaming: false

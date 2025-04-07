@@ -13,6 +13,7 @@ from src.config import (
     WRITER_AGENT_STREAMING,
     WRITER_AGENT_VERBOSE,
     LLM_TIMEOUT,
+    WRITER_AGENT_BASE_URL,
     AI_WRITER_PROMPT,
 )
 from src.models import ChatState
@@ -48,7 +49,7 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
 
         # Initialize the LLM
         llm = ChatOpenAI(
-            base_url="http://192.168.1.111:5000/v1",
+            base_url=WRITER_AGENT_BASE_URL,
             temperature=WRITER_AGENT_TEMPERATURE,
             max_tokens=WRITER_AGENT_MAX_TOKENS,
             streaming=WRITER_AGENT_STREAMING,

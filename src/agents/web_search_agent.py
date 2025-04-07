@@ -32,7 +32,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
     recent_chat = state.get_recent_history_str()
 
     # Generate search query using LLM
-    template = Template(config.prompts["web_search_prompt"])
+    template = Template(config.loaded_prompts["web_search_prompt"])
     formatted_prompt = template.render(
         user_query=user_query.content, recent_chat_history=recent_chat
     )

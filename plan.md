@@ -32,10 +32,10 @@ improving configuration management, and adding new functionalities like message 
 *   **Goal:** Clean up `config.yaml`, make prompts external, and prepare agent configurations for overrides.
 *   **Tasks:**
     1.  Create a new directory `src/prompts/`.
-    2.  Move the Jinja template content for `web_search_prompt`, `dice_processing_prompt`, `ai_writer_prompt`, `storyboard_generation_prompt`, and `decision_prompt` from `config.yaml` into separate files within `src/prompts/` (e.g., `web_search.j2`, `dice_processing.j2`, etc.).
+    2.  ✅ Move the Jinja template content for `web_search_prompt`, `dice_processing_prompt`, `ai_writer_prompt`, `storyboard_generation_prompt`, and `decision_prompt` from `config.yaml` into separate files within `src/prompts/` (e.g., `web_search.j2`, `dice_processing.j2`, etc.).
     3.  Update `config.yaml`:
-        *   Replace the prompt content under `prompts:` with filenames (e.g., `web_search_prompt: "web_search.j2"`).
-        *   Modify the `agents:` section. For each agent (`decision_agent`, `writer_agent`, etc.), add optional fields for `base_url`, `temperature`, `max_tokens`. Define the *current* values as defaults here.
+        *   ✅ Replace the prompt content under `prompts:` with filenames (e.g., `web_search_prompt: "web_search.j2"`).
+        *   ✅ Modify the `agents:` section. For each agent (`decision_agent`, `writer_agent`, etc.), add optional fields for `base_url`. Define the *current* values as defaults here.
         ```yaml
         # Example for writer_agent in config.yaml
         agents:
@@ -52,10 +52,10 @@ improving configuration management, and adding new functionalities like message 
         ```
     4.  Update `src/config.py`:
         *   Modify the Pydantic models (`DecisionAgentConfig`, `WriterAgentConfig`, etc.) to include the new optional fields (`base_url: Optional[str] = None`, etc.).
-        *   Add fields to `ConfigSchema` to store the *loaded prompt content* (not just filenames).
-        *   Add logic during config loading to read the prompt files specified in `config.yaml` (using the filenames) and store their content in the `config` object.
+        *   ✅ Add fields to `ConfigSchema` to store the *loaded prompt content* (not just filenames).
+        *   ✅ Add logic during config loading to read the prompt files specified in `config.yaml` (using the filenames) and store their content in the `config` object.
         ```python
-        # Example in src/config.py
+        # Example in src/config.py (Actual implementation done)
         from pathlib import Path
         # ... other imports
 
@@ -80,13 +80,13 @@ improving configuration management, and adding new functionalities like message 
                     schema.loaded_prompts[key] = f"ERROR: Prompt file {filename} not found."
             return schema
 
-        config = load_config()
+        config = load_config() # Actual implementation done
 
-        # Update constants to use loaded prompts
+        # ✅ Update constants to use loaded prompts
         AI_WRITER_PROMPT = config.loaded_prompts.get("ai_writer_prompt", "Write a story.")
         # ... other prompts ...
 
-        # Update agent configs to expose new fields if needed
+        # ✅ Update agent configs to expose new fields if needed
         # Example:
         WRITER_AGENT_BASE_URL = config.agents.writer_agent.base_url
         # ... other agent base URLs ...

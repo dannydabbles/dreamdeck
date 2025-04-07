@@ -3,7 +3,7 @@ from pathlib import Path
 import yaml
 import logging
 from pydantic import BaseModel, Field, ValidationError, ConfigDict
-from typing import ClassVar
+from typing import ClassVar, Optional
 from logging.handlers import RotatingFileHandler
 import warnings  # Add this import
 
@@ -14,6 +14,7 @@ cl_logger = logging.getLogger("chainlit")
 cl_logger.setLevel(logging.DEBUG)
 
 # Locate config.yaml relative to the package root
+PROMPTS_DIR = Path(__file__).parent / "prompts"
 CONFIG_FILE = Path(__file__).parent.parent / "config.yaml"
 if not os.path.exists(CONFIG_FILE):
     cl_logger.error(f"Configuration file '{CONFIG_FILE}' not found.")
@@ -33,12 +34,14 @@ class DecisionAgentConfig(BaseModel):
     temperature: float
     max_tokens: int
     streaming: bool
+    base_url: Optional[str] = None
     verbose: bool
 
 
 class WriterAgentConfig(BaseModel):
     temperature: float
     max_tokens: int
+    base_url: Optional[str] = None
     streaming: bool
     verbose: bool
 
@@ -46,6 +49,7 @@ class WriterAgentConfig(BaseModel):
 class StoryboardEditorAgentConfig(BaseModel):
     temperature: float
     max_tokens: int
+    base_url: Optional[str] = None
     streaming: bool
     verbose: bool
 
@@ -103,34 +107,35 @@ class ConfigSchema(BaseModel):
     """
 
     llm: LlmConfig
-    prompts: dict
+    prompt_files: dict = Field(alias="prompts")
+    loaded_prompts: dict = {}
     image_generation_payload: dict
     timeouts: dict
     refusal_list: list
-    defaults: DefaultsConfig  # Use the nested DefaultsConfig model
-    dice: DiceConfig  # Use the nested DiceConfig model
+    defaults: DefaultsConfig
+    dice: DiceConfig
     paths: dict
     openai: dict
     search: dict
-    features: FeatureConfig  # Use the nested FeatureConfig model
+    features: FeatureConfig
     error_handling: dict
     logging: dict
     api: dict
     security: dict
     monitoring: dict
     caching: dict
-    agents: AgentsConfig  # Replace dict with AgentsConfig
-    chainlit: dict  # Add chainlit configuration
-    search_enabled: bool  # Added
-    knowledge_directory: str  # Added
-    image_settings: dict  # Added
-    rate_limits: dict  # Added
-    storyboard_generation_prompt_prefix: str = ""  # Add this line
-    storyboard_generation_prompt_postfix: str = ""  # Fixed here (added 'str = ')
+    agents: AgentsConfig
+    chainlit: dict
+    search_enabled: bool
+    knowledge_directory: str
+    image_settings: dict
+    rate_limits: dict
+    storyboard_generation_prompt_prefix: str = ""
+    storyboard_generation_prompt_postfix: str = ""
     todo_dir_path: str = "./helper"
     todo_file_name: str = "todo.md"
-    _env_prefix: ClassVar[str] = "APP_"  # NEW: Enable env var loading with prefix
-    model_config = ConfigDict(extra="forbid")  # ENFORCE strict validation
+    _env_prefix: ClassVar[str] = "APP_"
+    model_config = ConfigDict(extra="forbid")
     chat: dict
 
 
@@ -151,18 +156,25 @@ def load_config():
     Returns:
         ConfigSchema: Validated configuration object
     """
-    return ConfigSchema.model_validate(config_yaml)
+    schema = ConfigSchema.model_validate(config_yaml)
+
+    # Load prompts from files
+    for key, filename in schema.prompt_files.items():
+        prompt_path = PROMPTS_DIR / filename
+        if prompt_path.exists():
+            schema.loaded_prompts[key] = prompt_path.read_text()
+        else:
+            cl_logger.error(f"Prompt file not found: {prompt_path}")
+            schema.loaded_prompts[key] = f"ERROR: Prompt file {filename} not found."
+
+    return schema
 
 
-# Load the config when the module is imported
 config = load_config()
 
-# Expose all required variables as module-level attributes
 DICE_ROLLING_ENABLED = config.features.dice_rolling
-DICE_SIDES = config.dice.sides  # Now dice is a DiceConfig instance
-WEB_SEARCH_ENABLED = (
-    config.features.web_search
-)  # Already pulls from config.yaml/environment
+DICE_SIDES = config.dice.sides
+WEB_SEARCH_ENABLED = config.features.web_search
 DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
 KNOWLEDGE_DIRECTORY = os.path.realpath(config.paths.get("knowledge", "./knowledge"))
 LLM_MAX_TOKENS = config.llm.max_tokens
@@ -175,19 +187,27 @@ LLM_FREQUENCY_PENALTY = config.llm.frequency_penalty
 LLM_TOP_P = config.llm.top_p
 LLM_VERBOSE = config.llm.verbose
 IMAGE_GENERATION_ENABLED = config.features.image_generation
-WEB_SEARCH_PROMPT = config.prompts.get("web_search_prompt", "")
+
+WEB_SEARCH_PROMPT = config.loaded_prompts.get("web_search_prompt", "")
+
 DECISION_AGENT_TEMPERATURE = config.agents.decision_agent.temperature
 DECISION_AGENT_MAX_TOKENS = config.agents.decision_agent.max_tokens
 DECISION_AGENT_STREAMING = config.agents.decision_agent.streaming
 DECISION_AGENT_VERBOSE = config.agents.decision_agent.verbose
+DECISION_AGENT_BASE_URL = config.agents.decision_agent.base_url
+
 WRITER_AGENT_TEMPERATURE = config.agents.writer_agent.temperature
 WRITER_AGENT_MAX_TOKENS = config.agents.writer_agent.max_tokens
 WRITER_AGENT_STREAMING = config.agents.writer_agent.streaming
 WRITER_AGENT_VERBOSE = config.agents.writer_agent.verbose
+WRITER_AGENT_BASE_URL = config.agents.writer_agent.base_url
+
 STORYBOARD_EDITOR_AGENT_TEMPERATURE = config.agents.storyboard_editor_agent.temperature
 STORYBOARD_EDITOR_AGENT_MAX_TOKENS = config.agents.storyboard_editor_agent.max_tokens
 STORYBOARD_EDITOR_AGENT_STREAMING = config.agents.storyboard_editor_agent.streaming
 STORYBOARD_EDITOR_AGENT_VERBOSE = config.agents.storyboard_editor_agent.verbose
+STORYBOARD_EDITOR_AGENT_BASE_URL = config.agents.storyboard_editor_agent.base_url
+
 IMAGE_GENERATION_PAYLOAD = config.image_generation_payload
 TIMEOUTS = config.timeouts
 REFUSAL_LIST = config.refusal_list
@@ -205,36 +225,33 @@ CACHING_SETTINGS = config.caching
 AGENTS = config.agents
 CHAINLIT_SETTINGS = config.chainlit
 START_MESSAGE = config.chat.get("start_message", "Hello! How can I help you today?")
-DECISION_PROMPT = config.prompts.get(
+
+DECISION_PROMPT = config.loaded_prompts.get(
     "decision_prompt", "What would you like to do next?"
 )
-AI_WRITER_PROMPT = config.prompts.get("ai_writer_prompt", "Write a story.")
-STORYBOARD_GENERATION_PROMPT = config.prompts.get(
+AI_WRITER_PROMPT = config.loaded_prompts.get("ai_writer_prompt", "Write a story.")
+STORYBOARD_GENERATION_PROMPT = config.loaded_prompts.get(
     "storyboard_generation_prompt", "Generate a storyboard."
 )
 
-# Ensure SERPAPI_KEY is set from environment variable first, then config file
 SERPAPI_KEY = os.getenv("SERPAPI_KEY", config.search.get("serpapi_key", ""))
 
-# Configure logging using the loaded config
 logging.basicConfig(
     level=LOGGING["level"],
     format=LOGGING["format"],
     handlers=[
         RotatingFileHandler(
             LOGGING["file"],
-            maxBytes=parse_size(LOGGING["max_size"]),  # Use parse_size
+            maxBytes=parse_size(LOGGING["max_size"]),
             backupCount=LOGGING["backup_count"],
         ),
         logging.StreamHandler() if LOGGING["console"] else None,
     ],
 )
 
-# Database configuration with fallbacks
 DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
 cl_logger.info(f"Database URL loaded: {DATABASE_URL}")
 
-# LLM configuration
 cl_logger.info(
     f"LLM configuration loaded: "
     f"temperature={LLM_TEMPERATURE}, "
@@ -248,7 +265,6 @@ cl_logger.info(
     f"verbose={LLM_VERBOSE}"
 )
 
-# Agents configuration
 cl_logger.info(
     f"Agents configuration loaded: "
     f"decision_agent (temperature={DECISION_AGENT_TEMPERATURE}, "
@@ -265,7 +281,6 @@ cl_logger.info(
     f"verbose={STORYBOARD_EDITOR_AGENT_VERBOSE})"
 )
 
-# Image generation payload
 cl_logger.info(
     f"Image generation payload loaded: "
     f"negative_prompt={IMAGE_GENERATION_PAYLOAD['negative_prompt']}, "
@@ -280,35 +295,25 @@ cl_logger.info(
     f"hr_second_pass_steps={IMAGE_GENERATION_PAYLOAD['hr_second_pass_steps']}"
 )
 
-# Timeouts
-IMAGE_GENERATION_TIMEOUT = TIMEOUTS.get(
-    "image_generation_timeout", 180
-)  # Default from config.yaml
+IMAGE_GENERATION_TIMEOUT = TIMEOUTS.get("image_generation_timeout", 180)
 cl_logger.info(f"Image generation timeout loaded: {IMAGE_GENERATION_TIMEOUT}")
 
-# Token limits
 cl_logger.info(f"LLM max tokens loaded: {LLM_MAX_TOKENS}")
 
-# Refusal list
 cl_logger.info(f"Refusal list loaded: {REFUSAL_LIST}")
 
-# Defaults
 cl_logger.info(f"Default DB file loaded: {config.defaults.db_file}")
 
-# Dice settings
 cl_logger.info(f"Default dice sides loaded: {DICE_SIDES}")
 
-# Knowledge directory
 cl_logger.info(f"Knowledge directory loaded: {KNOWLEDGE_DIRECTORY}")
 
-# LLM settings
 cl_logger.info(
     f"LLM settings loaded: "
     f"base_url={OPENAI_SETTINGS['base_url']}, "
     f"api_key={OPENAI_SETTINGS['api_key']}"
 )
 
-# Expose Stable Diffusion API URL
 STABLE_DIFFUSION_API_URL = config.image_generation_payload.get(
     "url", os.environ.get("STABLE_DIFFUSION_API_URL")
 )
@@ -324,39 +329,27 @@ HR_UPSCALER = config.image_generation_payload.get("hr_upscaler", "SwinIR 4x")
 HR_SECOND_PASS_STEPS = config.image_generation_payload.get("hr_second_pass_steps", 10)
 NEGATIVE_PROMPT = config.image_generation_payload.get("negative_prompt", "")
 
-# Expose storyboard generation prompt settings
 STORYBOARD_GENERATION_PROMPT_PREFIX = config.storyboard_generation_prompt_prefix
 STORYBOARD_GENERATION_PROMPT_POSTFIX = config.storyboard_generation_prompt_postfix
-# Expose todo settings
 TODO_DIR_PATH = config.todo_dir_path
 TODO_FILE_NAME = config.todo_file_name
 
-# Search settings
 cl_logger.info(f"Search settings loaded: serpapi_key={SERPAPI_KEY}")
 
-# Features
 cl_logger.info(f"Features loaded: {FEATURES}")
 
-# Error handling
 cl_logger.info(f"Error handling settings loaded: {ERROR_HANDLING}")
 
-# Logging
 cl_logger.info(f"Logging settings loaded: {LOGGING}")
 
-# API settings
 cl_logger.info(f"API settings loaded: {API_SETTINGS}")
 
-# Security settings
 cl_logger.info(f"Security settings loaded: {SECURITY_SETTINGS}")
 
-# Monitoring settings
 cl_logger.info(f"Monitoring settings loaded: {MONITORING_SETTINGS}")
 
-# Caching settings
 cl_logger.info(f"Caching settings loaded: {CACHING_SETTINGS}")
 
-# Agents settings
 cl_logger.info(f"Agents settings loaded: {AGENTS}")
 
-# Chainlit settings
 cl_logger.info(f"Chainlit settings loaded: {CHAINLIT_SETTINGS}")

@@ -12,6 +12,7 @@ from src.config import (
     DECISION_AGENT_STREAMING,
     DECISION_AGENT_VERBOSE,
     LLM_TIMEOUT,
+    DECISION_AGENT_BASE_URL,
     DECISION_PROMPT,
 )
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
@@ -51,7 +52,7 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
 
         # Initialize the LLM
         llm = ChatOpenAI(
-            base_url="http://192.168.1.111:5000/v1",
+            base_url=DECISION_AGENT_BASE_URL,
             temperature=DECISION_AGENT_TEMPERATURE,
             max_tokens=DECISION_AGENT_MAX_TOKENS,
             streaming=DECISION_AGENT_STREAMING,

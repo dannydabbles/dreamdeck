@@ -16,6 +16,7 @@ from src.config import (
     STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
     STORYBOARD_EDITOR_AGENT_STREAMING,
     STORYBOARD_EDITOR_AGENT_VERBOSE,
+    STORYBOARD_EDITOR_AGENT_BASE_URL,
     LLM_TIMEOUT,
     STORYBOARD_GENERATION_PROMPT,
 )
@@ -52,7 +53,7 @@ async def _generate_storyboard(
 
         # Initialize the LLM
         llm = ChatOpenAI(
-            base_url="http://192.168.1.111:5000/v1",
+            base_url=STORYBOARD_EDITOR_AGENT_BASE_URL,
             temperature=STORYBOARD_EDITOR_AGENT_TEMPERATURE,
             max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
             streaming=STORYBOARD_EDITOR_AGENT_STREAMING,

@@ -14,7 +14,7 @@ from langchain_core.messages import (
     AIMessage,
     BaseMessage,
 )  # Use LangChain's standard messages
-from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
+from chainlit import Message as CLMessage, user_session as cl_user_session
 from src.config import DICE_ROLLING_ENABLED, DICE_SIDES
 from langchain_openai import ChatOpenAI  # Import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
@@ -32,7 +32,7 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
     recent_chat = state.get_recent_history_str()
 
     try:
-        template = Template(config.prompts["dice_processing_prompt"])
+        template = Template(config.loaded_prompts["dice_processing_prompt"])
         formatted_prompt = template.render(
             user_query=input_msg.content, recent_chat=recent_chat
         )
@@ -40,7 +40,7 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
 
         # Invoke LLM to get structured output
         llm = ChatOpenAI(
-            base_url=config.openai["base_url"],
+            base_url=config.OPENAI_SETTINGS["base_url"],
             temperature=0.7,  # Adjust temperature as needed
             max_tokens=100,
             streaming=False,
