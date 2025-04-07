@@ -51,6 +51,10 @@ aider-sonnet:
 	@echo "Running aider with sonnet..."
 	@aider --multiline --architect --sonnet
 
+aider-gemma-sonnet:
+	@echo "Running aider with gemma and sonnet..."
+	@aider --multiline --architect --model openrouter/google/gemini-2.5-pro-exp-03-25:free --editor-model sonnet --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
+
 aider-gemma-quasar:
 	@echo "Running aider with gemma and quasar..."
 	@aider --multiline --architect --model openrouter/google/gemini-2.5-pro-exp-03-25:free --editor-model openrouter/openrouter/quasar-alpha --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
