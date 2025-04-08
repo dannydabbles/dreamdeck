@@ -73,3 +73,7 @@ async def manage_todo(state: ChatState) -> list[AIMessage]:
     return await _manage_todo(state)
 
 todo_agent = manage_todo
+
+
+async def call_todo_agent(state: ChatState) -> list[AIMessage]:
+    return await _manage_todo(state)
