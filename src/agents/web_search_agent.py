@@ -70,7 +70,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
         )
         await cl_msg.send()
 
-        # Add delete button
+        # Attach delete button AFTER sending, with real ID
         from chainlit import Action
         delete_action = Action(
             name="delete_message",
