@@ -20,15 +20,17 @@ async def test_decision_agent_roll_action(mock_chainlit_context):
     user_input = HumanMessage(content="roll 2d20")
     state = ChatState(messages=[user_input], thread_id="test-thread-id")
 
-    # Mock the LLM's response to return "roll" explicitly
-    with patch(
-        "src.agents.decision_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock
-    ) as mock_ainvoke:
-        mock_result = AIMessage(content="roll", name="dice_roll")
-        mock_ainvoke.return_value = mock_result
+    # Patch cl.user_session.get to avoid "Chainlit context not found" error
+    with patch("src.agents.decision_agent.cl.user_session.get", return_value({})):
+        # Mock the LLM's response to return "roll" explicitly
+        with patch(
+            "src.agents.decision_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock
+        ) as mock_ainvoke:
+            mock_result = AIMessage(content="roll", name="dice_roll")
+            mock_ainvoke.return_value = mock_result
 
-        result = await _decide_action(state)
-        assert result[0].name == "dice_roll"
+            result = await _decide_action(state)
+            assert result[0].name == "dice_roll"
 
 
 @pytest.mark.asyncio
