@@ -68,6 +68,7 @@ from langchain_core.stores import BaseStore
 import chainlit as cl
 from chainlit.input_widget import Slider, TextInput  # Import widgets
 from src import config  # Import your config
+from chainlit import Action  # Import Action for buttons
 
 # Centralized logging configuration
 logging.basicConfig(
@@ -200,11 +201,25 @@ async def on_chat_start():
         asyncio.create_task(load_knowledge_documents())
 
         # Initialize thread in Chainlit with a start message
-        await cl.Message(content=START_MESSAGE, author="Game Master").send()
+        delete_action = Action(
+            name="delete_message",
+            label="Delete Message",
+            value="start_message",  # Placeholder, will be replaced after send
+            description="Delete this message and its children",
+            color="red",
+        )
+        start_cl_msg = cl.Message(
+            content=START_MESSAGE,
+            author="Game Master",
+            actions=[delete_action],
+        )
+        await start_cl_msg.send()
+        # Update delete_action value to real message id
+        delete_action.value = start_cl_msg.id
 
         # Create initial state
         state = ChatState(
-            messages=[AIMessage(content=START_MESSAGE, name="Game Master")],
+            messages=[AIMessage(content=START_MESSAGE, name="Game Master", metadata={"message_id": start_cl_msg.id})],
             thread_id=cl.context.session.thread_id,
             user_preferences=cl.user_session.get("user_session", {}).get(
                 "preferences", {}
@@ -214,7 +229,7 @@ async def on_chat_start():
         # Store state
         cl.user_session.set("state", state)
         cl.user_session.set("image_generation_memory", [])
-        cl.user_session.set("ai_message_id", None)
+        cl_user_session.set("ai_message_id", None)
 
     except Exception as e:
         cl_logger.error(f"Application failed to start: {e}", exc_info=True)
@@ -249,13 +264,39 @@ async def on_chat_resume(thread: ThreadDict):
     for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
         step_id = step.get("id")
         if step["type"] == "user_message":
-            messages.append(HumanMessage(content=step["output"], name="Player"))
+            delete_action = Action(
+                name="delete_message",
+                label="Delete Message",
+                value=step_id or "unknown",
+                description="Delete this message and its children",
+                color="red",
+            )
+            cl_msg = cl.Message(
+                content=step["output"],
+                author="Player",
+                actions=[delete_action],
+            )
+            await cl_msg.send()
+            messages.append(HumanMessage(content=step["output"], name="Player", metadata={"message_id": step_id}))
             if step_id:
                 await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "human", "author": "Player"})
             else:
                 cl_logger.warning(f"Missing ID for user step in on_chat_resume: {step.get('output', '')[:50]}...")
         elif step["type"] == "assistant_message":
-            messages.append(AIMessage(content=step["output"], name=step["name"]))
+            delete_action = Action(
+                name="delete_message",
+                label="Delete Message",
+                value=step_id or "unknown",
+                description="Delete this message and its children",
+                color="red",
+            )
+            cl_msg = cl.Message(
+                content=step["output"],
+                author=step.get("name", "Game Master"),
+                actions=[delete_action],
+            )
+            await cl_msg.send()
+            messages.append(AIMessage(content=step["output"], name=step["name"], metadata={"message_id": step_id}))
             if step_id:
                 await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "ai", "author": step.get("name", "Unknown")})
             else:
@@ -400,3 +441,52 @@ async def load_knowledge_documents():
     # Final flush of remaining documents
     if documents:
         await vector_memory.add_documents(documents)
+@cl.action_callback("delete_message")
+async def handle_delete_message(action: cl.Action):
+    message_id = action.value
+    state: ChatState = cl.user_session.get("state")
+    vector_store: VectorStore = cl.user_session.get("vector_memory")
+
+    if not state:
+        await cl.Message(content="Error: Session state not found.").send()
+        return
+
+    ids_to_delete = set()
+    ids_to_delete.add(message_id)
+
+    def collect_children(parent_id):
+        for msg in state.messages:
+            meta = getattr(msg, "metadata", {}) or {}
+            if meta.get("parent_id") == parent_id:
+                child_id = meta.get("message_id")
+                if child_id and child_id not in ids_to_delete:
+                    ids_to_delete.add(child_id)
+                    collect_children(child_id)
+
+    collect_children(message_id)
+
+    # Remove from ChatState
+    state.messages = [
+        msg
+        for msg in state.messages
+        if (getattr(msg, "metadata", {}) or {}).get("message_id") not in ids_to_delete
+    ]
+
+    cl.user_session.set("state", state)
+
+    # Delete from vector store
+    for mid in ids_to_delete:
+        try:
+            await vector_store.collection.delete(ids=[mid])
+        except Exception:
+            pass
+
+    # Delete from Chainlit persistent data layer
+    try:
+        db = await DatabasePool.get_pool()
+        for mid in ids_to_delete:
+            await db.delete_message(mid)
+    except Exception:
+        pass
+
+    await cl.Message(content="Message deleted.").send()
