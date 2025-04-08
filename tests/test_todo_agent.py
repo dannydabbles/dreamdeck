@@ -11,9 +11,10 @@ async def test_manage_todo_creates_file(tmp_path):
     # Patch module-level constants, not the config object
     with patch("src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)), \
          patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), \
-         patch("src.agents.todo_agent.CLMessage", new_callable=AsyncMock) as mock_cl_msg_cls:
+         patch("src.agents.todo_agent.CLMessage", new_callable=MagicMock) as mock_cl_msg_cls:
 
-        mock_cl_msg_instance = AsyncMock()
+        mock_cl_msg_instance = MagicMock()
+        mock_cl_msg_instance.send = AsyncMock()
         mock_cl_msg_instance.send.return_value = None
         mock_cl_msg_instance.id = "todo-msg-id"
         mock_cl_msg_cls.return_value = mock_cl_msg_instance
