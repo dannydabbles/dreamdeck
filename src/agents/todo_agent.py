@@ -21,6 +21,13 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
             return [AIMessage(content="No user input found.", name="error")]
         user_input = last_human.content.strip()
 
+        # Special case: if user_input is empty or just "/todo", treat as empty task
+        if user_input.startswith("/todo"):
+            task_text = user_input[5:].strip()
+            if not task_text:
+                return [AIMessage(content="Task cannot be empty", name="error")]
+            user_input = task_text
+
         # Load current todo list from file (if exists)
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
         dir_path = os.path.join(TODO_DIR_PATH, current_date)
