@@ -15,14 +15,17 @@ from src.config import IMAGE_GENERATION_ENABLED
 
 cl_logger = logging.getLogger("chainlit")
 
-# Disable command registration during pytest or any test collection phase
+# During pytest collection, Chainlit is not running, so @cl.command registration causes KeyError.
+# This replaces cl.command with a dummy decorator during tests to avoid errors.
 if "PYTEST_CURRENT_TEST" in os.environ or "PYTEST_RUNNING" in os.environ:
     cl_logger.info("Skipping Chainlit command registration during test run.")
-    # Patch cl.command to a no-op decorator to avoid KeyError during import
+
     def _noop_decorator(*args, **kwargs):
+        """Dummy decorator to replace @cl.command during tests."""
         def wrapper(func):
             return func
         return wrapper
+
     cl.command = _noop_decorator
 
 
