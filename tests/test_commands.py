@@ -37,7 +37,6 @@ async def test_command_roll(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-roll-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
 
         await command_roll(query)
 
@@ -73,7 +72,6 @@ async def test_command_search(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-search-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
 
         await command_search(query)
 
@@ -104,7 +102,6 @@ async def test_command_todo(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-todo-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
 
         await command_todo(query)
 
@@ -134,7 +131,6 @@ async def test_command_write(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-write-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
 
         await command_write(query)
 
