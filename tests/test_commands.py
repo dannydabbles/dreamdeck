@@ -45,7 +45,9 @@ async def test_command_roll(mock_session_data):
 
         await command_roll(query)
 
-        mock_cl_message_cls.assert_called_with(content=f"/roll {query}", author="Player")
+        mock_cl_message_instance = mock_cl_message_cls.return_value
+        assert mock_cl_message_instance.content == f"/roll {query}"
+        assert mock_cl_message_instance.author == "Player"
         mock_cl_message_instance.send.assert_awaited_once_with()
         mock_dice_agent.assert_awaited_once_with(state)
 
@@ -81,7 +83,9 @@ async def test_command_search(mock_session_data):
 
         await command_search(query)
 
-        mock_cl_message_cls.assert_called_with(content=f"/search {query}", author="Player")
+        mock_cl_message_instance = mock_cl_message_cls.return_value
+        assert mock_cl_message_instance.content == f"/search {query}"
+        assert mock_cl_message_instance.author == "Player"
         mock_cl_message_instance.send.assert_awaited_once_with()
         mock_search_agent.assert_awaited_once_with(state)
 
