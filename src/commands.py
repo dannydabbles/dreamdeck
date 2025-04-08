@@ -153,7 +153,8 @@ async def command_todo(query: str):
     if response_messages:
         ai_msg = response_messages[0]
         state.messages.append(ai_msg)
-        if ai_msg.metadata and "message_id" in ai_msg.metadata:
+        # Defensive: skip metadata check if error message (which lacks metadata)
+        if hasattr(ai_msg, "metadata") and ai_msg.metadata and "message_id" in ai_msg.metadata:
             await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
         else:
             cl_logger.warning(f"AIMessage from todo_agent missing message_id: {ai_msg.content}")
