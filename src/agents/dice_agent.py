@@ -48,6 +48,15 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
             timeout=config.llm.timeout,
         )
 
+        input_msg = state.get_last_human_message()
+        if not input_msg:
+            return [
+                AIMessage(
+                    content="🎲 Error: No user input found for dice roll.",
+                    name="error",
+                )
+            ]
+
         response = await llm.ainvoke([("system", formatted_prompt)])
         cl_logger.debug(f"Raw LLM response: {response.content}")  # Log raw output
 
@@ -58,6 +67,12 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
             cl_logger.error(
                 f"Invalid JSON response: {response.content}. Error: {str(e)}"
             )
+            return [
+                AIMessage(
+                    content=f"🎲 Error parsing dice roll response: {str(e)}",
+                    name="error",
+                )
+            ]
 
         # Validate required fields
         specs = json_output.get("specs", [])  # Use .get() with default
@@ -65,6 +80,12 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
 
         if not specs or len(specs) != len(reasons):
             cl_logger.error(f"Invalid dice roll output: {json_output}")
+            return [
+                AIMessage(
+                    content="🎲 Error: Invalid dice roll specification received.",
+                    name="error",
+                )
+            ]
 
         # Perform actual dice rolls
         results = []
@@ -79,7 +100,7 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
             results.append(
                 {
                     "spec": spec,
-                    "rolls": f"{", ".join(rolls)}",
+                    "rolls": f"{', '.join(rolls)}",
                     "total": f"{total}",
                     "reason": reasons[i],
                 }
@@ -98,7 +119,7 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
             content=f"**Dice Rolls:**\n\n"
             + "\n\n".join(
                 [
-                    f"• **{res['reason']}**: Rolling {res['spec']} → Rolls: {"".join(res['rolls'])} → Total: {res['total']}"
+                    f"• **{res['reason']}**: Rolling {res['spec']} → Rolls: {', '.join(res['rolls'])} → Total: {res['total']}"
                     for res in results
                 ]
             ),

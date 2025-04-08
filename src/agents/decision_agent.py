@@ -40,12 +40,14 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
         dict: The next action to take.
     """
     messages = state.messages
-    result = []
 
     # Get last human message
     user_input = next(
         (m for m in reversed(messages) if isinstance(m, HumanMessage)), None
     )
+
+    if not user_input:
+        return [AIMessage(content="No user input found.", name="error")]
 
     try:
         template = Template(DECISION_PROMPT)
@@ -73,16 +75,16 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
         decision = response.content.strip()
 
         if "roll" in decision.lower():
-            result = AIMessage(content="Rolling dice...", name="dice_roll")
+            result = [AIMessage(content="Rolling dice...", name="dice_roll")]
         elif "search" in decision.lower():
-            result = AIMessage(content="Searching the web...", name="web_search")
+            result = [AIMessage(content="Searching the web...", name="web_search")]
         else:
-            result = AIMessage(content="Continuing the story...", name="continue_story")
+            result = [AIMessage(content="Continuing the story...", name="continue_story")]
     except Exception as e:
         cl_logger.error(f"Decision failed: {e}")
-        result = AIMessage(content="Decision failed.", name="error")
+        result = [AIMessage(content="Decision failed.", name="error")]
 
-    return [result]
+    return result
 
 
 @task

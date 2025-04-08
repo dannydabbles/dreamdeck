@@ -6,7 +6,7 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import chainlit as cl
 
@@ -30,15 +30,15 @@ class ChatState(BaseModel):
         - Memories are automatically populated from vector store queries
     """
 
-    messages: List[BaseMessage] = []
+    messages: List[BaseMessage] = Field(default_factory=list)
     is_last_step: bool = False
-    thread_id: str = ...
-    metadata: dict = {}
+    thread_id: str
+    metadata: dict = Field(default_factory=dict)
     current_message_id: Optional[str] = None
     error_count: int = 0
-    memories: List[str] = []
-    user_preferences: dict = {}
-    thread_data: dict = {}
+    memories: List[str] = Field(default_factory=list)
+    user_preferences: dict = Field(default_factory=dict)
+    thread_data: dict = Field(default_factory=dict)
 
     def increment_error_count(self) -> None:
         self.error_count += 1
@@ -49,7 +49,7 @@ class ChatState(BaseModel):
         except Exception:
             return ""
 
-    def get_last_human_message(self) -> str:
+    def get_last_human_message(self) -> Optional[HumanMessage]:
         human_messages = [
             msg for msg in reversed(self.messages) if isinstance(msg, HumanMessage)
         ]

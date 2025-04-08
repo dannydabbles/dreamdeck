@@ -29,6 +29,8 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
 
     # Get user input and context
     user_query = state.get_last_human_message()
+    if not user_query:
+        return [AIMessage(content="No user input found for search.", name="error")]
     recent_chat = state.get_recent_history_str()
 
     # Generate search query using LLM

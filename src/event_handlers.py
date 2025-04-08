@@ -445,6 +445,7 @@ async def load_knowledge_documents():
     # Final flush of remaining documents
     if documents:
         await vector_memory.add_documents(documents)
+
 @cl.action_callback("delete_message")
 async def handle_delete_message(action: cl.Action):
     message_id = action.value

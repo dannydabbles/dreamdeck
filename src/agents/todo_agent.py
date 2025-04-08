@@ -8,7 +8,10 @@ from src.models import ChatState
 
 async def _manage_todo(state: ChatState) -> list[AIMessage]:
     try:
-        user_input = state.get_last_human_message().content
+        last_human = state.get_last_human_message()
+        if not last_human:
+            raise ValueError("No user input found.")
+        user_input = last_human.content
         
         if not user_input.startswith("/todo"):
             return []
@@ -35,12 +38,13 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
             parent_id=None
         )
         await cl_msg.send()
+        cl_msg_id = cl_msg.id
         
         return [
             AIMessage(
                 content=f"Added: {task_text}",
                 name="todo",
-                metadata={"message_id": cl_msg.id},
+                metadata={"message_id": cl_msg_id, "parent_id": None},
             )
         ]
         
