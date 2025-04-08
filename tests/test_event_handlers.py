@@ -451,3 +451,60 @@ async def test_load_knowledge_documents_no_vector_store(monkeypatch, mock_cl_env
      if mock_dir != KNOWLEDGE_DIRECTORY:
          os.remove(Path(mock_dir) / "dummy.txt")
          os.rmdir(mock_dir)
+
+
+@pytest.mark.asyncio
+async def test_handle_delete_message(mock_cl_environment):
+    from src.event_handlers import handle_delete_message
+    from src.models import ChatState
+    from langchain_core.messages import HumanMessage, AIMessage
+    from src.stores import VectorStore
+
+    # Setup state with parent and child messages
+    parent_id = "parent-id"
+    child_id = "child-id"
+    state = ChatState(
+        thread_id="test",
+        messages=[
+            HumanMessage(content="hi", name="Player", metadata={"message_id": parent_id}),
+            AIMessage(content="reply", name="GM", metadata={"message_id": child_id, "parent_id": parent_id}),
+        ]
+    )
+    mock_cl_environment["state"] = state
+
+    # Mock vector store
+    vector_store = AsyncMock(spec=VectorStore)
+    vector_store.collection.delete = AsyncMock()
+    mock_cl_environment["vector_memory"] = vector_store
+
+    # Patch DB pool
+    with patch("src.event_handlers.DatabasePool.get_pool", new_callable=AsyncMock) as mock_get_pool, \
+         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
+
+        mock_db = AsyncMock()
+        mock_get_pool.return_value = mock_db
+
+        mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send.return_value = None
+        mock_cl_message_cls.return_value = mock_cl_message_instance
+
+        action = MagicMock()
+        action.value = parent_id
+
+        await handle_delete_message(action)
+
+        # Parent and child should be deleted from state
+        remaining_ids = [m.metadata.get("message_id") for m in mock_cl_environment["state"].messages]
+        assert parent_id not in remaining_ids
+        assert child_id not in remaining_ids
+
+        # Vector store delete called for both
+        vector_store.collection.delete.assert_any_await(ids=[parent_id])
+        vector_store.collection.delete.assert_any_await(ids=[child_id])
+
+        # DB delete called for both
+        mock_db.delete_message.assert_any_await(parent_id)
+        mock_db.delete_message.assert_any_await(child_id)
+
+        # Confirmation message sent
+        mock_cl_message_instance.send.assert_awaited_once()

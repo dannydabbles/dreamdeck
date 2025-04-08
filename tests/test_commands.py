@@ -249,3 +249,69 @@ async def test_command_missing_state():
         # Check that the "Error: Session state not found." message was sent
         mock_cl_message_cls.assert_called_with(content="Error: Session state not found.")
         mock_cl_message_instance.send.assert_awaited_once_with()
+
+
+@pytest.mark.asyncio
+async def test_command_help():
+    with patch("src.commands.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
+        mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send.return_value = None
+        mock_cl_message_cls.return_value = mock_cl_message_instance
+
+        from src.commands import command_help
+        await command_help()
+
+        mock_cl_message_instance.send.assert_awaited_once()
+        sent_content = mock_cl_message_cls.call_args.kwargs.get("content", "")
+        assert "Available Commands" in sent_content
+
+@pytest.mark.asyncio
+async def test_command_reset(mock_session_data):
+    state, vector_store, user_session_get = mock_session_data
+
+    with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
+         patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
+         patch("src.commands.cl.context.session.thread_id", "cmd-test-thread"), \
+         patch("src.commands.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
+
+        mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send.return_value = None
+        mock_cl_message_instance.id = "start-msg-id"
+        mock_cl_message_cls.return_value = mock_cl_message_instance
+
+        from src.commands import command_reset
+        await command_reset()
+
+        # Check start message sent
+        mock_cl_message_instance.send.assert_awaited_once()
+        # Check state reset
+        args, kwargs = mock_user_session_set.call_args_list[-1]
+        assert args[0] == "state"
+        new_state = args[1]
+        assert new_state.messages
+        assert isinstance(new_state.messages[0], AIMessage)
+        assert new_state.messages[0].content.startswith("Hello")  # START_MESSAGE
+
+@pytest.mark.asyncio
+async def test_command_save(mock_session_data):
+    state, vector_store, user_session_get = mock_session_data
+    # Add some messages
+    state.messages.append(HumanMessage(content="Hi", name="Player"))
+    state.messages.append(AIMessage(content="Hello", name="Game Master"))
+
+    with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
+         patch("src.commands.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
+
+        mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send.return_value = None
+        mock_cl_message_cls.return_value = mock_cl_message_instance
+
+        from src.commands import command_save
+        await command_save()
+
+        mock_cl_message_instance.send.assert_awaited_once()
+        sent_elements = mock_cl_message_cls.call_args.kwargs.get("elements", [])
+        assert sent_elements
+        file_element = sent_elements[0]
+        assert file_element.name.endswith(".md")
+        assert b"Player" in file_element.content

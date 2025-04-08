@@ -101,3 +101,42 @@ async def test_dice_agent(mock_chainlit_context):
         state = ChatState(messages=[user_input], thread_id="test-thread-id")
         result = await _dice_roll(state)
         assert "roll" in result[0].content.lower()
+
+
+@pytest.mark.asyncio
+async def test_dice_roll_invalid_json(monkeypatch):
+    from src.agents.dice_agent import _dice_roll
+    from src.models import ChatState
+    from langchain_core.messages import HumanMessage
+
+    state = ChatState(messages=[HumanMessage(content="roll 2d6", name="Player")], thread_id="test")
+
+    class FakeResp:
+        content = "not a json"
+
+    async def fake_ainvoke(*args, **kwargs):
+        return FakeResp()
+
+    monkeypatch.setattr("src.agents.dice_agent.ChatOpenAI.ainvoke", fake_ainvoke)
+
+    result = await _dice_roll(state)
+    assert "Error parsing dice roll" in result[0].content
+
+@pytest.mark.asyncio
+async def test_dice_roll_invalid_specs(monkeypatch):
+    from src.agents.dice_agent import _dice_roll
+    from src.models import ChatState
+    from langchain_core.messages import HumanMessage
+
+    state = ChatState(messages=[HumanMessage(content="roll 2d6", name="Player")], thread_id="test")
+
+    class FakeResp:
+        content = '{"specs": [], "reasons": []}'
+
+    async def fake_ainvoke(*args, **kwargs):
+        return FakeResp()
+
+    monkeypatch.setattr("src.agents.dice_agent.ChatOpenAI.ainvoke", fake_ainvoke)
+
+    result = await _dice_roll(state)
+    assert "Invalid dice roll specification" in result[0].content
