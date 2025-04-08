@@ -40,7 +40,7 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
 
         # Invoke LLM to get structured output
         llm = ChatOpenAI(
-            base_url=config.OPENAI_SETTINGS["base_url"],
+            base_url=config.openai["base_url"],
             temperature=0.7,  # Adjust temperature as needed
             max_tokens=100,
             streaming=False,
