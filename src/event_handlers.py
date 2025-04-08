@@ -207,6 +207,7 @@ async def on_chat_start():
             value="start_message",  # Placeholder, will be replaced after send
             description="Delete this message and its children",
             color="red",
+            payload={"message_id": "start_message"},  # Required dummy payload
         )
         start_cl_msg = cl.Message(
             content=START_MESSAGE,
@@ -214,8 +215,9 @@ async def on_chat_start():
             actions=[delete_action],
         )
         await start_cl_msg.send()
-        # Update delete_action value to real message id
+        # Update delete_action value and payload to real message id
         delete_action.value = start_cl_msg.id
+        delete_action.payload = {"message_id": start_cl_msg.id}
 
         # Create initial state
         state = ChatState(
@@ -270,6 +272,7 @@ async def on_chat_resume(thread: ThreadDict):
                 value=step_id or "unknown",
                 description="Delete this message and its children",
                 color="red",
+                payload={"message_id": step_id or "unknown"},
             )
             cl_msg = cl.Message(
                 content=step["output"],
@@ -289,6 +292,7 @@ async def on_chat_resume(thread: ThreadDict):
                 value=step_id or "unknown",
                 description="Delete this message and its children",
                 color="red",
+                payload={"message_id": step_id or "unknown"},
             )
             cl_msg = cl.Message(
                 content=step["output"],
