@@ -153,9 +153,7 @@ Default users (matching password callback):
 ## TODOs and Quick Wins
 
 - **Gameplay:**
-  - [ ] `/help` command listing all slash commands.
-  - [ ] `/reset` command to clear chat history.
-  - [ ] `/save` and `/load` commands for story snapshots.
+  - [ ] `/save` and `/load` commands for story snapshots.  # `/save` exists, `/load` does not
   - [ ] Support multiple dice expressions in `/roll`.
   - [ ] Undo last message feature.
   - [ ] Export chat to markdown or JSON.
