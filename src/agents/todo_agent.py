@@ -12,15 +12,22 @@ TODO_FILE_NAME = config.todo_file_name
 
 async def _manage_todo(state: ChatState) -> list[AIMessage]:
     try:
+        cl_logger.info("Starting _manage_todo()")
+
         last_human = state.get_last_human_message()
+        cl_logger.info(f"Last human message: {last_human}")
+
         if not last_human:
             raise ValueError("No user input found.")
         user_input = last_human.content
+        cl_logger.info(f"User input: {user_input}")
 
         if not user_input.startswith("/todo"):
             return []
 
         task_text = user_input[6:].strip()
+        cl_logger.info(f"Task text: '{task_text}'")
+
         if not task_text:
             raise ValueError("Task cannot be empty")
 
@@ -31,11 +38,17 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         )
         file_path = os.path.join(dir_path, TODO_FILE_NAME)
 
+        cl_logger.info(f"Todo directory path: {dir_path}")
+        cl_logger.info(f"Todo file path: {file_path}")
+
         os.makedirs(dir_path, exist_ok=True)
+        cl_logger.info(f"Ensured directory exists: {dir_path}")
 
         timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M]")
         with open(file_path, "a", encoding="utf-8") as f:
             f.write(f"\n{timestamp} {task_text}")
+
+        cl_logger.info(f"Wrote task to file: {file_path}")
 
         cl_msg = CLMessage(
             content=f"✅ Added to TODO:\n{task_text}",
@@ -43,6 +56,8 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         )
         await cl_msg.send()
         cl_msg_id = cl_msg.id
+
+        cl_logger.info(f"Sent Chainlit message with id: {cl_msg_id}")
 
         return [
             AIMessage(
