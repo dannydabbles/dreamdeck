@@ -214,26 +214,11 @@ async def on_chat_start():
         asyncio.create_task(load_knowledge_documents())
 
         # Initialize thread in Chainlit with a start message
-        delete_action = Action(
-            name="delete_message",
-            label="Delete Message",
-            value="start_message",  # Placeholder, will be replaced after send
-            description="Delete this message and its children",
-            color="red",
-            payload={"message_id": "start_message"},  # Required dummy payload
-        )
         start_cl_msg = cl.Message(
             content=START_MESSAGE,
             author=current_user_identifier,
-            actions=[delete_action],
         )
         await start_cl_msg.send()
-        # Update delete_action value and payload to real message id
-        delete_action.value = start_cl_msg.id
-        delete_action.payload = {"message_id": start_cl_msg.id}
-        # Update the button in the UI with the real message id
-        start_cl_msg.actions = [delete_action]
-        await start_cl_msg.update()
 
         # Create initial state
         state = ChatState(
@@ -305,18 +290,9 @@ async def on_chat_resume(thread: ThreadDict):
             pass
 
         if step["type"] == "user_message":
-            delete_action = Action(
-                name="delete_message",
-                label="Delete Message",
-                value=step_id or "unknown",
-                description="Delete this message and its children",
-                color="red",
-                payload={"message_id": step_id or "unknown"},
-            )
             cl_msg = cl.Message(
                 content=step["output"],
                 author=current_user_identifier,
-                actions=[delete_action],
             )
             # await cl_msg.send()  # Disabled to avoid duplicate UI messages
             messages.append(HumanMessage(content=step["output"], name="Player", metadata=meta))
@@ -325,18 +301,9 @@ async def on_chat_resume(thread: ThreadDict):
             elif not step_id:
                 cl_logger.warning(f"Missing ID for user step in on_chat_resume: {step.get('output', '')[:50]}...")
         elif step["type"] == "assistant_message":
-            delete_action = Action(
-                name="delete_message",
-                label="Delete Message",
-                value=step_id or "unknown",
-                description="Delete this message and its children",
-                color="red",
-                payload={"message_id": step_id or "unknown"},
-            )
             cl_msg = cl.Message(
                 content=step["output"],
                 author=current_user_identifier,
-                actions=[delete_action],
             )
             # await cl_msg.send()  # Disabled to avoid duplicate UI messages
             messages.append(AIMessage(content=step["output"], name=step["name"], metadata=meta))
@@ -502,72 +469,6 @@ async def load_knowledge_documents():
     if documents:
         await vector_memory.add_documents(documents)
 
-@cl.action_callback("delete_message")
-async def handle_delete_message(action: cl.Action):
-    message_id = None
-    if hasattr(action, "payload") and isinstance(action.payload, dict):
-        message_id = action.payload.get("message_id")
-    if not message_id:
-        # fallback for older Chainlit or missing payload
-        message_id = getattr(action, "value", None)
-    if not message_id:
-        await cl.Message(content="Error: No message ID found in delete action.").send()
-        return
-
-    state: ChatState = cl.user_session.get("state")
-    vector_store: VectorStore = cl.user_session.get("vector_memory")
-
-    if not state:
-        await cl.Message(content="Error: Session state not found.").send()
-        return
-
-    ids_to_delete = set()
-    ids_to_delete.add(message_id)
-
-    def collect_children(parent_id):
-        for msg in state.messages:
-            meta = getattr(msg, "metadata", {}) or {}
-            if meta.get("parent_id") == parent_id:
-                child_id = meta.get("message_id")
-                if child_id and child_id not in ids_to_delete:
-                    ids_to_delete.add(child_id)
-                    collect_children(child_id)
-
-    collect_children(message_id)
-
-    # Remove from ChatState
-    state.messages = [
-        msg
-        for msg in state.messages
-        if (getattr(msg, "metadata", {}) or {}).get("message_id") not in ids_to_delete
-    ]
-
-    # Persist updated state
-    cl.user_session.set("state", state)
-
-    # Delete from vector store
-    for mid in ids_to_delete:
-        try:
-            await vector_store.collection.delete(ids=[mid])
-        except Exception:
-            pass
-
-    # Delete from Chainlit persistent data layer
-    try:
-        db = await DatabasePool.get_pool()
-        for mid in ids_to_delete:
-            await db.delete_message(mid)
-    except Exception:
-        pass
-
-    # Attempt to remove message(s) from UI
-    try:
-        for mid in ids_to_delete:
-            await cl.delete_message(mid)
-    except Exception:
-        pass
-
-    await cl.Message(content="Message deleted.").send()
 
 
 @cl.on_settings_update
