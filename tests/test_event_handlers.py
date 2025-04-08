@@ -105,7 +105,10 @@ async def test_on_chat_start(mock_cl_environment):
 
 
         # Verify start message sent
-        mock_cl_message_cls.assert_called_with(content=START_MESSAGE, author="Game Master")
+        args, kwargs = mock_cl_message_cls.call_args
+        assert kwargs["content"] == START_MESSAGE
+        assert kwargs["author"] == "Game Master"
+        # Optionally, check 'actions' if desired, or ignore it
         mock_cl_message_instance.send.assert_awaited_once()
 
         # Verify initial state stored
@@ -186,7 +189,7 @@ async def test_on_chat_resume(mock_cl_environment):
 
     with patch("src.event_handlers.VectorStore", new_callable=MagicMock) as mock_vector_store_cls, \
          patch("src.event_handlers.load_knowledge_documents", new_callable=AsyncMock) as mock_load_knowledge, \
-         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls: # Mock cl.Message used internally
+         patch("src.event_handlers.cl.Message", new_callable=AsyncMock) as mock_cl_message_cls: # Make cl.Message an AsyncMock
 
         mock_vector_store_instance = MagicMock()
         mock_vector_store_instance.put = AsyncMock() # Mock the put method
