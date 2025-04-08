@@ -139,7 +139,7 @@ async def test_command_write(mock_session_data):
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
          patch("chainlit.Message", new_callable=MagicMock) as mock_cl_message_cls, \
-         patch("src.commands.writer_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_writer_agent:
+         patch("src.agents.writer_agent.call_writer_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_call_writer_agent:
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.send.return_value = None
@@ -152,7 +152,7 @@ async def test_command_write(mock_session_data):
         assert mock_cl_message_instance.content == f"/write {query}"
         assert mock_cl_message_instance.author == "Player"
         mock_cl_message_instance.send.assert_awaited_once_with()
-        mock_writer_agent.assert_awaited_once_with(state)
+        mock_call_writer_agent.assert_awaited_once_with(state)
 
         assert len(state.messages) == 2
         assert state.messages[1] == ai_response_msg
