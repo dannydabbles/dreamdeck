@@ -116,7 +116,9 @@ async def test_command_todo(mock_session_data):
 
         await command_todo(query)
 
-        mock_cl_message_cls.assert_called_with(content=f"/todo {query}", author="Player")
+        mock_cl_message_instance = mock_cl_message_cls.return_value
+        assert mock_cl_message_instance.content == f"/todo {query}"
+        assert mock_cl_message_instance.author == "Player"
         mock_cl_message_instance.send.assert_awaited_once_with()
         mock_todo_agent.assert_awaited_once_with(state)
 
@@ -146,7 +148,9 @@ async def test_command_write(mock_session_data):
 
         await command_write(query)
 
-        mock_cl_message_cls.assert_called_with(content=f"/write {query}", author="Player")
+        mock_cl_message_instance = mock_cl_message_cls.return_value
+        assert mock_cl_message_instance.content == f"/write {query}"
+        assert mock_cl_message_instance.author == "Player"
         mock_cl_message_instance.send.assert_awaited_once_with()
         mock_writer_agent.assert_awaited_once_with(state)
 
