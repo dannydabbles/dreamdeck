@@ -136,6 +136,7 @@ class ConfigSchema(BaseModel):
     storyboard_generation_prompt_postfix: str = ""
     todo_dir_path: str = "./helper"
     todo_file_name: str = "todo.md"
+    max_chain_length: int = 3
     _env_prefix: ClassVar[str] = "APP_"
     model_config = ConfigDict(extra="forbid")
     chat: dict
@@ -173,6 +174,8 @@ def load_config():
 
 
 config = load_config()
+
+MAX_CHAIN_LENGTH = config.max_chain_length
 
 DICE_ROLLING_ENABLED = config.features.dice_rolling
 DICE_SIDES = config.dice.sides

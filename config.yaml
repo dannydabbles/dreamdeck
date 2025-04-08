@@ -1,3 +1,5 @@
+max_chain_length: 3
+
 llm:
   temperature: 0.6
   max_tokens: 8000
