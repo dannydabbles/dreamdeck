@@ -99,70 +99,15 @@ improving configuration management, and adding new functionalities like message 
 
 *   **Goal:** Allow direct invocation of agents via slash commands.
 *   **Tasks:**
-    1.  Create a new file `src/commands.py`.
-    2.  In `src/commands.py`, define async functions decorated with `@cl.command` for each agent: `roll`, `search`, `todo`, `write`, `storyboard`.
-    3.  Each command function should:
-        *   Accept user input (e.g., `query: str`).
-        *   Retrieve the current `ChatState` and `VectorStore` from `cl.user_session`.
-        *   Create a `HumanMessage` from the `query`.
-        *   *Carefully* decide how to interact with the agent:
-            *   *Option A (Simpler, less state impact):* Call the agent's underlying `_helper` function (e.g., `_dice_roll`, `_web_search`) with a *temporary* or *simplified* state containing just the new human message and maybe recent history. Send the result directly using `cl.Message`. This won't update the main `ChatState` or vector store.
-            *   *Option B (More integrated):* Add the `HumanMessage` to the main `ChatState`, call the agent *task* (e.g., `dice_agent(state)`), add the agent's `AIMessage` response back to the `ChatState`, update the vector store, and send the `cl.Message`. This keeps the command interaction in the history. *Let's go with Option B for
-consistency, but be mindful of potential side effects.*
-        *   Example for `/roll`:
-            ```python
-            # src/commands.py
-            import chainlit as cl
-            from src.models import ChatState
-            from src.agents import dice_agent # Import the agent task
-            from langchain_core.messages import HumanMessage
-            from src.stores import VectorStore
+    1.  ✅ Create a new file `src/commands.py`.
+    2.  ✅ In `src/commands.py`, define async functions decorated with `@cl.command` for each agent: `roll`, `search`, `todo`, `write`, `storyboard`.
+    3.  ✅ Each command function should:
+        *   ✅ Accept user input (e.g., `query: str`).
+        *   ✅ Retrieve the current `ChatState` and `VectorStore` from `cl.user_session`.
+        *   ✅ Create a `HumanMessage` from the `query`.
+        *   ✅ *Option B (More integrated):* Add the `HumanMessage` to the main `ChatState`, call the agent *task* (e.g., `dice_agent(state)`), add the agent's `AIMessage` response back to the `ChatState`, update the vector store, and send the `cl.Message`. This keeps the command interaction in the history.
+    4.  ✅ In `src/event_handlers.py`, import the command functions from `src/commands.py` to make them available to Chainlit.
 
-            @cl.command(name="roll", description="Roll dice (e.g., /roll 2d6)")
-            async def command_roll(query: str):
-                state: ChatState = cl.user_session.get("state")
-                vector_store: VectorStore = cl.user_session.get("vector_memory")
-                if not state or not vector_store:
-                    await cl.Message(content="Error: Session state not found.").send()
-                    return
-
-                # Add user command message to state
-                user_msg = HumanMessage(content=f"/roll {query}", name="Player")
-                state.messages.append(user_msg)
-                await vector_store.put(content=user_msg.content) # Assuming put exists
-
-                # Call the dice agent task
-                # Note: The dice agent itself might need adjustment if it expects
-                # the *last* message to be the trigger, not just any message.
-                # It currently uses get_last_human_message(). Let's assume it works for now.
-                response_messages = await dice_agent(state) # Call the LangGraph task
-
-                if response_messages:
-                    ai_msg = response_messages[0]
-                    state.messages.append(ai_msg)
-                    await vector_store.put(content=ai_msg.content) # Add response to vector store
-
-                    # Send response to UI (agent already sends its own cl.Message, maybe redundant?)
-                    # The dice_agent already sends a cl.Message. We might not need to send another one here.
-                    # Let's comment this out for now, assuming agent handles UI.
-                    # await cl.Message(content=ai_msg.content, author=ai_msg.name).send()
-                else:
-                    await cl.Message(content="Dice roll command failed.").send()
-
-                # Update state in session
-                cl.user_session.set("state", state)
-
-            # ... similar commands for search, todo, write, storyboard ...
-            # For /write and /storyboard, they might need more context or specific handling.
-            # /write might just take the query as the next story beat.
-            # /storyboard might operate on the last GM message in the state.
-            ```
-    4.  In `src/event_handlers.py`, import the command functions from `src/commands.py` to make them available to Chainlit.
-        ```python
-        # src/event_handlers.py
-        # ... other imports
-        from . import commands # This registers the @cl.command functions
-        ```
 *   **Chainlit Docs Snippet:**
     > ```python
     > @cl.command(name="my-command", description="Description of my command")
