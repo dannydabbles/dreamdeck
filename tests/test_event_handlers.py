@@ -595,3 +595,56 @@ async def test_handle_delete_message(mock_cl_environment):
         mock_db.delete_message.assert_any_await(grandchild_id)
 
         mock_cl_message_instance.send.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_handle_delete_message_action_removes_message(mock_cl_environment):
+    from src.event_handlers import handle_delete_message
+    from src.models import ChatState
+    from langchain_core.messages import HumanMessage, AIMessage
+    from src.stores import VectorStore
+
+    # Setup state with two messages
+    msg1 = AIMessage(content="Hello", name="Game Master", metadata={"message_id": "m1"})
+    msg2 = AIMessage(content="Hi again", name="Game Master", metadata={"message_id": "m2", "parent_id": "m1"})
+    state = ChatState(thread_id="test", messages=[msg1, msg2])
+    mock_cl_environment["state"] = state
+
+    # Setup vector store mock
+    vector_store = AsyncMock(spec=VectorStore)
+    vector_store.collection = AsyncMock()
+    vector_store.collection.delete = AsyncMock()
+    mock_cl_environment["vector_memory"] = vector_store
+
+    # Setup DB pool mock
+    with patch("src.event_handlers.DatabasePool.get_pool", new_callable=AsyncMock) as mock_get_pool, \
+         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
+
+        mock_db = AsyncMock()
+        mock_get_pool.return_value = mock_db
+
+        mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send.return_value = None
+        mock_cl_message_cls.return_value = mock_cl_message_instance
+
+        # Simulate clicking delete on msg1
+        action = MagicMock()
+        action.value = "m1"
+
+        await handle_delete_message(action)
+
+        # Both messages should be deleted from state
+        remaining_ids = [m.metadata.get("message_id") for m in mock_cl_environment["state"].messages]
+        assert "m1" not in remaining_ids
+        assert "m2" not in remaining_ids
+
+        # Vector store delete called for both
+        vector_store.collection.delete.assert_any_await(ids=["m1"])
+        vector_store.collection.delete.assert_any_await(ids=["m2"])
+
+        # DB delete called for both
+        mock_db.delete_message.assert_any_await("m1")
+        mock_db.delete_message.assert_any_await("m2")
+
+        # Confirmation message sent
+        mock_cl_message_instance.send.assert_awaited_once()

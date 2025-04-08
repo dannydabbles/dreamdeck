@@ -548,6 +548,13 @@ async def handle_delete_message(action: cl.Action):
     except Exception:
         pass
 
+    # Attempt to remove message(s) from UI
+    try:
+        for mid in ids_to_delete:
+            await cl.delete_message(mid)
+    except Exception:
+        pass
+
     await cl.Message(content="Message deleted.").send()
 
 
