@@ -12,13 +12,19 @@ async def test_manage_todo_creates_file(tmp_path):
     # Patch module-level constants, not the config object
     with patch("src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)), \
          patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), \
-         patch("src.agents.todo_agent.CLMessage", new_callable=MagicMock) as mock_cl_msg_cls:
+         patch("src.agents.todo_agent.CLMessage", new_callable=MagicMock) as mock_cl_msg_cls, \
+         patch("src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke:
 
         mock_cl_msg_instance = MagicMock()
         mock_cl_msg_instance.send = AsyncMock()
         mock_cl_msg_instance.send.return_value = None
         mock_cl_msg_instance.id = "todo-msg-id"
         mock_cl_msg_cls.return_value = mock_cl_msg_instance
+
+        # Mock LLM response to output a JSON list with the task
+        mock_response = MagicMock()
+        mock_response.content = '["buy milk"]'
+        mock_ainvoke.return_value = mock_response
 
         state = ChatState(
             thread_id="test",
@@ -28,7 +34,7 @@ async def test_manage_todo_creates_file(tmp_path):
         result = await _manage_todo(state)
         # Check AIMessage returned
         assert result
-        assert "Added" in result[0].content
+        assert "buy milk" in result[0].content
 
         # Check file created inside date-based subfolder
         import datetime
