@@ -72,6 +72,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
             AIMessage(
                 content=f"Search results for '{search_query}':\n{summary}",
                 name="web_search",
+                metadata={"message_id": cl_msg.id},
             )
         ]
     except Exception as e:

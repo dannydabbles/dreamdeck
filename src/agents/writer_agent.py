@@ -82,7 +82,9 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
         await gm_message.send()
 
         story_segment = AIMessage(
-            content=gm_message.content.strip(), name="Game Master"
+            content=gm_message.content.strip(),
+            name="Game Master",
+            metadata={"message_id": gm_message.id},
         )
 
         return [story_segment]

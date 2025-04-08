@@ -34,25 +34,6 @@ if (
     cl.command = _noop_decorator
 
 
-async def _handle_agent_response(state: ChatState, vector_store: VectorStore, response_messages: list[AIMessage]):
-    """Helper to handle adding agent response to state and vector store."""
-    if response_messages:
-        ai_msg = response_messages[0]
-        # Ensure message_id is in metadata before adding to state/store
-        if ai_msg and hasattr(ai_msg, 'metadata') and ai_msg.metadata and "message_id" in ai_msg.metadata:
-            state.messages.append(ai_msg)
-            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"])
-            cl_logger.debug(f"Added agent response to state and vector store: {ai_msg.name} (ID: {ai_msg.metadata['message_id']})")
-        elif ai_msg:
-            state.messages.append(ai_msg)
-            await vector_store.put(content=ai_msg.content)
-            cl_logger.warning(f"Agent response for {ai_msg.name} added to state, but missing message_id in metadata. Added to vector store without ID.")
-        else:
-            cl_logger.warning("Agent response was empty or None.")
-    else:
-        cl_logger.warning("Agent did not return any response messages.")
-
-
 @cl.command(name="roll", description="Roll dice (e.g., /roll 2d6 or /roll check perception)")
 async def command_roll(query: str):
     """Handles the /roll command."""
@@ -62,14 +43,27 @@ async def command_roll(query: str):
         await cl.Message(content="Error: Session state not found.").send()
         return
 
-    user_msg = HumanMessage(content=f"/roll {query}", name="Player")
+    # Create and send user message
+    user_cl_msg = cl.Message(content=f"/roll {query}", author="Player")
+    await user_cl_msg.send()
+    user_cl_msg_id = user_cl_msg.id
+
+    # Update state and vector store for user message
+    user_msg = HumanMessage(content=f"/roll {query}", name="Player", metadata={"message_id": user_cl_msg_id})
     state.messages.append(user_msg)
-    await vector_store.put(content=user_msg.content)
+    await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player"})
 
     cl_logger.info(f"Executing /roll command with query: {query}")
     response_messages = await dice_agent(state)
 
-    await _handle_agent_response(state, vector_store, response_messages)
+    # Update state and vector store for AI response
+    if response_messages:
+        ai_msg = response_messages[0]
+        state.messages.append(ai_msg)
+        if ai_msg.metadata and "message_id" in ai_msg.metadata:
+            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+        else:
+            cl_logger.warning(f"AIMessage from dice_agent missing message_id: {ai_msg.content}")
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/roll command processed.")
@@ -84,14 +78,27 @@ async def command_search(query: str):
         await cl.Message(content="Error: Session state not found.").send()
         return
 
-    user_msg = HumanMessage(content=f"/search {query}", name="Player")
+    # Create and send user message
+    user_cl_msg = cl.Message(content=f"/search {query}", author="Player")
+    await user_cl_msg.send()
+    user_cl_msg_id = user_cl_msg.id
+
+    # Update state and vector store for user message
+    user_msg = HumanMessage(content=f"/search {query}", name="Player", metadata={"message_id": user_cl_msg_id})
     state.messages.append(user_msg)
-    await vector_store.put(content=user_msg.content)
+    await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player"})
 
     cl_logger.info(f"Executing /search command with query: {query}")
     response_messages = await web_search_agent(state)
 
-    await _handle_agent_response(state, vector_store, response_messages)
+    # Update state and vector store for AI response
+    if response_messages:
+        ai_msg = response_messages[0]
+        state.messages.append(ai_msg)
+        if ai_msg.metadata and "message_id" in ai_msg.metadata:
+            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+        else:
+            cl_logger.warning(f"AIMessage from web_search_agent missing message_id: {ai_msg.content}")
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/search command processed.")
@@ -106,14 +113,27 @@ async def command_todo(query: str):
         await cl.Message(content="Error: Session state not found.").send()
         return
 
-    user_msg = HumanMessage(content=f"/todo {query}", name="Player")
+    # Create and send user message
+    user_cl_msg = cl.Message(content=f"/todo {query}", author="Player")
+    await user_cl_msg.send()
+    user_cl_msg_id = user_cl_msg.id
+
+    # Update state and vector store for user message
+    user_msg = HumanMessage(content=f"/todo {query}", name="Player", metadata={"message_id": user_cl_msg_id})
     state.messages.append(user_msg)
-    await vector_store.put(content=user_msg.content)
+    await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player"})
 
     cl_logger.info(f"Executing /todo command with query: {query}")
     response_messages = await todo_agent(state)
 
-    await _handle_agent_response(state, vector_store, response_messages)
+    # Update state and vector store for AI response
+    if response_messages:
+        ai_msg = response_messages[0]
+        state.messages.append(ai_msg)
+        if ai_msg.metadata and "message_id" in ai_msg.metadata:
+            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+        else:
+            cl_logger.warning(f"AIMessage from todo_agent missing message_id: {ai_msg.content}")
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/todo command processed.")
@@ -128,14 +148,27 @@ async def command_write(query: str):
         await cl.Message(content="Error: Session state not found.").send()
         return
 
-    user_msg = HumanMessage(content=f"/write {query}", name="Player")
+    # Create and send user message
+    user_cl_msg = cl.Message(content=f"/write {query}", author="Player")
+    await user_cl_msg.send()
+    user_cl_msg_id = user_cl_msg.id
+
+    # Update state and vector store for user message
+    user_msg = HumanMessage(content=f"/write {query}", name="Player", metadata={"message_id": user_cl_msg_id})
     state.messages.append(user_msg)
-    await vector_store.put(content=user_msg.content)
+    await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player"})
 
     cl_logger.info(f"Executing /write command with query: {query}")
     response_messages = await writer_agent(state)
 
-    await _handle_agent_response(state, vector_store, response_messages)
+    # Update state and vector store for AI response
+    if response_messages:
+        ai_msg = response_messages[0]
+        state.messages.append(ai_msg)
+        if ai_msg.metadata and "message_id" in ai_msg.metadata:
+            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+        else:
+            cl_logger.warning(f"AIMessage from writer_agent missing message_id: {ai_msg.content}")
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/write command processed.")
@@ -156,7 +189,7 @@ async def command_storyboard(query: str = ""):
     last_gm_message_id = None
     for msg in reversed(state.messages):
         if isinstance(msg, AIMessage) and msg.name == "Game Master":
-            if hasattr(msg, 'metadata') and msg.metadata and "message_id" in msg.metadata:
+            if msg.metadata and "message_id" in msg.metadata:
                 last_gm_message_id = msg.metadata["message_id"]
                 break
             else:

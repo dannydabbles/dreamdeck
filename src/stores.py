@@ -46,20 +46,40 @@ class VectorStore:
         Returns:
             List[Document]: The relevant documents.
         """
-        results = self.collection.query(query_texts=[content], n_results=5)
-        documents_flat = results.get("documents", [[]])[0]  # Get first query's results
-        return [Document(page_content=doc) for doc in documents_flat]
+        results = self.collection.query(
+            query_texts=[content], n_results=5, include=["documents", "metadatas"]
+        )
+        documents_flat = results.get("documents", [[]])[0]
+        metadatas_flat = results.get("metadatas", [[]])[0]
+        return [
+            Document(page_content=doc, metadata=meta)
+            for doc, meta in zip(documents_flat, metadatas_flat)
+        ]
 
-    async def put(self, content: str) -> None:
+    async def put(
+        self, content: str, message_id: str, metadata: Optional[dict] = None
+    ) -> None:
         """Store new content in ChromaDB."""
+        full_metadata = {"message_id": message_id, **(metadata or {})}
         await asyncio.to_thread(
-            self.collection.add, ids=[str(uuid.uuid4())], documents=[content]
+            self.collection.add,
+            ids=[message_id],
+            documents=[content],
+            metadatas=[full_metadata],
         )
 
     async def add_documents(self, docs: List[Document]) -> None:
         """Store a list of documents in ChromaDB."""
-        for doc in docs:
-            await self.put(doc.page_content)
+        doc_ids = [str(uuid.uuid4()) for _ in docs]
+        metadatas = [
+            {"source": doc.metadata.get("source", "unknown")} for doc in docs
+        ]
+        await asyncio.to_thread(
+            self.collection.add,
+            ids=doc_ids,
+            documents=[d.page_content for d in docs],
+            metadatas=metadatas,
+        )
 
 
 # Ensure max_size is parsed correctly

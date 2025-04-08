@@ -106,7 +106,13 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
         )
         await cl_msg.send()
 
-        return [AIMessage(content=lang_graph_msg, name="dice_roll")]
+        return [
+            AIMessage(
+                content=lang_graph_msg,
+                name="dice_roll",
+                metadata={"message_id": cl_msg.id},
+            )
+        ]
 
     except Exception as e:
         cl_logger.error(f"Dice roll failed: {e}")

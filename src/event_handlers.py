@@ -285,10 +285,11 @@ async def on_message(message: cl.Message):
 
     try:
         # Add user message to state
-        state.messages.append(HumanMessage(content=message.content, name="Player"))
+        user_msg = HumanMessage(content=message.content, name="Player", metadata={"message_id": message.id})
+        state.messages.append(user_msg)
 
         # Add user message to vector memory
-        await vector_memory.put(content=message.content)
+        await vector_memory.put(content=message.content, message_id=message.id, metadata={"type": "human", "author": "Player"})
 
         # Put messages relevant to the player message into state.memories list for AI to use from the vector memory
         state.memories = [
@@ -320,7 +321,14 @@ async def on_message(message: cl.Message):
             inputs, config=RunnableConfig(callbacks=[cb], **thread_config)
         )
 
-        # await gm_message.send()
+        # Store final AI response in vector store
+        if state.messages and isinstance(state.messages[-1], AIMessage):
+            ai_msg = state.messages[-1]
+            if ai_msg.metadata and "message_id" in ai_msg.metadata:
+                await vector_memory.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+            else:
+                cl_logger.warning(f"Final AIMessage missing message_id: {ai_msg.content}")
+
         cl.user_session.set("state", state)
 
     except Exception as e:

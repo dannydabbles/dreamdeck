@@ -36,7 +36,13 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         )
         await cl_msg.send()
         
-        return [AIMessage(content=f"Added: {task_text}", name="todo")]
+        return [
+            AIMessage(
+                content=f"Added: {task_text}",
+                name="todo",
+                metadata={"message_id": cl_msg.id},
+            )
+        ]
         
     except Exception as e:
         cl_logger.error(f"Todo failed: {str(e)}")
