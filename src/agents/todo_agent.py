@@ -7,8 +7,8 @@ from langchain_core.messages import AIMessage
 from src.models import ChatState
 
 # Module-level constants for easier patching in tests
-TODO_DIR_PATH = config.TODO_DIR_PATH
-TODO_FILE_NAME = config.TODO_FILE_NAME
+TODO_DIR_PATH = config.todo_dir_path
+TODO_FILE_NAME = config.todo_file_name
 
 async def _manage_todo(state: ChatState) -> list[AIMessage]:
     try:
