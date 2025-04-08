@@ -1,5 +1,24 @@
 import sys
 import os
+
+# Patch chainlit.command to a dummy decorator during pytest collection and run
+if (
+    "pytest" in sys.modules
+    or "PYTEST_CURRENT_TEST" in os.environ
+    or "PYTEST_RUNNING" in os.environ
+):
+    try:
+        import chainlit as cl
+
+        def _noop_decorator(*args, **kwargs):
+            def wrapper(func):
+                return func
+            return wrapper
+
+        cl.command = _noop_decorator
+    except ImportError:
+        pass
+
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 
