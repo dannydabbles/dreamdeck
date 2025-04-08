@@ -24,6 +24,7 @@ from langchain_core.messages import (
 )  # Import HumanMessage
 from src.models import ChatState
 
+import chainlit as cl
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -50,11 +51,17 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
         template = Template(DECISION_PROMPT)
         formatted_prompt = template.render(user_input=user_input.content)
 
-        # Initialize the LLM
+        # Get user settings and defaults
+        user_settings = cl.user_session.get("chat_settings", {})
+        final_temp = user_settings.get("decision_temp", DECISION_AGENT_TEMPERATURE)
+        final_endpoint = user_settings.get("decision_endpoint") or DECISION_AGENT_BASE_URL
+        final_max_tokens = user_settings.get("decision_max_tokens", DECISION_AGENT_MAX_TOKENS)
+
+        # Initialize the LLM with potentially overridden settings
         llm = ChatOpenAI(
-            base_url=DECISION_AGENT_BASE_URL,
-            temperature=DECISION_AGENT_TEMPERATURE,
-            max_tokens=DECISION_AGENT_MAX_TOKENS,
+            base_url=final_endpoint,
+            temperature=final_temp,
+            max_tokens=final_max_tokens,
             streaming=DECISION_AGENT_STREAMING,
             verbose=DECISION_AGENT_VERBOSE,
             timeout=LLM_TIMEOUT,

@@ -22,6 +22,7 @@ from src.config import (
 )
 from src.models import ChatState
 
+import chainlit as cl
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
@@ -51,11 +52,17 @@ async def _generate_storyboard(
             tool_results=state.get_tool_results_str(),
         )
 
-        # Initialize the LLM
+        # Get user settings and defaults
+        user_settings = cl.user_session.get("chat_settings", {})
+        final_temp = user_settings.get("storyboard_temp", STORYBOARD_EDITOR_AGENT_TEMPERATURE)
+        final_endpoint = user_settings.get("storyboard_endpoint") or STORYBOARD_EDITOR_AGENT_BASE_URL
+        final_max_tokens = user_settings.get("storyboard_max_tokens", STORYBOARD_EDITOR_AGENT_MAX_TOKENS)
+
+        # Initialize the LLM with potentially overridden settings
         llm = ChatOpenAI(
-            base_url=STORYBOARD_EDITOR_AGENT_BASE_URL,
-            temperature=STORYBOARD_EDITOR_AGENT_TEMPERATURE,
-            max_tokens=STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
+            base_url=final_endpoint,
+            temperature=final_temp,
+            max_tokens=final_max_tokens,
             streaming=STORYBOARD_EDITOR_AGENT_STREAMING,
             verbose=STORYBOARD_EDITOR_AGENT_VERBOSE,
             timeout=LLM_TIMEOUT,

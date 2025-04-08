@@ -66,6 +66,8 @@ from . import commands # ADD THIS LINE to register the @cl.command functions
 from langchain_core.stores import BaseStore
 
 import chainlit as cl
+from chainlit.input_widget import Slider, TextInput  # Import widgets
+from src import config  # Import your config
 
 # Centralized logging configuration
 logging.basicConfig(
@@ -139,6 +141,59 @@ async def on_chat_start():
         cl_user_session.set("dice_roll_agent", dice_roll_agent)
         cl_user_session.set("web_search_agent", web_search_agent)
 
+        # Define Chat Settings
+        settings = await cl.ChatSettings(
+            [
+                Slider(
+                    id="writer_temp",
+                    label="Writer Agent - Temperature",
+                    min=0.0, max=2.0, step=0.1, initial=config.WRITER_AGENT_TEMPERATURE
+                ),
+                Slider(
+                    id="writer_max_tokens",
+                    label="Writer Agent - Max Tokens",
+                    min=100, max=16000, step=100, initial=config.WRITER_AGENT_MAX_TOKENS
+                ),
+                TextInput(
+                    id="writer_endpoint",
+                    label="Writer Agent - OpenAI Endpoint URL",
+                    initial=config.WRITER_AGENT_BASE_URL or "",
+                    placeholder="e.g., http://localhost:5000/v1"
+                ),
+                Slider(
+                    id="storyboard_temp",
+                    label="Storyboard Agent - Temperature",
+                    min=0.0, max=2.0, step=0.1, initial=config.STORYBOARD_EDITOR_AGENT_TEMPERATURE
+                ),
+                Slider(
+                    id="storyboard_max_tokens",
+                    label="Storyboard Agent - Max Tokens",
+                    min=100, max=16000, step=100, initial=config.STORYBOARD_EDITOR_AGENT_MAX_TOKENS
+                ),
+                TextInput(
+                    id="storyboard_endpoint",
+                    label="Storyboard Agent - OpenAI Endpoint URL",
+                    initial=config.STORYBOARD_EDITOR_AGENT_BASE_URL or "",
+                    placeholder="e.g., http://localhost:5000/v1"
+                ),
+                Slider(
+                    id="decision_temp",
+                    label="Decision Agent - Temperature",
+                    min=0.0, max=2.0, step=0.1, initial=config.DECISION_AGENT_TEMPERATURE
+                ),
+                Slider(
+                    id="decision_max_tokens",
+                    label="Decision Agent - Max Tokens",
+                    min=10, max=1000, step=10, initial=config.DECISION_AGENT_MAX_TOKENS
+                ),
+                TextInput(
+                    id="decision_endpoint",
+                    label="Decision Agent - OpenAI Endpoint URL",
+                    initial=config.DECISION_AGENT_BASE_URL or "",
+                    placeholder="e.g., http://localhost:5000/v1"
+                ),
+            ]
+        ).send()
 
         # Launch knowledge loading in the background
         asyncio.create_task(load_knowledge_documents())

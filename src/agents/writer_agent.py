@@ -47,11 +47,17 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
             tool_results=state.get_tool_results_str(),
         )
 
-        # Initialize the LLM
+        # Get user settings and defaults
+        user_settings = cl.user_session.get("chat_settings", {})
+        final_temp = user_settings.get("writer_temp", WRITER_AGENT_TEMPERATURE)
+        final_endpoint = user_settings.get("writer_endpoint") or WRITER_AGENT_BASE_URL
+        final_max_tokens = user_settings.get("writer_max_tokens", WRITER_AGENT_MAX_TOKENS)
+
+        # Initialize the LLM with potentially overridden settings
         llm = ChatOpenAI(
-            base_url=WRITER_AGENT_BASE_URL,
-            temperature=WRITER_AGENT_TEMPERATURE,
-            max_tokens=WRITER_AGENT_MAX_TOKENS,
+            base_url=final_endpoint,
+            temperature=final_temp,
+            max_tokens=final_max_tokens,
             streaming=WRITER_AGENT_STREAMING,
             verbose=WRITER_AGENT_VERBOSE,
             timeout=LLM_TIMEOUT,
