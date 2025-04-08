@@ -247,12 +247,19 @@ async def on_chat_resume(thread: ThreadDict):
 
     # Reconstruct messages from thread history
     for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
+        step_id = step.get("id")
         if step["type"] == "user_message":
             messages.append(HumanMessage(content=step["output"], name="Player"))
-            vector_memory.put(content=step["output"])
+            if step_id:
+                await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "human", "author": "Player"})
+            else:
+                cl_logger.warning(f"Missing ID for user step in on_chat_resume: {step.get('output', '')[:50]}...")
         elif step["type"] == "assistant_message":
             messages.append(AIMessage(content=step["output"], name=step["name"]))
-            vector_memory.put(content=step["output"])
+            if step_id:
+                await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "ai", "author": step.get("name", "Unknown")})
+            else:
+                cl_logger.warning(f"Missing ID for assistant step in on_chat_resume: {step.get('output', '')[:50]}...")
 
     # Create state
     state = ChatState(
@@ -264,8 +271,8 @@ async def on_chat_resume(thread: ThreadDict):
 
     # Store state and memories
     cl.user_session.set("state", state)
-    cl.user_session.set("image_generation_memory", image_generation_memory)
-    cl.user_session.set("ai_message_id", None)
+    cl_user_session.set("image_generation_memory", image_generation_memory)
+    cl_user_session.set("ai_message_id", None)
 
     # Load knowledge documents
     await load_knowledge_documents()

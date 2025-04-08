@@ -37,7 +37,7 @@ async def test_command_roll(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-roll-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
+        mock_cl_message_cls.return_value.send = AsyncMock(return_value=None)
 
         await command_roll(query)
 
@@ -73,7 +73,7 @@ async def test_command_search(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-search-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
+        mock_cl_message_cls.return_value.send = AsyncMock(return_value=None)
 
         await command_search(query)
 
@@ -104,7 +104,7 @@ async def test_command_todo(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-todo-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
+        mock_cl_message_cls.return_value.send = AsyncMock(return_value=None)
 
         await command_todo(query)
 
@@ -134,7 +134,7 @@ async def test_command_write(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-write-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
+        mock_cl_message_cls.return_value.send = AsyncMock(return_value=None)
 
         await command_write(query)
 
@@ -165,7 +165,7 @@ async def test_command_storyboard_enabled(mock_session_data):
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
+        mock_cl_message_cls.return_value.send = AsyncMock(return_value=None)
 
         await command_storyboard()
 
@@ -187,7 +187,7 @@ async def test_command_storyboard_disabled(mock_session_data):
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
+        mock_cl_message_cls.return_value.send = AsyncMock(return_value=None)
 
         await command_storyboard()
 
@@ -214,7 +214,7 @@ async def test_command_storyboard_no_gm_message(mock_session_data):
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
+        mock_cl_message_cls.return_value.send = AsyncMock(return_value=None)
 
         await command_storyboard()
 
@@ -237,7 +237,7 @@ async def test_command_missing_state():
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
+        mock_cl_message_cls.return_value.send = AsyncMock(return_value=None)
 
         # Test one command, the logic is the same for all
         await command_roll(query)

@@ -17,29 +17,38 @@ import asyncio
 import os
 from pathlib import Path  # Add missing import
 
+from chainlit.context import context_var, ChainlitContext
+
 # Mock Chainlit context and user session globally for this module
 @pytest.fixture(autouse=True)
-def mock_cl_environment():
+def mock_cl_environment(monkeypatch):
     mock_session = MagicMock()
     mock_session.thread_id = "evt-test-thread"
-    mock_session.user = {"identifier": "test_user"} # Simulate a logged-in user
+    mock_session.user = {"identifier": "test_user"}
 
-    mock_context = MagicMock()
-    mock_context.session = mock_session
+    mock_context_obj = MagicMock(spec=ChainlitContext)
+    mock_context_obj.session = mock_session
+    mock_context_obj.emitter = AsyncMock()
 
-    # Mock user_session storage
+    token = context_var.set(mock_context_obj)
+
     user_session_store = {}
 
     def mock_set(key, value):
         user_session_store[key] = value
 
     def mock_get(key, default=None):
+        if key == 'context':
+            return mock_context_obj
         return user_session_store.get(key, default)
 
-    with patch("chainlit.context", mock_context), \
+    with patch("chainlit.context", mock_context_obj), \
          patch("src.event_handlers.cl_user_session.set", mock_set), \
          patch("src.event_handlers.cl_user_session.get", side_effect=mock_get):
-        yield user_session_store # Provide the store for inspection if needed
+        try:
+            yield user_session_store
+        finally:
+            context_var.reset(token)
 
 @pytest.mark.asyncio
 async def test_on_chat_start(mock_cl_environment):
@@ -55,9 +64,11 @@ async def test_on_chat_start(mock_cl_environment):
         mock_vector_store_cls.return_value = mock_vector_store_instance
 
         mock_chat_settings_instance = AsyncMock()
+        mock_chat_settings_instance.send = AsyncMock(return_value=None)
         mock_chat_settings.return_value = mock_chat_settings_instance
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock(return_value=None)
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await on_chat_start()
@@ -187,8 +198,8 @@ async def test_on_chat_resume(mock_cl_environment):
         assert state.messages[1].name == "Game Master"
 
         # Verify vector store puts during reconstruction
-        mock_vector_store_instance.put.assert_any_await(content="Hello there")
-        mock_vector_store_instance.put.assert_any_await(content="How can I help?")
+        mock_vector_store_instance.put.assert_any_await(content="Hello there", message_id="step1", metadata={"type": "human", "author": "Player"})
+        mock_vector_store_instance.put.assert_any_await(content="How can I help?", message_id="step2", metadata={"type": "ai", "author": "Game Master"})
 
         # Verify knowledge loading called
         mock_load_knowledge.assert_awaited_once()
@@ -320,6 +331,7 @@ async def test_on_message_workflow_error(mock_cl_environment):
          patch("src.event_handlers.cl.Message", new_callable=AsyncMock) as mock_cl_message_cls:
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock(return_value=None)
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await on_message(incoming_message)
