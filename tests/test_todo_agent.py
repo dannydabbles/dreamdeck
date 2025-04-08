@@ -8,11 +8,9 @@ from langchain_core.messages import HumanMessage
 
 @pytest.mark.asyncio
 async def test_manage_todo_creates_file(tmp_path):
-    # Patch config paths on the module, not the config object
-    import src.agents.todo_agent as todo_mod
-
-    with patch.object(todo_mod.config, "TODO_DIR_PATH", str(tmp_path)), \
-         patch.object(todo_mod.config, "TODO_FILE_NAME", "todo.md"), \
+    # Patch module-level constants, not the config object
+    with patch("src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)), \
+         patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), \
          patch("src.agents.todo_agent.CLMessage", new_callable=AsyncMock) as mock_cl_msg_cls:
 
         mock_cl_msg_instance = AsyncMock()

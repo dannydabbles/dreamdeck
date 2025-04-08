@@ -302,8 +302,11 @@ async def test_command_save(mock_session_data):
     state.messages.append(HumanMessage(content="Hi", name="Player"))
     state.messages.append(AIMessage(content="Hello", name="Game Master"))
 
+    # Patch chainlit.element.context BEFORE importing command_save
+    from chainlit import element as cl_element
     dummy_context = MagicMock()
     dummy_context.session.thread_id = "cmd-test-thread"
+    cl_element.context = dummy_context
 
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("src.commands.cl.context", dummy_context), \
