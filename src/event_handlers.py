@@ -269,6 +269,20 @@ async def on_chat_resume(thread: ThreadDict):
     # Reconstruct messages from thread history
     for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
         step_id = step.get("id")
+        parent_id = step.get("parentId")
+        meta = {"message_id": step_id}
+        if parent_id:
+            meta["parent_id"] = parent_id
+
+        # Check if message already exists in vector store to avoid duplicates
+        existing = False
+        try:
+            res = vector_memory.collection.get(ids=[step_id])
+            if res and res.get("ids") and step_id in res["ids"]:
+                existing = True
+        except Exception:
+            pass
+
         if step["type"] == "user_message":
             delete_action = Action(
                 name="delete_message",
@@ -284,10 +298,10 @@ async def on_chat_resume(thread: ThreadDict):
                 actions=[delete_action],
             )
             await cl_msg.send()
-            messages.append(HumanMessage(content=step["output"], name="Player", metadata={"message_id": step_id}))
-            if step_id:
-                await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "human", "author": "Player"})
-            else:
+            messages.append(HumanMessage(content=step["output"], name="Player", metadata=meta))
+            if step_id and not existing:
+                await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "human", "author": "Player", "parent_id": parent_id})
+            elif not step_id:
                 cl_logger.warning(f"Missing ID for user step in on_chat_resume: {step.get('output', '')[:50]}...")
         elif step["type"] == "assistant_message":
             delete_action = Action(
@@ -304,10 +318,10 @@ async def on_chat_resume(thread: ThreadDict):
                 actions=[delete_action],
             )
             await cl_msg.send()
-            messages.append(AIMessage(content=step["output"], name=step["name"], metadata={"message_id": step_id}))
-            if step_id:
-                await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "ai", "author": step.get("name", "Unknown")})
-            else:
+            messages.append(AIMessage(content=step["output"], name=step["name"], metadata=meta))
+            if step_id and not existing:
+                await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "ai", "author": step.get("name", "Unknown"), "parent_id": parent_id})
+            elif not step_id:
                 cl_logger.warning(f"Missing ID for assistant step in on_chat_resume: {step.get('output', '')[:50]}...")
 
     # Create state
@@ -439,9 +453,21 @@ async def load_knowledge_documents():
                 loaded_docs = await loop.run_in_executor(
                     None, _load_document, file_path
                 )
+                # Tag knowledge docs with metadata
+                for doc in loaded_docs:
+                    doc.metadata = doc.metadata or {}
+                    doc.metadata["type"] = "knowledge"
+                    doc.metadata["source"] = file_path
+
                 split_docs = await loop.run_in_executor(
                     None, text_splitter.split_documents, loaded_docs
                 )
+                # Also tag split docs
+                for doc in split_docs:
+                    doc.metadata = doc.metadata or {}
+                    doc.metadata["type"] = "knowledge"
+                    doc.metadata["source"] = file_path
+
                 documents.extend(split_docs)
 
                 # Periodically flush to vector store to prevent memory bloat
@@ -486,6 +512,7 @@ async def handle_delete_message(action: cl.Action):
         if (getattr(msg, "metadata", {}) or {}).get("message_id") not in ids_to_delete
     ]
 
+    # Persist updated state
     cl.user_session.set("state", state)
 
     # Delete from vector store
