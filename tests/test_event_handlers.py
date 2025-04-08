@@ -65,11 +65,9 @@ async def test_on_chat_start(mock_cl_environment):
 
         mock_chat_settings_instance = AsyncMock()
         mock_chat_settings.return_value = mock_chat_settings_instance
-        mock_chat_settings_instance.send = AsyncMock()
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
 
         await on_chat_start()
 
@@ -332,7 +330,6 @@ async def test_on_message_workflow_error(mock_cl_environment):
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
-        mock_cl_message_instance.send = AsyncMock()
 
         await on_message(incoming_message)
 
