@@ -2,6 +2,7 @@ import pytest
 import os
 import shutil
 from unittest.mock import patch, AsyncMock
+from unittest.mock import MagicMock
 from src.agents.todo_agent import _manage_todo
 from src.models import ChatState
 from langchain_core.messages import HumanMessage
