@@ -161,6 +161,7 @@ async def test_command_storyboard_enabled(mock_session_data):
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         await command_storyboard()
 
@@ -182,6 +183,7 @@ async def test_command_storyboard_disabled(mock_session_data):
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         await command_storyboard()
 
@@ -208,6 +210,7 @@ async def test_command_storyboard_no_gm_message(mock_session_data):
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         await command_storyboard()
 
@@ -230,6 +233,7 @@ async def test_command_missing_state():
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         # Test one command, the logic is the same for all
         await command_roll(query)
