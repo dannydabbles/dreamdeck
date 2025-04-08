@@ -37,11 +37,12 @@ async def test_command_roll(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-roll-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         await command_roll(query)
 
         mock_cl_message_cls.assert_called_with(content=f"/roll {query}", author="Player")
-        mock_cl_message_instance.send.assert_awaited_once()
+        mock_cl_message_instance.send.assert_awaited_once_with()
         mock_dice_agent.assert_awaited_once_with(state)
 
         # Check state update
@@ -72,11 +73,12 @@ async def test_command_search(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-search-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         await command_search(query)
 
         mock_cl_message_cls.assert_called_with(content=f"/search {query}", author="Player")
-        mock_cl_message_instance.send.assert_awaited_once()
+        mock_cl_message_instance.send.assert_awaited_once_with()
         mock_search_agent.assert_awaited_once_with(state)
 
         assert len(state.messages) == 2
@@ -102,11 +104,12 @@ async def test_command_todo(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-todo-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         await command_todo(query)
 
         mock_cl_message_cls.assert_called_with(content=f"/todo {query}", author="Player")
-        mock_cl_message_instance.send.assert_awaited_once()
+        mock_cl_message_instance.send.assert_awaited_once_with()
         mock_todo_agent.assert_awaited_once_with(state)
 
         assert len(state.messages) == 2
@@ -131,11 +134,12 @@ async def test_command_write(mock_session_data):
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.id = "user-write-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         await command_write(query)
 
         mock_cl_message_cls.assert_called_with(content=f"/write {query}", author="Player")
-        mock_cl_message_instance.send.assert_awaited_once()
+        mock_cl_message_instance.send.assert_awaited_once_with()
         mock_writer_agent.assert_awaited_once_with(state)
 
         assert len(state.messages) == 2
@@ -161,12 +165,13 @@ async def test_command_storyboard_enabled(mock_session_data):
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         await command_storyboard()
 
         # Check that the "Generating..." message was sent
         mock_cl_message_cls.assert_called_with(content="Generating storyboard for the last scene...")
-        mock_cl_message_instance.send.assert_awaited_once()
+        mock_cl_message_instance.send.assert_awaited_once_with()
 
         # Check that the agent was called with the correct state and message ID
         mock_storyboard_agent.assert_awaited_once_with(state=state, gm_message_id="gm-msg-for-storyboard")
@@ -182,12 +187,13 @@ async def test_command_storyboard_disabled(mock_session_data):
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         await command_storyboard()
 
         # Check that the "disabled" message was sent
         mock_cl_message_cls.assert_called_with(content="Image generation is disabled.")
-        mock_cl_message_instance.send.assert_awaited_once()
+        mock_cl_message_instance.send.assert_awaited_once_with()
 
         # Check that the agent was NOT called
         mock_storyboard_agent.assert_not_awaited()
@@ -208,12 +214,13 @@ async def test_command_storyboard_no_gm_message(mock_session_data):
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         await command_storyboard()
 
         # Check that the "Could not find" message was sent
         mock_cl_message_cls.assert_called_with(content="Could not find a previous Game Master message with a valid ID to generate a storyboard for.")
-        mock_cl_message_instance.send.assert_awaited_once()
+        mock_cl_message_instance.send.assert_awaited_once_with()
 
         # Check that the agent was NOT called
         mock_storyboard_agent.assert_not_awaited()
@@ -230,10 +237,11 @@ async def test_command_missing_state():
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
+        mock_cl_message_instance.send = AsyncMock()
 
         # Test one command, the logic is the same for all
         await command_roll(query)
 
         # Check that the "Error: Session state not found." message was sent
         mock_cl_message_cls.assert_called_with(content="Error: Session state not found.")
-        mock_cl_message_instance.send.assert_awaited_once()
+        mock_cl_message_instance.send.assert_awaited_once_with()
