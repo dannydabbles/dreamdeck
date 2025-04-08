@@ -1,4 +1,5 @@
 import os
+import sys
 import chainlit as cl
 import logging
 from langchain_core.messages import HumanMessage, AIMessage
@@ -15,10 +16,14 @@ from src.config import IMAGE_GENERATION_ENABLED
 
 cl_logger = logging.getLogger("chainlit")
 
-# During pytest collection, Chainlit is not running, so @cl.command registration causes KeyError.
-# This replaces cl.command with a dummy decorator during tests to avoid errors.
-if "PYTEST_CURRENT_TEST" in os.environ or "PYTEST_RUNNING" in os.environ:
-    cl_logger.info("Skipping Chainlit command registration during test run.")
+# Patch cl.command with a dummy decorator during *any* pytest phase (collection or run)
+if (
+    "PYTEST_CURRENT_TEST" in os.environ
+    or "PYTEST_RUNNING" in os.environ
+    or "pytest" in sys.modules
+    or any("pytest" in arg for arg in sys.argv)
+):
+    cl_logger.info("Patching Chainlit command decorator during pytest collection/run.")
 
     def _noop_decorator(*args, **kwargs):
         """Dummy decorator to replace @cl.command during tests."""
