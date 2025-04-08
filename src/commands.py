@@ -23,7 +23,6 @@ from src.config import IMAGE_GENERATION_ENABLED, START_MESSAGE
 cl_logger = logging.getLogger("chainlit")
 
 
-@cl.command(name="roll", description="Roll dice (e.g., /roll 2d6 or /roll check perception)")
 async def command_roll(query: str):
     """Handles the /roll command.
 
@@ -72,7 +71,6 @@ async def command_roll(query: str):
     cl_logger.info(f"/roll command processed.")
 
 
-@cl.command(name="search", description="Perform a web search (e.g., /search history of dragons)")
 async def command_search(query: str):
     """Handles the /search command.
 
@@ -121,7 +119,6 @@ async def command_search(query: str):
     cl_logger.info(f"/search command processed.")
 
 
-@cl.command(name="todo", description="Add a TODO item (e.g., /todo Remember to buy milk)")
 async def command_todo(query: str):
     """Handles the /todo command.
 
@@ -173,7 +170,6 @@ async def command_todo(query: str):
     cl_logger.info(f"/todo command processed.")
 
 
-@cl.command(name="write", description="Directly prompt the writer agent (e.g., /write The wizard casts a spell)")
 async def command_write(query: str):
     """Handles the /write command.
 
@@ -214,7 +210,6 @@ async def command_write(query: str):
     cl_logger.info(f"/write command processed.")
 
 
-@cl.command(name="storyboard", description="Generate storyboard for the last scene")
 async def command_storyboard(query: str = ""):
     """Handles the /storyboard command.
 
@@ -246,7 +241,6 @@ async def command_storyboard(query: str = ""):
     else:
         await cl.Message(content="Could not find a previous Game Master message with a valid ID to generate a storyboard for.").send()
         cl_logger.warning("Could not execute /storyboard: No suitable GM message found in state.")
-@cl.command(name="help", description="List all available slash commands")
 async def command_help():
     help_text = """
 **Available Commands:**
@@ -263,7 +257,6 @@ async def command_help():
     await cl.Message(content=help_text.strip()).send()
 
 
-@cl.command(name="reset", description="Reset the current story and start fresh")
 async def command_reset():
     cl_logger.info("Resetting chat state and vector store")
     # Clear state
@@ -287,7 +280,6 @@ async def command_reset():
     cl.user_session.set("state", state)
 
 
-@cl.command(name="save", description="Export the current story as a markdown file")
 async def command_save():
     state: ChatState = cl.user_session.get("state")
     if not state:
