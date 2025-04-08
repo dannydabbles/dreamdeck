@@ -4,6 +4,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from src.workflows import _chat_workflow
 from src.agents.decision_agent import decide_action
 from langgraph.func import task  # Ensure proper imports
+from src.models import ChatState  # <-- Add this import
 
 @pytest.fixture
 def mock_chat_state():
