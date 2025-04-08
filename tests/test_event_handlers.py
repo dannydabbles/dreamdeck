@@ -17,6 +17,10 @@ import asyncio
 import os
 from pathlib import Path  # Add missing import
 
+async def mock_send(*args, **kwargs):
+    """Mock async send method that returns None."""
+    return None
+
 from chainlit.context import context_var, ChainlitContext
 
 # Mock Chainlit context and user session globally for this module

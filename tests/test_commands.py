@@ -11,6 +11,10 @@ from src.commands import (
 )
 import chainlit as cl # Keep this import
 
+async def mock_send(*args, **kwargs):
+    """Mock async send method that returns None."""
+    return None
+
 # Fixture for mock state and vector store
 @pytest.fixture
 def mock_session_data():
