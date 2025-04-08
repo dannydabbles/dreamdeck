@@ -236,6 +236,10 @@ STORYBOARD_GENERATION_PROMPT = config.loaded_prompts.get(
     "storyboard_generation_prompt", "Generate a storyboard."
 )
 
+ORCHESTRATOR_PROMPT = config.loaded_prompts.get(
+    "orchestrator_prompt", "You are an AI orchestrator."
+)
+
 SERPAPI_KEY = os.getenv("SERPAPI_KEY", config.search.get("serpapi_key", ""))
 
 logging.basicConfig(

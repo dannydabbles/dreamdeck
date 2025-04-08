@@ -17,6 +17,7 @@ prompts:
   ai_writer_prompt: "ai_writer_prompt.j2"
   storyboard_generation_prompt: "storyboard_generation_prompt.j2"
   decision_prompt: "decision_prompt.j2"
+  orchestrator_prompt: "orchestrator_prompt.j2"
 
 image_generation_payload:
   url: "http://192.168.1.4:7860"

@@ -16,6 +16,7 @@ from src.config import (
     DECISION_AGENT_VERBOSE,
     LLM_TIMEOUT,
     DECISION_AGENT_BASE_URL,
+    ORCHESTRATOR_PROMPT,
 )
 import chainlit as cl
 
@@ -38,37 +39,8 @@ async def _decide_actions(state) -> list[str]:
         return ["continue_story"]
 
     try:
-        # Compose prompt with examples
-        prompt_template = """
-You are an AI orchestrator that decides which tools to invoke based on the user's latest input and chat history.
-
-Output a JSON object with an ordered list of actions to perform, e.g.:
-
-{"actions": ["search", "roll", "write"]}
-
-Possible actions include:
-- "search"
-- "roll"
-- "todo"
-- "character"
-- "lore"
-- "puzzle"
-- "write"
-- "continue_story" (default if no tools needed)
-
-Always output a JSON object with an "actions" list, ordered by execution priority.
-
-If no tools are needed, output:
-
-{"actions": ["continue_story"]}
-
-User input:
-\"\"\"{user_input}\"\"\"
-
-Chat history:
-\"\"\"{chat_history}\"\"\"
-"""
-        formatted_prompt = prompt_template.format(
+        template = Template(ORCHESTRATOR_PROMPT)
+        formatted_prompt = template.render(
             user_input=user_input.content,
             chat_history=state.get_recent_history_str(),
         )
