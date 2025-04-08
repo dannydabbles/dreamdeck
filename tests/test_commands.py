@@ -29,7 +29,8 @@ async def test_command_roll(mock_session_data):
     query = "2d6"
     ai_response_msg = AIMessage(content="Rolled 2d6: 7", name="dice_roll", metadata={"message_id": "ai-roll-msg-id"})
 
-    with patch("chainlit.user_session.get", side_effect=user_session_get), \
+    with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
+         patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
          patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
          patch("src.commands.dice_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_dice_agent:
 
@@ -55,13 +56,16 @@ async def test_command_roll(mock_session_data):
         vector_store.put.assert_any_await(content=f"/roll {query}", message_id="user-roll-msg-id", metadata={'type': 'human', 'author': 'Player'})
         vector_store.put.assert_any_await(content="Rolled 2d6: 7", message_id="ai-roll-msg-id", metadata={'type': 'ai', 'author': 'dice_roll'})
 
+        mock_user_session_set.assert_called_with("state", state)
+
 @pytest.mark.asyncio
 async def test_command_search(mock_session_data):
     state, vector_store, user_session_get = mock_session_data
     query = "history of dragons"
     ai_response_msg = AIMessage(content="Search results...", name="web_search", metadata={"message_id": "ai-search-msg-id"})
 
-    with patch("chainlit.user_session.get", side_effect=user_session_get), \
+    with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
+         patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
          patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
          patch("src.commands.web_search_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_search_agent:
 
@@ -81,6 +85,8 @@ async def test_command_search(mock_session_data):
         vector_store.put.assert_any_await(content=f"/search {query}", message_id="user-search-msg-id", metadata={'type': 'human', 'author': 'Player'})
         vector_store.put.assert_any_await(content="Search results...", message_id="ai-search-msg-id", metadata={'type': 'ai', 'author': 'web_search'})
 
+        mock_user_session_set.assert_called_with("state", state)
+
 
 @pytest.mark.asyncio
 async def test_command_todo(mock_session_data):
@@ -88,7 +94,8 @@ async def test_command_todo(mock_session_data):
     query = "buy milk"
     ai_response_msg = AIMessage(content="Added: buy milk", name="todo", metadata={"message_id": "ai-todo-msg-id"})
 
-    with patch("chainlit.user_session.get", side_effect=user_session_get), \
+    with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
+         patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
          patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
          patch("src.commands.todo_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_todo_agent:
 
@@ -108,13 +115,16 @@ async def test_command_todo(mock_session_data):
         vector_store.put.assert_any_await(content=f"/todo {query}", message_id="user-todo-msg-id", metadata={'type': 'human', 'author': 'Player'})
         vector_store.put.assert_any_await(content="Added: buy milk", message_id="ai-todo-msg-id", metadata={'type': 'ai', 'author': 'todo'})
 
+        mock_user_session_set.assert_called_with("state", state)
+
 @pytest.mark.asyncio
 async def test_command_write(mock_session_data):
     state, vector_store, user_session_get = mock_session_data
     query = "the wizard speaks"
     ai_response_msg = AIMessage(content="The wizard says hello.", name="Game Master", metadata={"message_id": "ai-write-msg-id"})
 
-    with patch("chainlit.user_session.get", side_effect=user_session_get), \
+    with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
+         patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
          patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
          patch("src.commands.writer_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_writer_agent:
 
@@ -134,6 +144,8 @@ async def test_command_write(mock_session_data):
         vector_store.put.assert_any_await(content=f"/write {query}", message_id="user-write-msg-id", metadata={'type': 'human', 'author': 'Player'})
         vector_store.put.assert_any_await(content="The wizard says hello.", message_id="ai-write-msg-id", metadata={'type': 'ai', 'author': 'Game Master'})
 
+        mock_user_session_set.assert_called_with("state", state)
+
 
 @pytest.mark.asyncio
 async def test_command_storyboard_enabled(mock_session_data):
@@ -142,7 +154,7 @@ async def test_command_storyboard_enabled(mock_session_data):
     gm_msg = AIMessage(content="Last scene description", name="Game Master", metadata={"message_id": "gm-msg-for-storyboard"})
     state.messages.append(gm_msg)
 
-    with patch("chainlit.user_session.get", side_effect=user_session_get), \
+    with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
          patch("src.commands.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_agent, \
          patch("src.commands.IMAGE_GENERATION_ENABLED", True): # Ensure enabled
@@ -163,7 +175,7 @@ async def test_command_storyboard_enabled(mock_session_data):
 async def test_command_storyboard_disabled(mock_session_data):
     state, _, user_session_get = mock_session_data
 
-    with patch("chainlit.user_session.get", side_effect=user_session_get), \
+    with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
          patch("src.commands.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_agent, \
          patch("src.commands.IMAGE_GENERATION_ENABLED", False): # Ensure disabled
@@ -189,7 +201,7 @@ async def test_command_storyboard_no_gm_message(mock_session_data):
     state.messages.append(AIMessage(content="GM message, no metadata", name="Game Master", metadata={}))
 
 
-    with patch("chainlit.user_session.get", side_effect=user_session_get), \
+    with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
          patch("src.commands.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_agent, \
          patch("src.commands.IMAGE_GENERATION_ENABLED", True): # Ensure enabled
@@ -213,7 +225,7 @@ async def test_command_missing_state():
     user_session_get = MagicMock(return_value=None)
     query = "anything"
 
-    with patch("chainlit.user_session.get", side_effect=user_session_get), \
+    with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls:
 
         mock_cl_message_instance = AsyncMock()
