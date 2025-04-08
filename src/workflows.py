@@ -109,7 +109,7 @@ async def _chat_workflow(
             decision_response = await decision_agent(state)
             action = decision_response[0].name
             cl_logger.info(f"Action: {action}")
-            new_message = AIMessage(content=decision_response[0].name, name="decision")
+            new_message = AIMessage(content=decision_response[0].name, name="decision", metadata={})
             state.messages.append(new_message)
 
         vector_memory = cl.user_session.get("vector_memory")  # Retrieve vector store
@@ -150,7 +150,8 @@ async def _chat_workflow(
         state.messages.append(
             AIMessage(
                 content="The adventure continues...",  # Match test expectation
-                name="system"
+                name="system",
+                metadata={}
             )
         )
 
