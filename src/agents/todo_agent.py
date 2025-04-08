@@ -32,26 +32,16 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
         dir_path = os.path.join(TODO_DIR_PATH, current_date)
         file_path = os.path.join(dir_path, TODO_FILE_NAME)
-        todo_items = []
+
+        existing_content = ""
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-            # Parse lines, ignore timestamps, get task text
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                # Remove timestamp prefix if present
-                if "]" in line:
-                    _, task = line.split("]", 1)
-                    todo_items.append(task.strip())
-                else:
-                    todo_items.append(line)
+                existing_content = f.read()
 
         # Prepare prompt
         template = Template(config.loaded_prompts.get("todo_prompt", ""))
         prompt = template.render(
-            current_todo=todo_items,
+            existing_todo_file=existing_content,
             user_input=user_input,
             recent_chat_history=state.get_recent_history_str(),
             tool_results=state.get_tool_results_str(),
@@ -73,36 +63,22 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         )
 
         response = await llm.ainvoke([("system", prompt)])
-        content = response.content.strip()
+        updated_markdown = response.content.strip()
 
-        # Parse JSON list
-        import json
-        try:
-            updated_todo = json.loads(content)
-            if not isinstance(updated_todo, list):
-                raise ValueError("LLM did not return a list")
-        except Exception as e:
-            cl_logger.error(f"Failed to parse todo list JSON: {e}")
-            return [AIMessage(content="Error updating TODO list.", name="error")]
-
-        # Save updated todo list back to file
+        # Save updated markdown back to file
         os.makedirs(dir_path, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:
-            for item in updated_todo:
-                timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M]")
-                f.write(f"{timestamp} {item}\n")
+            f.write(updated_markdown)
 
-        # Compose message content
-        todo_text = "\n".join(f"- {item}" for item in updated_todo)
         cl_msg = CLMessage(
-            content=f"📝 Updated TODO list:\n{todo_text}",
+            content=f"📝 Updated TODO list:\n{updated_markdown}",
             parent_id=None,
         )
         await cl_msg.send()
 
         return [
             AIMessage(
-                content=f"Updated TODO list:\n{todo_text}",
+                content=f"Updated TODO list:\n{updated_markdown}",
                 name="todo",
                 metadata={"message_id": cl_msg.id},
             )
