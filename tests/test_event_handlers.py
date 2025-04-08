@@ -189,11 +189,15 @@ async def test_on_chat_resume(mock_cl_environment):
 
     with patch("src.event_handlers.VectorStore", new_callable=MagicMock) as mock_vector_store_cls, \
          patch("src.event_handlers.load_knowledge_documents", new_callable=AsyncMock) as mock_load_knowledge, \
-         patch("src.event_handlers.cl.Message", new_callable=AsyncMock) as mock_cl_message_cls: # Make cl.Message an AsyncMock
+         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:  # Patch as MagicMock (class mock)
 
         mock_vector_store_instance = MagicMock()
-        mock_vector_store_instance.put = AsyncMock() # Mock the put method
+        mock_vector_store_instance.put = AsyncMock()  # Mock the put method
         mock_vector_store_cls.return_value = mock_vector_store_instance
+
+        # Make cl.Message() return an instance whose .send() is an AsyncMock
+        mock_cl_message_instance = AsyncMock()
+        mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await on_chat_resume(thread_dict)
 
