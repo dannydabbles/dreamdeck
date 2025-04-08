@@ -15,27 +15,29 @@ from src.config import IMAGE_GENERATION_ENABLED
 
 cl_logger = logging.getLogger("chainlit")
 
-async def _handle_agent_response(state: ChatState, vector_store: VectorStore, response_messages: list[AIMessage]):
-    """Helper to handle adding agent response to state and vector store."""
-    if response_messages:
-        ai_msg = response_messages[0]
-        # Ensure message_id is in metadata before adding to state/store
-        if ai_msg and hasattr(ai_msg, 'metadata') and ai_msg.metadata and "message_id" in ai_msg.metadata:
-            state.messages.append(ai_msg)
-            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"])
-            cl_logger.debug(f"Added agent response to state and vector store: {ai_msg.name} (ID: {ai_msg.metadata['message_id']})")
-        elif ai_msg:
-            state.messages.append(ai_msg)
-            await vector_store.put(content=ai_msg.content)
-            cl_logger.warning(f"Agent response for {ai_msg.name} added to state, but missing message_id in metadata. Added to vector store without ID.")
+# Disable command registration during pytest or any test collection phase
+if "PYTEST_CURRENT_TEST" in os.environ or "PYTEST_RUNNING" in os.environ:
+    cl_logger.info("Skipping Chainlit command registration during test run.")
+else:
+    async def _handle_agent_response(state: ChatState, vector_store: VectorStore, response_messages: list[AIMessage]):
+        """Helper to handle adding agent response to state and vector store."""
+        if response_messages:
+            ai_msg = response_messages[0]
+            # Ensure message_id is in metadata before adding to state/store
+            if ai_msg and hasattr(ai_msg, 'metadata') and ai_msg.metadata and "message_id" in ai_msg.metadata:
+                state.messages.append(ai_msg)
+                await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"])
+                cl_logger.debug(f"Added agent response to state and vector store: {ai_msg.name} (ID: {ai_msg.metadata['message_id']})")
+            elif ai_msg:
+                state.messages.append(ai_msg)
+                await vector_store.put(content=ai_msg.content)
+                cl_logger.warning(f"Agent response for {ai_msg.name} added to state, but missing message_id in metadata. Added to vector store without ID.")
+            else:
+                cl_logger.warning("Agent response was empty or None.")
         else:
-            cl_logger.warning("Agent response was empty or None.")
-    else:
-        cl_logger.warning("Agent did not return any response messages.")
+            cl_logger.warning("Agent did not return any response messages.")
 
 
-# Only register commands if NOT running under pytest
-if "PYTEST_CURRENT_TEST" not in os.environ:
     @cl.command(name="roll", description="Roll dice (e.g., /roll 2d6 or /roll check perception)")
     async def command_roll(query: str):
         """Handles the /roll command."""
