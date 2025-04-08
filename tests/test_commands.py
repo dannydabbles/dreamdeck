@@ -35,6 +35,7 @@ async def test_command_roll(mock_session_data):
          patch("src.commands.dice_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_dice_agent:
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_cl_message_instance.id = "user-roll-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
@@ -70,6 +71,7 @@ async def test_command_search(mock_session_data):
          patch("src.commands.web_search_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_search_agent:
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_cl_message_instance.id = "user-search-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
@@ -100,6 +102,7 @@ async def test_command_todo(mock_session_data):
          patch("src.commands.todo_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_todo_agent:
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_cl_message_instance.id = "user-todo-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
@@ -129,6 +132,7 @@ async def test_command_write(mock_session_data):
          patch("src.commands.writer_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_writer_agent:
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_cl_message_instance.id = "user-write-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
