@@ -23,7 +23,7 @@ cl_logger = logging.getLogger("chainlit")
 
 
 async def _web_search(state: ChatState) -> list[BaseMessage]:
-    """Execute web search using natural language processing"""
+    """Generate a search query, call SerpAPI, and summarize results."""
     if not WEB_SEARCH_ENABLED:
         return [AIMessage(content="Web search is disabled.", name="error")]
 

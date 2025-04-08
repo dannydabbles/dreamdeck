@@ -25,19 +25,7 @@ cl_logger = logging.getLogger("chainlit")
 
 
 async def _generate_story(state: ChatState) -> list[BaseMessage]:
-    """Generate a story segment based on the input content.
-    content = state.messages[-1].content if state.messages else ""
-    store = state.vector_memory
-    previous = state
-
-    Args:
-        content (str): The input content for the story.
-        store (BaseStore, optional): The store for chat state. Defaults to None.
-        previous (ChatState, optional): Previous chat state. Defaults to None.
-
-    Returns:
-        str: The generated story segment.
-    """
+    """Generate the Game Master's narrative response based on recent chat, memories, and tool results."""
     try:
         # Format AI_WRITER_PROMPT as jinja2
         template = Template(AI_WRITER_PROMPT)

@@ -27,7 +27,7 @@ cl_logger = logging.getLogger("chainlit")
 
 
 async def _dice_roll(state: ChatState) -> List[BaseMessage]:
-    """Process dice rolling requests from users."""
+    """Parse dice expressions, perform random rolls, and return results."""
     input_msg = state.get_last_human_message()
     recent_chat = state.get_recent_history_str()
 

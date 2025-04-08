@@ -33,11 +33,7 @@ cl_logger = logging.getLogger("chainlit")
 async def _decide_action(state: ChatState) -> list[BaseMessage]:
     """Determine the next action based on user input.
 
-    Args:
-        user_message (HumanMessage): The user's input.
-
-    Returns:
-        dict: The next action to take.
+    Returns an AIMessage with `.name` set to `'dice_roll'`, `'web_search'`, or `'continue_story'`.
     """
     messages = state.messages
 

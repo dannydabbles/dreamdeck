@@ -1,3 +1,7 @@
+"""
+Initializes and manages the Chainlit database pool.
+"""
+
 import os
 import logging
 from typing import Optional

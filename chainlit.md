@@ -2,13 +2,28 @@
 
 Welcome to Dreamdeck! This application is your gateway to creating and managing immersive, collaborative stories with the help of AI. Whether you're a game master (GM) or a player, Dreamdeck will help you craft dynamic and engaging narratives, providing a Holodeck-like experience.
 
+## Slash Commands
+
+| Command        | Description                                                      | Example Usage                                  |
+|----------------|------------------------------------------------------------------|------------------------------------------------|
+| `/roll`        | Roll dice via natural language or dice notation                  | `/roll 2d6`, `/roll check perception`          |
+| `/search`      | Perform a web search                                             | `/search history of dragons`                   |
+| `/todo`        | Add a TODO item                                                  | `/todo Remember to buy milk`                   |
+| `/write`       | Directly prompt the writer agent                                 | `/write The wizard casts a spell`              |
+| `/storyboard`  | Generate storyboard images for the last Game Master message      | `/storyboard`                                 |
+
+- **Slash commands bypass the decision agent** and directly invoke the relevant tool or agent.
+- `/storyboard` generates images for the **last Game Master message**.
+- `/todo` saves reminders and notes in local markdown files under `./helper/YYYY-MM-DD/todo.md`.
+
 ## New Features
 
 - **Smart Categorization of User Input:**
-  - The app now categorizes user input into different buckets to handle specific actions:
+  - The app automatically classifies normal chat input into:
     - **Roll:** If the user wants to roll dice, the app will handle the roll before continuing the story.
     - **Search:** If the user wants to look up information, the app will perform a web search using SerpAPI.
     - **Continue Story:** If the user is continuing the story, the app will generate the next part of the narrative.
+  - **Slash commands bypass this classification** and directly invoke the relevant tool.
 
 ## Overview
 
@@ -37,15 +52,24 @@ Dreamdeck is designed to:
 
 - **Visualize Scenes:** After the GM generates a narrative segment, the app will create storyboards to bring the scene to life.
 - **View and Save Images:** The generated images will be displayed in the chat. You can save them for future reference or share them with others.
+- You can also use `/storyboard` to generate images for the **last Game Master message** at any time.
 
 ### Use the Dice Roll Tool
 
-- **Add an Element of Chance:** Use the `/roll` command to roll a dice with a specified number of sides (default is 100).
+- **Add an Element of Chance:** Use the `/roll` command to roll dice with natural language or dice notation.
+- Dice rolls are also detected automatically in normal chat input.
+
+### Manage TODOs
+
+- Use `/todo` to save reminders and notes.
+- TODO items are saved locally in markdown files under `./helper/YYYY-MM-DD/todo.md`.
 
 ### Knowledge Management
 
 - **Location**: The knowledge directory MUST reside at the root of your project (`./knowledge`). 
 - **Container Sync**: When running in Docker, ensure the `knowledge` folder is mounted or copied into the container.
+- Files are **chunked and indexed** on startup or chat resume.
+- The knowledge base is used for **retrieval-augmented generation** to enrich the story.
 
 ### Troubleshooting
 If the system reports the knowledge directory is missing:
@@ -59,10 +83,12 @@ If the system reports the knowledge directory is missing:
 - **Rolling Dice:**
   - **User:** "I want to roll a 20-sided die."
   - **App:** 🎲 You rolled a 15 on a 20-sided die.
+  - **Or:** `/roll 1d20`
 
 - **Web Search:**
   - **User:** "Search for the history of dragons in mythology."
-  - **App:** Dragons have been a part of mythology for centuries, often depicted as powerful and wise creatures. In Norse mythology, dragons like Fafnir and Nidhogg are well-known. In Chinese mythology, dragons are symbols of power and good fortune.
+  - **App:** Summarized search results.
+  - **Or:** `/search history of dragons`
 
 - **Continuing the Story:**
   - **User:** "I approach the old wizard in the tower."

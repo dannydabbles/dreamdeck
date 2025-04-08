@@ -104,6 +104,8 @@ class ConfigSchema(BaseModel):
         - Uses strict validation (extra='forbid')
         - Nested structures require explicit model definitions
         - Environment variables override YAML values
+
+    Slash commands bypass the decision agent and directly invoke the relevant tool.
     """
 
     llm: LlmConfig

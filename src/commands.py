@@ -1,3 +1,9 @@
+"""
+Slash command handlers for Dreamdeck.
+
+These commands bypass the decision agent and directly invoke the relevant tool or agent.
+"""
+
 import os
 import sys
 import chainlit as cl
@@ -19,7 +25,10 @@ cl_logger = logging.getLogger("chainlit")
 
 @cl.command(name="roll", description="Roll dice (e.g., /roll 2d6 or /roll check perception)")
 async def command_roll(query: str):
-    """Handles the /roll command."""
+    """Handles the /roll command.
+
+    Creates a user message, appends it to state, calls the dice agent, and stores the AI response.
+    """
     state: ChatState = cl.user_session.get("state")
     vector_store: VectorStore = cl.user_session.get("vector_memory")
     if not state or not vector_store:
@@ -54,7 +63,10 @@ async def command_roll(query: str):
 
 @cl.command(name="search", description="Perform a web search (e.g., /search history of dragons)")
 async def command_search(query: str):
-    """Handles the /search command."""
+    """Handles the /search command.
+
+    Creates a user message, appends it to state, calls the web search agent, and stores the AI response.
+    """
     state: ChatState = cl.user_session.get("state")
     vector_store: VectorStore = cl.user_session.get("vector_memory")
     if not state or not vector_store:
@@ -89,7 +101,10 @@ async def command_search(query: str):
 
 @cl.command(name="todo", description="Add a TODO item (e.g., /todo Remember to buy milk)")
 async def command_todo(query: str):
-    """Handles the /todo command."""
+    """Handles the /todo command.
+
+    Creates a user message, appends it to state, calls the todo agent, and stores the AI response.
+    """
     state: ChatState = cl.user_session.get("state")
     vector_store: VectorStore = cl.user_session.get("vector_memory")
     if not state or not vector_store:
@@ -124,7 +139,10 @@ async def command_todo(query: str):
 
 @cl.command(name="write", description="Directly prompt the writer agent (e.g., /write The wizard casts a spell)")
 async def command_write(query: str):
-    """Handles the /write command."""
+    """Handles the /write command.
+
+    Creates a user message, appends it to state, calls the writer agent, and stores the AI response.
+    """
     state: ChatState = cl.user_session.get("state")
     vector_store: VectorStore = cl.user_session.get("vector_memory")
     if not state or not vector_store:
@@ -159,7 +177,10 @@ async def command_write(query: str):
 
 @cl.command(name="storyboard", description="Generate storyboard for the last scene")
 async def command_storyboard(query: str = ""):
-    """Handles the /storyboard command."""
+    """Handles the /storyboard command.
+
+    Finds the last Game Master message, then calls the storyboard editor agent to generate images.
+    """
     state: ChatState = cl.user_session.get("state")
     if not state:
         await cl.Message(content="Error: Session state not found.").send()

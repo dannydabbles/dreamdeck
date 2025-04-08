@@ -11,7 +11,9 @@ Dreamdeck is an AI-powered application designed to provide a Holodeck-like exper
 - **Knowledge Base:** Load `.txt`, `.md`, and `.pdf` files from `./knowledge` directory, which are automatically chunked and indexed for retrieval-augmented generation.
 - **Dice Rolling:** Supports natural language dice rolls, e.g., "roll 2d6 for attack" or `/roll 2d6`.
 - **Web Search:** Use `/search` or natural language to perform web searches via SerpAPI.
-- **Slash Commands:** Control the app with `/roll`, `/search`, `/todo`, `/write`, `/storyboard`.
+- **Slash Commands:** `/roll`, `/search`, `/todo`, `/write`, `/storyboard` for direct control.
+- **TODO List:** Save reminders and notes during your adventure.
+- **Storyboarding:** Generate images for the latest Game Master message or on demand.
 - **Local Storage:** All your stories, characters, and elements are stored locally.
 - **Multi-Language Support:** English, Bengali, Gujarati, Hebrew, Hindi, Kannada, Malayalam, Marathi, Dutch, Tamil, Telugu, Chinese (Simplified).
 - **Flexible Tone:** The GM adapts to your preferred tone, from lighthearted to intense.
@@ -31,6 +33,9 @@ Dreamdeck is an AI-powered application designed to provide a Holodeck-like exper
 | `/todo`        | Add a TODO item                                                  | `/todo Remember to buy milk`                   |
 | `/write`       | Directly prompt the writer agent                                 | `/write The wizard casts a spell`              |
 | `/storyboard`  | Generate storyboard images for the last Game Master message      | `/storyboard`                                 |
+
+- **Slash commands bypass the decision agent** and directly invoke the relevant tool or agent.
+- **Normal chat input is classified automatically** as dice roll, search, or story continuation.
 
 ---
 

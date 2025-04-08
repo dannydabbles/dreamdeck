@@ -128,7 +128,8 @@ def auth_callback(username: str, password: str):
 async def on_chat_start():
     """Initialize new chat session with Chainlit integration.
 
-    Sets up the user session, initializes the chat state, and sends initial messages.
+    Sets up the user session, initializes the chat state, initializes agents and vector store,
+    and sends initial messages. Agents and vector store are stored in the Chainlit user session.
     """
 
     try:
@@ -245,8 +246,8 @@ async def on_chat_start():
 async def on_chat_resume(thread: ThreadDict):
     """Reconstruct state from Chainlit thread.
 
-    Args:
-        thread (ThreadDict): The thread dictionary from Chainlit.
+    Initializes agents and vector store, reconstructs chat state from thread history,
+    and stores them in the Chainlit user session.
     """
     # Set the user in the session
     user_dict = thread.get("user")
@@ -325,7 +326,12 @@ async def on_chat_resume(thread: ThreadDict):
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    """Handle incoming messages, excluding commands (which are handled separately)."""
+    """Handle incoming user chat messages.
+
+    Ignores slash commands (handled separately).
+    Adds user message to state and vector store.
+    Calls the chat workflow, which invokes the decision agent and relevant tools.
+    """
     state: ChatState = cl.user_session.get("state")
     vector_memory: VectorStore = cl.user_session.get("vector_memory")
 

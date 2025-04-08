@@ -31,17 +31,7 @@ cl_logger = logging.getLogger("chainlit")
 async def _generate_storyboard(
     state: ChatState, gm_message_id: str
 ) -> list[BaseMessage]:
-    """Generate a storyboard based on the input content.
-    content = state.messages[-1].content if state.messages else ""
-
-    Args:
-        content (str): The input content for the storyboard.
-        store (BaseStore, optional): The store for chat state. Defaults to None.
-        previous (ChatState, optional): Previous chat state. Defaults to None.
-
-    Returns:
-        str: The generated storyboard.
-    """
+    """Generate a storyboard prompt from recent chat, then asynchronously generate images."""
     messages = state.messages
     try:
         # Format STORYBOARD_GENERATION_PROMPT as jinja2

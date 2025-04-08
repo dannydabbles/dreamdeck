@@ -62,24 +62,14 @@ async def _chat_workflow(
     messages: List[BaseMessage],
     previous: ChatState,
 ) -> ChatState:
-    """Core logic for processing user input and generating responses.
+    """
+    Main workflow:
 
-    Args:
-        messages (List[BaseMessage]): Incoming messages from the user.
-        previous (ChatState): Previous state of the conversation.
-
-    Returns:
-        ChatState: Updated conversation state after processing.
-
-    Workflow Steps:
-        1. Update state with new messages
-        2. Determine action via decision_agent
-        3. Execute selected action (dice/web/story)
-        4. Append results to conversation
-        5. Trigger storyboard generation if enabled
-
-    Raises:
-        Exception: Critical errors during processing are logged but don't halt execution
+    - Receives new user messages
+    - Calls decision agent to classify input as 'roll', 'search', or 'continue_story'
+    - Invokes dice agent or web search agent if needed
+    - Always calls writer agent to generate the next story segment
+    - Optionally triggers storyboard image generation after writer agent
     """
 
     cl_logger.info(f"Messages: {messages}")
