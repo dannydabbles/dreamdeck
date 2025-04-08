@@ -70,6 +70,19 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
         )
         await cl_msg.send()
 
+        # Add delete button
+        from chainlit import Action
+        delete_action = Action(
+            name="delete_message",
+            label="Delete Message",
+            value=cl_msg.id,
+            description="Delete this message and its children",
+            color="red",
+            payload={"message_id": cl_msg.id},
+        )
+        cl_msg.actions = [delete_action]
+        await cl_msg.update()
+
         return [
             AIMessage(
                 content=f"Search results for '{search_query}':\n{summary}",

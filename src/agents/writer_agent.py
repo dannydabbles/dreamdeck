@@ -69,6 +69,19 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
             await gm_message.stream_token(chunk.content)
         await gm_message.send()
 
+        # Add delete button
+        from chainlit import Action
+        delete_action = Action(
+            name="delete_message",
+            label="Delete Message",
+            value=gm_message.id,
+            description="Delete this message and its children",
+            color="red",
+            payload={"message_id": gm_message.id},
+        )
+        gm_message.actions = [delete_action]
+        await gm_message.update()
+
         story_segment = AIMessage(
             content=gm_message.content.strip(),
             name="Game Master",

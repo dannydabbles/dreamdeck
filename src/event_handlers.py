@@ -315,7 +315,7 @@ async def on_chat_resume(thread: ThreadDict):
                 author=current_user_identifier,
                 actions=[delete_action],
             )
-            await cl_msg.send()
+            # await cl_msg.send()  # Disabled to avoid duplicate UI messages
             messages.append(HumanMessage(content=step["output"], name="Player", metadata=meta))
             if step_id and not existing:
                 await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "human", "author": "Player", "parent_id": parent_id})
@@ -335,7 +335,7 @@ async def on_chat_resume(thread: ThreadDict):
                 author=current_user_identifier,
                 actions=[delete_action],
             )
-            await cl_msg.send()
+            # await cl_msg.send()  # Disabled to avoid duplicate UI messages
             messages.append(AIMessage(content=step["output"], name=step["name"], metadata=meta))
             if step_id and not existing:
                 await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "ai", "author": step.get("name", "Unknown"), "parent_id": parent_id})
