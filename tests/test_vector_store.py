@@ -40,3 +40,10 @@ def test_vector_store_operations(mock_chainlit_context):  # Use the fixed fixtur
     # Verify retrieval
     query_results = store.get("document content")
     assert any("Test document" in doc.page_content for doc in query_results)
+
+def test_vector_store_put_and_get(mock_chainlit_context):
+    store = VectorStore()
+    import asyncio
+    asyncio.run(store.put("Hello world", "msg1", {"type": "human"}))
+    results = store.get("Hello")
+    assert any("Hello" in doc.page_content for doc in results)

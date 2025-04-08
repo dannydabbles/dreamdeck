@@ -54,3 +54,9 @@ def test_chat_state_get_recent_history():
     state = ChatState(thread_id="t", messages=msgs)
     recent = state.get_recent_history(n=3)
     assert recent == msgs[-3:]
+
+def test_increment_error_count():
+    state = ChatState(thread_id="t")
+    assert state.error_count == 0
+    state.increment_error_count()
+    assert state.error_count == 1

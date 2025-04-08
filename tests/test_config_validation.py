@@ -67,3 +67,9 @@ def test_edge_case_configs():
         "chat": {}
     }
     ConfigSchema.model_validate(minimal_config)
+
+def test_env_override(monkeypatch):
+    monkeypatch.setenv("APP_LLM__TEMPERATURE", "0.9")
+    from src.config import load_config
+    cfg = load_config()
+    assert abs(cfg.llm.temperature - 0.9) < 1e-6

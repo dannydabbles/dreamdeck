@@ -540,3 +540,10 @@ async def test_load_knowledge_documents_no_vector_store(monkeypatch, mock_cl_env
          os.rmdir(mock_dir)
 
 
+@pytest.mark.asyncio
+async def test_on_settings_update_callback():
+    from src.event_handlers import on_settings_update
+    dummy_settings = {"foo": "bar"}
+    # Should not raise
+    await on_settings_update(dummy_settings)
+

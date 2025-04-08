@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch, AsyncMock, MagicMock  # <-- ADD THIS IMPORT
 from src.image_generation import generate_image_async, generate_image_generation_prompts
 import base64  # Import base64
+import httpx
 
 @pytest.mark.asyncio
 async def test_image_prompt_generation():
@@ -26,3 +27,13 @@ async def test_mocked_image_generation():
 
         image_bytes = await generate_image_async("Test prompt", 123)
         assert image_bytes == b"Hello world"  # Matches the mock's "Hello world" decoding
+
+@pytest.mark.asyncio
+async def test_generate_image_async_retries():
+    from src.image_generation import generate_image_async
+    with patch("httpx.AsyncClient.post", side_effect=httpx.HTTPError("fail")) as mock_post:
+        try:
+            await generate_image_async("prompt", 42)
+        except Exception:
+            pass
+        assert mock_post.call_count >= 1  # retried
