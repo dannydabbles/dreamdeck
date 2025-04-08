@@ -501,7 +501,16 @@ async def load_knowledge_documents():
 
 @cl.action_callback("delete_message")
 async def handle_delete_message(action: cl.Action):
-    message_id = action.value
+    message_id = None
+    if hasattr(action, "payload") and isinstance(action.payload, dict):
+        message_id = action.payload.get("message_id")
+    if not message_id:
+        # fallback for older Chainlit or missing payload
+        message_id = getattr(action, "value", None)
+    if not message_id:
+        await cl.Message(content="Error: No message ID found in delete action.").send()
+        return
+
     state: ChatState = cl.user_session.get("state")
     vector_store: VectorStore = cl.user_session.get("vector_memory")
 
