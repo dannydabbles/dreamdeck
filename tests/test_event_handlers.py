@@ -64,9 +64,11 @@ async def test_on_chat_start(mock_cl_environment):
         mock_vector_store_cls.return_value = mock_vector_store_instance
 
         mock_chat_settings_instance = AsyncMock()
+        mock_chat_settings_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_chat_settings.return_value = mock_chat_settings_instance
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await on_chat_start()
@@ -329,6 +331,7 @@ async def test_on_message_workflow_error(mock_cl_environment):
          patch("src.event_handlers.cl.Message", new_callable=AsyncMock) as mock_cl_message_cls:
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await on_message(incoming_message)

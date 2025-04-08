@@ -160,6 +160,7 @@ async def test_command_storyboard_enabled(mock_session_data):
          patch("src.commands.IMAGE_GENERATION_ENABLED", True): # Ensure enabled
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await command_storyboard()
@@ -181,6 +182,7 @@ async def test_command_storyboard_disabled(mock_session_data):
          patch("src.commands.IMAGE_GENERATION_ENABLED", False): # Ensure disabled
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await command_storyboard()
@@ -207,6 +209,7 @@ async def test_command_storyboard_no_gm_message(mock_session_data):
          patch("src.commands.IMAGE_GENERATION_ENABLED", True): # Ensure enabled
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await command_storyboard()
@@ -229,6 +232,7 @@ async def test_command_missing_state():
          patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls:
 
         mock_cl_message_instance = AsyncMock()
+        mock_cl_message_instance.send = AsyncMock()  # Explicitly mock the send method
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         # Test one command, the logic is the same for all
