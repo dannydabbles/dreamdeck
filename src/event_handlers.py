@@ -372,7 +372,7 @@ async def on_message(message: cl.Message):
             cl_logger.warning(f"Processing message from 'Player' author, but couldn't verify against session identifier '{current_user_identifier}'.")
 
         # If the message is a command button click, handle it
-        if message.command:
+        if message.command is not None and message.command != "":
             cl_logger.info(f"Command button selected: {message.command}")
             try:
                 from src import commands as cmd_mod
