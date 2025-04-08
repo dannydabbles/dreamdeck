@@ -277,8 +277,21 @@ async def on_message(message: cl.Message):
     state: ChatState = cl.user_session.get("state")
     vector_memory: VectorStore = cl.user_session.get("vector_memory")
 
-    # Ensure message is from user before processing
-    if message.author == cl.User.get_current().identifier or message.author == "Player":
+    # Retrieve current user identifier from session
+    current_user_identifier = None
+    user_info = cl.user_session.get("user")
+    if user_info:
+        if isinstance(user_info, dict):
+            current_user_identifier = user_info.get("identifier")
+        elif hasattr(user_info, 'identifier'):
+            current_user_identifier = user_info.identifier
+
+    is_current_user = current_user_identifier and message.author == current_user_identifier
+    is_generic_player = message.author == "Player"
+
+    if is_current_user or is_generic_player:
+        if not is_current_user and is_generic_player:
+            cl_logger.warning(f"Processing message from 'Player' author, but couldn't verify against session identifier '{current_user_identifier}'.")
 
         # Add user message to state immediately
         user_msg = HumanMessage(content=message.content, name="Player", metadata={"message_id": message.id})
@@ -393,7 +406,7 @@ async def on_message(message: cl.Message):
             ).send()
             return
     else:
-        cl_logger.debug(f"Ignoring non-user message type: {message.type} from author: {message.author}")
+        cl_logger.debug(f"Ignoring message from author '{message.author}'. Expected identifier: '{current_user_identifier}'.")
 
 
 async def load_knowledge_documents():
