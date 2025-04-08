@@ -38,8 +38,7 @@ def mock_cl_environment():
 
     with patch("chainlit.context", mock_context), \
          patch("chainlit.user_session.set", mock_set), \
-         patch("chainlit.user_session.__getitem__", side_effect=mock_get), \
-         patch("chainlit.user_session.__setitem__", side_effect=mock_set):
+         patch("chainlit.user_session.get", side_effect=mock_get):
         yield user_session_store # Provide the store for inspection if needed
 
 @pytest.mark.asyncio
