@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from langchain_core.messages import AIMessage, HumanMessage
 from src.workflows import _chat_workflow
 from src.agents.decision_agent import decide_action
