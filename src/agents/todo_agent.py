@@ -27,18 +27,18 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
         dir_path = os.path.join(
             TODO_DIR_PATH,
-            f"helper_for_{current_date}"
+            f"helper_{current_date}"
         )
         file_path = os.path.join(dir_path, TODO_FILE_NAME)
 
         os.makedirs(dir_path, exist_ok=True)
 
         timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M]")
-        with open(file_path, "a") as f:
+        with open(file_path, "a", encoding="utf-8") as f:
             f.write(f"\n{timestamp} {task_text}")
 
         cl_msg = CLMessage(
-            content=f"✅ Added: {task_text}",
+            content=f"✅ Added to TODO:\n{task_text}",
             parent_id=None
         )
         await cl_msg.send()
