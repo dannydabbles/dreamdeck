@@ -1,4 +1,4 @@
-from src.config import config
+from src.config import config, OPENAI_SETTINGS
 import logging
 from jinja2 import Template
 from langgraph.func import task
@@ -22,7 +22,7 @@ async def _lore(state: ChatState) -> list[BaseMessage]:
 
         user_settings = cl.user_session.get("chat_settings", {})
         final_temp = user_settings.get("lore_temp", 0.7)
-        final_endpoint = user_settings.get("lore_endpoint") or config.OPENAI_SETTINGS.get("base_url")
+        final_endpoint = user_settings.get("lore_endpoint") or OPENAI_SETTINGS.get("base_url")
         final_max_tokens = user_settings.get("lore_max_tokens", 500)
 
         llm = ChatOpenAI(
