@@ -32,10 +32,7 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
             raise ValueError("Task cannot be empty")
 
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-        dir_path = os.path.join(
-            TODO_DIR_PATH,
-            f"helper_{current_date}"
-        )
+        dir_path = TODO_DIR_PATH
         file_path = os.path.join(dir_path, TODO_FILE_NAME)
 
         cl_logger.info(f"Todo directory path: {dir_path}")
