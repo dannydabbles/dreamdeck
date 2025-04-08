@@ -14,25 +14,6 @@ from src.agents import (
 )
 from src.config import IMAGE_GENERATION_ENABLED
 
-cl_logger = logging.getLogger("chainlit")
-
-# Patch cl.command with a dummy decorator during *any* pytest phase (collection or run)
-if (
-    "PYTEST_CURRENT_TEST" in os.environ
-    or "PYTEST_RUNNING" in os.environ
-    or "pytest" in sys.modules
-    or any("pytest" in arg for arg in sys.argv)
-):
-    cl_logger.info("Patching Chainlit command decorator during pytest collection/run.")
-
-    def _noop_decorator(*args, **kwargs):
-        """Dummy decorator to replace @cl.command during tests."""
-        def wrapper(func):
-            return func
-        return wrapper
-
-    cl.command = _noop_decorator
-
 
 @cl.command(name="roll", description="Roll dice (e.g., /roll 2d6 or /roll check perception)")
 async def command_roll(query: str):
