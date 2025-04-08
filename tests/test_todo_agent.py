@@ -34,7 +34,11 @@ async def test_manage_todo_creates_file(tmp_path):
         result = await _manage_todo(state)
         # Check AIMessage returned
         assert result
+        # The LLM output is now a markdown with sections, so check for the task inside Remaining or In Progress
         assert "buy milk" in result[0].content
+        assert "## Finished" in result[0].content
+        assert "## In Progress" in result[0].content
+        assert "## Remaining" in result[0].content
 
         # Check file created inside date-based subfolder
         import datetime
@@ -43,6 +47,9 @@ async def test_manage_todo_creates_file(tmp_path):
         assert todo_file.exists()
         content = todo_file.read_text()
         assert "buy milk" in content
+        assert "## Finished" in content
+        assert "## In Progress" in content
+        assert "## Remaining" in content
 
 @pytest.mark.asyncio
 async def test_manage_todo_empty_task():
