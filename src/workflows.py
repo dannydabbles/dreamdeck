@@ -119,24 +119,48 @@ async def _chat_workflow(
             new_message = dice_response[0]
             state.messages.append(new_message)
             if vector_memory:
-                await vector_memory.put(content=new_message.content)
+                if new_message.metadata and "message_id" in new_message.metadata:
+                    await vector_memory.put(
+                        content=new_message.content,
+                        message_id=new_message.metadata["message_id"],
+                        metadata={"type": "ai", "author": new_message.name},
+                    )
+                else:
+                    cl_logger.warning(
+                        f"AIMessage from dice_agent missing message_id for vector store: {new_message.content}"
+                    )
 
         elif "search" in action:
             web_search_response = await web_search_agent(state)
             new_message = web_search_response[0]
             state.messages.append(new_message)
             if vector_memory:
-                await vector_memory.put(content=new_message.content)
+                if new_message.metadata and "message_id" in new_message.metadata:
+                    await vector_memory.put(
+                        content=new_message.content,
+                        message_id=new_message.metadata["message_id"],
+                        metadata={"type": "ai", "author": new_message.name},
+                    )
+                else:
+                    cl_logger.warning(
+                        f"AIMessage from web_search_agent missing message_id for vector store: {new_message.content}"
+                    )
 
         writer_response = await writer_agent(state)
         if writer_response:
             new_message = writer_response[0]
             state.messages.append(new_message)
             if vector_memory:
-                await vector_memory.put(content=new_message.content)
-
-        else:
-            cl_logger.error(f"Unknown action: {action}")
+                if new_message.metadata and "message_id" in new_message.metadata:
+                    await vector_memory.put(
+                        content=new_message.content,
+                        message_id=new_message.metadata["message_id"],
+                        metadata={"type": "ai", "author": new_message.name},
+                    )
+                else:
+                    cl_logger.warning(
+                        f"AIMessage from writer_agent missing message_id for vector store: {new_message.content}"
+                    )
 
         # After all agent responses, trigger storyboard generation if enabled
         if IMAGE_GENERATION_ENABLED:
