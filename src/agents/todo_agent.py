@@ -5,72 +5,110 @@ from chainlit import Message as CLMessage
 from langgraph.func import task
 from langchain_core.messages import AIMessage
 from src.models import ChatState
+from langchain_openai import ChatOpenAI
+from jinja2 import Template
 
 # Module-level constants for easier patching in tests
 TODO_DIR_PATH = config.todo_dir_path
 TODO_FILE_NAME = config.todo_file_name
 
+
 async def _manage_todo(state: ChatState) -> list[AIMessage]:
     try:
-        cl_logger.info("Starting _manage_todo()")
-
         last_human = state.get_last_human_message()
-        cl_logger.info(f"Last human message: {last_human}")
-
         if not last_human:
-            raise ValueError("No user input found.")
-        user_input = last_human.content
-        cl_logger.info(f"User input: {user_input}")
+            return [AIMessage(content="No user input found.", name="error")]
+        user_input = last_human.content.strip()
 
-        if not user_input.startswith("/todo"):
-            return []
-
-        task_text = user_input[6:].strip()
-        cl_logger.info(f"Task text: '{task_text}'")
-
-        if not task_text:
-            raise ValueError("Task cannot be empty")
-
+        # Load current todo list from file (if exists)
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
         dir_path = os.path.join(TODO_DIR_PATH, current_date)
         file_path = os.path.join(dir_path, TODO_FILE_NAME)
+        todo_items = []
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            # Parse lines, ignore timestamps, get task text
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                # Remove timestamp prefix if present
+                if "]" in line:
+                    _, task = line.split("]", 1)
+                    todo_items.append(task.strip())
+                else:
+                    todo_items.append(line)
 
-        cl_logger.info(f"Todo directory path: {dir_path}")
-        cl_logger.info(f"Todo file path: {file_path}")
+        # Prepare prompt
+        template = Template(config.loaded_prompts.get("todo_prompt", ""))
+        prompt = template.render(
+            current_todo=todo_items,
+            user_input=user_input,
+            recent_chat_history=state.get_recent_history_str(),
+            tool_results=state.get_tool_results_str(),
+        )
 
+        # Call LLM
+        user_settings = cl.user_session.get("chat_settings", {})
+        final_temp = user_settings.get("todo_temp", 0.3)
+        final_endpoint = user_settings.get("todo_endpoint") or config.openai.get("base_url")
+        final_max_tokens = user_settings.get("todo_max_tokens", 300)
+
+        llm = ChatOpenAI(
+            base_url=final_endpoint,
+            temperature=final_temp,
+            max_tokens=final_max_tokens,
+            streaming=False,
+            verbose=True,
+            timeout=config.llm.timeout,
+        )
+
+        response = await llm.ainvoke([("system", prompt)])
+        content = response.content.strip()
+
+        # Parse JSON list
+        import json
+        try:
+            updated_todo = json.loads(content)
+            if not isinstance(updated_todo, list):
+                raise ValueError("LLM did not return a list")
+        except Exception as e:
+            cl_logger.error(f"Failed to parse todo list JSON: {e}")
+            return [AIMessage(content="Error updating TODO list.", name="error")]
+
+        # Save updated todo list back to file
         os.makedirs(dir_path, exist_ok=True)
-        cl_logger.info(f"Ensured directory exists: {dir_path}")
+        with open(file_path, "w", encoding="utf-8") as f:
+            for item in updated_todo:
+                timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M]")
+                f.write(f"{timestamp} {item}\n")
 
-        timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M]")
-        with open(file_path, "a", encoding="utf-8") as f:
-            f.write(f"\n{timestamp} {task_text}")
-
-        cl_logger.info(f"Wrote task to file: {file_path}")
-
+        # Compose message content
+        todo_text = "\n".join(f"- {item}" for item in updated_todo)
         cl_msg = CLMessage(
-            content=f"✅ Added to TODO:\n{task_text}",
-            parent_id=None
+            content=f"📝 Updated TODO list:\n{todo_text}",
+            parent_id=None,
         )
         await cl_msg.send()
-        cl_msg_id = cl_msg.id
-
-        cl_logger.info(f"Sent Chainlit message with id: {cl_msg_id}")
 
         return [
             AIMessage(
-                content=f"Added: {task_text}",
+                content=f"Updated TODO list:\n{todo_text}",
                 name="todo",
-                metadata={"message_id": cl_msg_id, "parent_id": None},
+                metadata={"message_id": cl_msg.id},
             )
         ]
 
     except Exception as e:
-        cl_logger.error(f"Todo failed: {str(e)}")
-        return [AIMessage(content=str(e), name="error")]
+        cl_logger.error(f"Todo agent failed: {e}")
+        return [AIMessage(content="Todo update failed.", name="error")]
+
 
 @task
 async def manage_todo(state: ChatState) -> list[AIMessage]:
     return await _manage_todo(state)
+
 
 todo_agent = manage_todo
 
