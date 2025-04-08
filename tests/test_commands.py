@@ -269,9 +269,12 @@ async def test_command_help():
 async def test_command_reset(mock_session_data):
     state, vector_store, user_session_get = mock_session_data
 
+    dummy_context = MagicMock()
+    dummy_context.session.thread_id = "cmd-test-thread"
+
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
-         patch("src.commands.cl.context.session.thread_id", "cmd-test-thread"), \
+         patch("src.commands.cl.context", dummy_context), \
          patch("src.commands.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
 
         mock_cl_message_instance = AsyncMock()
@@ -299,7 +302,11 @@ async def test_command_save(mock_session_data):
     state.messages.append(HumanMessage(content="Hi", name="Player"))
     state.messages.append(AIMessage(content="Hello", name="Game Master"))
 
+    dummy_context = MagicMock()
+    dummy_context.session.thread_id = "cmd-test-thread"
+
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
+         patch("src.commands.cl.context", dummy_context), \
          patch("src.commands.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
 
         mock_cl_message_instance = AsyncMock()

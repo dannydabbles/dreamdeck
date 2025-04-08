@@ -105,7 +105,7 @@ async def test_dice_agent(mock_chainlit_context):
 
 @pytest.mark.asyncio
 async def test_dice_roll_invalid_json(monkeypatch):
-    from src.agents.dice_agent import _dice_roll
+    from src.agents.dice_agent import _dice_roll, ChatOpenAI
     from src.models import ChatState
     from langchain_core.messages import HumanMessage
 
@@ -117,14 +117,14 @@ async def test_dice_roll_invalid_json(monkeypatch):
     async def fake_ainvoke(*args, **kwargs):
         return FakeResp()
 
-    monkeypatch.setattr("src.agents.dice_agent.ChatOpenAI.ainvoke", fake_ainvoke)
+    monkeypatch.setattr(ChatOpenAI, "ainvoke", fake_ainvoke)
 
     result = await _dice_roll(state)
     assert "Error parsing dice roll" in result[0].content
 
 @pytest.mark.asyncio
 async def test_dice_roll_invalid_specs(monkeypatch):
-    from src.agents.dice_agent import _dice_roll
+    from src.agents.dice_agent import _dice_roll, ChatOpenAI
     from src.models import ChatState
     from langchain_core.messages import HumanMessage
 
@@ -136,7 +136,7 @@ async def test_dice_roll_invalid_specs(monkeypatch):
     async def fake_ainvoke(*args, **kwargs):
         return FakeResp()
 
-    monkeypatch.setattr("src.agents.dice_agent.ChatOpenAI.ainvoke", fake_ainvoke)
+    monkeypatch.setattr(ChatOpenAI, "ainvoke", fake_ainvoke)
 
     result = await _dice_roll(state)
     assert "Invalid dice roll specification" in result[0].content

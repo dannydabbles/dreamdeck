@@ -474,6 +474,7 @@ async def test_handle_delete_message(mock_cl_environment):
 
     # Mock vector store
     vector_store = AsyncMock(spec=VectorStore)
+    vector_store.collection = AsyncMock()
     vector_store.collection.delete = AsyncMock()
     mock_cl_environment["vector_memory"] = vector_store
 
