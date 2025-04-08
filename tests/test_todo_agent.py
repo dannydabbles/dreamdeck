@@ -13,7 +13,11 @@ async def test_manage_todo_creates_file(tmp_path):
     with patch("src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)), \
          patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), \
          patch("src.agents.todo_agent.CLMessage", new_callable=MagicMock) as mock_cl_msg_cls, \
-         patch("src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke:
+         patch("src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke, \
+         patch("src.agents.todo_agent.cl", new_callable=MagicMock) as mock_cl_module:
+
+        # Patch cl.user_session.get to avoid "Chainlit context not found"
+        mock_cl_module.user_session.get.return_value = {}
 
         mock_cl_msg_instance = MagicMock()
         mock_cl_msg_instance.send = AsyncMock()
