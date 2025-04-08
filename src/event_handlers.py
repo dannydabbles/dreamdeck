@@ -356,10 +356,40 @@ async def on_message(message: cl.Message):
         if not is_current_user and is_generic_player:
             cl_logger.warning(f"Processing message from 'Player' author, but couldn't verify against session identifier '{current_user_identifier}'.")
 
-        # If the message is a command, skip processing here
+        # If the message is a slash command, parse and dispatch
         if message.content.strip().startswith("/"):
-            cl_logger.debug(f"Command '{message.content.split()[0]}' detected. Letting command handler process it.")
-            return
+            command_line = message.content.strip()
+            parts = command_line.split(maxsplit=1)
+            command = parts[0][1:].lower()
+            arg = parts[1] if len(parts) > 1 else ""
+
+            cl_logger.info(f"Slash command detected: /{command} with arg: '{arg}'")
+
+            try:
+                from src import commands  # Import here to avoid circular imports
+                if command == "roll":
+                    await commands.command_roll(arg)
+                elif command == "search":
+                    await commands.command_search(arg)
+                elif command == "todo":
+                    await commands.command_todo(arg)
+                elif command == "write":
+                    await commands.command_write(arg)
+                elif command == "storyboard":
+                    await commands.command_storyboard(arg)
+                elif command == "help":
+                    await commands.command_help()
+                elif command == "reset":
+                    await commands.command_reset()
+                elif command == "save":
+                    await commands.command_save()
+                else:
+                    await cl.Message(content=f"Unknown command: /{command}").send()
+            except Exception as e:
+                cl_logger.error(f"Error handling slash command /{command}: {e}", exc_info=True)
+                await cl.Message(content=f"Error processing command /{command}: {e}").send()
+
+            return  # Skip normal message processing
 
         # Add user message to state immediately
         user_msg = HumanMessage(content=message.content, name="Player", metadata={"message_id": message.id})
