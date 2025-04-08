@@ -33,6 +33,7 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
             recent_chat_history=state.get_recent_history_str(),
             memories=state.get_memories_str(),
             tool_results=state.get_tool_results_str(),
+            user_preferences=state.user_preferences,
         )
 
         # Get user settings and defaults

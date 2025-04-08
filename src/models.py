@@ -71,8 +71,8 @@ class ChatState(BaseModel):
             for msg in reversed(recent_messages)
             if isinstance(msg, AIMessage) and msg.name in ["dice_roll", "web_search"]
         ]
-        # Set tool_msgs to the last agent message if it exists
-        tool_msgs = recent_agent_messages[:1]
+        # Set tool_msgs to the last 3 agent messages if they exist
+        tool_msgs = recent_agent_messages[:3]
         return (
             "\n".join([f"{msg.name}: {msg.content}" for msg in tool_msgs])
             if tool_msgs
