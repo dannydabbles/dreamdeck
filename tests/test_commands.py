@@ -31,11 +31,11 @@ async def test_command_roll(mock_session_data):
 
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
-         patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
+         patch("chainlit.Message", new_callable=MagicMock) as mock_cl_message_cls, \
          patch("src.commands.dice_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_dice_agent:
 
         mock_cl_message_instance = AsyncMock()
-        mock_cl_message_instance.send.return_value = None  # Configure await result
+        mock_cl_message_instance.send = AsyncMock(return_value=None)
         mock_cl_message_instance.id = "user-roll-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
@@ -67,11 +67,11 @@ async def test_command_search(mock_session_data):
 
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
-         patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
+         patch("chainlit.Message", new_callable=MagicMock) as mock_cl_message_cls, \
          patch("src.commands.web_search_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_search_agent:
 
         mock_cl_message_instance = AsyncMock()
-        mock_cl_message_instance.send.return_value = None  # Configure await result
+        mock_cl_message_instance.send = AsyncMock(return_value=None)
         mock_cl_message_instance.id = "user-search-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
@@ -98,11 +98,11 @@ async def test_command_todo(mock_session_data):
 
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
-         patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
+         patch("chainlit.Message", new_callable=MagicMock) as mock_cl_message_cls, \
          patch("src.commands.todo_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_todo_agent:
 
         mock_cl_message_instance = AsyncMock()
-        mock_cl_message_instance.send.return_value = None  # Configure await result
+        mock_cl_message_instance.send = AsyncMock(return_value=None)
         mock_cl_message_instance.id = "user-todo-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
@@ -128,11 +128,11 @@ async def test_command_write(mock_session_data):
 
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
-         patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
+         patch("chainlit.Message", new_callable=MagicMock) as mock_cl_message_cls, \
          patch("src.commands.writer_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_writer_agent:
 
         mock_cl_message_instance = AsyncMock()
-        mock_cl_message_instance.send.return_value = None  # Configure await result
+        mock_cl_message_instance.send = AsyncMock(return_value=None)
         mock_cl_message_instance.id = "user-write-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
@@ -159,12 +159,12 @@ async def test_command_storyboard_enabled(mock_session_data):
     state.messages.append(gm_msg)
 
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
-         patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
+         patch("chainlit.Message", new_callable=MagicMock) as mock_cl_message_cls, \
          patch("src.commands.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_agent, \
          patch("src.commands.IMAGE_GENERATION_ENABLED", True): # Ensure enabled
 
         mock_cl_message_instance = AsyncMock()
-        mock_cl_message_instance.send.return_value = None  # Configure await result
+        mock_cl_message_instance.send = AsyncMock(return_value=None)
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await command_storyboard()
@@ -181,12 +181,12 @@ async def test_command_storyboard_disabled(mock_session_data):
     state, _, user_session_get = mock_session_data
 
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
-         patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
+         patch("chainlit.Message", new_callable=MagicMock) as mock_cl_message_cls, \
          patch("src.commands.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_agent, \
          patch("src.commands.IMAGE_GENERATION_ENABLED", False): # Ensure disabled
 
         mock_cl_message_instance = AsyncMock()
-        mock_cl_message_instance.send.return_value = None  # Configure await result
+        mock_cl_message_instance.send = AsyncMock(return_value=None)
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await command_storyboard()
@@ -208,12 +208,12 @@ async def test_command_storyboard_no_gm_message(mock_session_data):
 
 
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
-         patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls, \
+         patch("chainlit.Message", new_callable=MagicMock) as mock_cl_message_cls, \
          patch("src.commands.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard_agent, \
          patch("src.commands.IMAGE_GENERATION_ENABLED", True): # Ensure enabled
 
         mock_cl_message_instance = AsyncMock()
-        mock_cl_message_instance.send.return_value = None  # Configure await result
+        mock_cl_message_instance.send = AsyncMock(return_value=None)
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await command_storyboard()
