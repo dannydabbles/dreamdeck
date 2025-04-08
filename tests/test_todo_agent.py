@@ -30,8 +30,10 @@ async def test_manage_todo_creates_file(tmp_path):
         assert result
         assert "Added" in result[0].content
 
-        # Check file created
-        todo_file = tmp_path / "todo.md"
+        # Check file created inside date-based subfolder
+        import datetime
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        todo_file = tmp_path / current_date / "todo.md"
         assert todo_file.exists()
         content = todo_file.read_text()
         assert "buy milk" in content
