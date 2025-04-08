@@ -133,6 +133,15 @@ async def on_chat_start():
     """
 
     try:
+        # Fetch current user identifier
+        user_info = cl.user_session.get("user")
+        if isinstance(user_info, dict):
+            current_user_identifier = user_info.get("identifier", "Player")
+        elif hasattr(user_info, 'identifier'):
+            current_user_identifier = user_info.identifier
+        else:
+            current_user_identifier = "Player"
+
         # Initialize vector store
         vector_memory = VectorStore()
         cl.user_session.set("vector_memory", vector_memory)
@@ -215,7 +224,7 @@ async def on_chat_start():
         )
         start_cl_msg = cl.Message(
             content=START_MESSAGE,
-            author="Game Master",
+            author=current_user_identifier,
             actions=[delete_action],
         )
         await start_cl_msg.send()
@@ -257,6 +266,15 @@ async def on_chat_resume(thread: ThreadDict):
     if user_dict:
         cl.user_session.set("user", user_dict)
 
+    # Fetch current user identifier
+    user_info = cl.user_session.get("user")
+    if isinstance(user_info, dict):
+        current_user_identifier = user_info.get("identifier", "Player")
+    elif hasattr(user_info, 'identifier'):
+        current_user_identifier = user_info.identifier
+    else:
+        current_user_identifier = "Player"
+
     # Initialize vector store
     vector_memory = VectorStore()
     cl.user_session.set("vector_memory", vector_memory)
@@ -264,7 +282,7 @@ async def on_chat_resume(thread: ThreadDict):
     # Initialize thread in Chainlit with a start message
     messages = []
     image_generation_memory = []
-    cl.user_session.set("gm_message", cl.Message(content="", author="Game Master"))
+    cl.user_session.set("gm_message", cl.Message(content="", author=current_user_identifier))
 
     # Reconstruct messages from thread history
     for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
@@ -294,7 +312,7 @@ async def on_chat_resume(thread: ThreadDict):
             )
             cl_msg = cl.Message(
                 content=step["output"],
-                author="Player",
+                author=current_user_identifier,
                 actions=[delete_action],
             )
             await cl_msg.send()
@@ -314,7 +332,7 @@ async def on_chat_resume(thread: ThreadDict):
             )
             cl_msg = cl.Message(
                 content=step["output"],
-                author=step.get("name", "Game Master"),
+                author=current_user_identifier,
                 actions=[delete_action],
             )
             await cl_msg.send()
