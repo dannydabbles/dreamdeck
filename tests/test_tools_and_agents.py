@@ -21,7 +21,7 @@ async def test_decision_agent_roll_action(mock_chainlit_context):
     state = ChatState(messages=[user_input], thread_id="test-thread-id")
 
     # Patch cl.user_session.get to avoid "Chainlit context not found" error
-    with patch("src.agents.decision_agent.cl.user_session.get", return_value({})):
+    with patch("src.agents.decision_agent.cl.user_session.get", return_value={}):
         # Mock the LLM's response to return "roll" explicitly
         with patch(
             "src.agents.decision_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock
