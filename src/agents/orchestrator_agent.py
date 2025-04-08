@@ -63,7 +63,13 @@ async def _decide_actions(state) -> list[str]:
         cl_logger.info(f"Orchestrator response: {response.content}")
 
         try:
-            parsed = json.loads(response.content.strip())
+            content = response.content.strip()
+            # Remove markdown code fencing if present
+            if content.startswith("```") and content.endswith("```"):
+                lines = content.splitlines()
+                if len(lines) >= 3:
+                    content = "\n".join(lines[1:-1]).strip()
+            parsed = json.loads(content)
             actions = parsed.get("actions", [])
             if not isinstance(actions, list) or not actions:
                 return ["continue_story"]
