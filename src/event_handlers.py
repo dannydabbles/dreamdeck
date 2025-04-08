@@ -312,7 +312,10 @@ async def on_chat_resume(thread: ThreadDict):
             # await cl_msg.send()  # Disabled to avoid duplicate UI messages
             messages.append(HumanMessage(content=step["output"], name="Player", metadata=meta))
             if step_id and not existing:
-                await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "human", "author": "Player", "parent_id": parent_id})
+                meta = {"type": "human", "author": "Player"}
+                if parent_id is not None:
+                    meta["parent_id"] = parent_id
+                await vector_memory.put(content=step["output"], message_id=step_id, metadata=meta)
             elif not step_id:
                 cl_logger.warning(f"Missing ID for user step in on_chat_resume: {step.get('output', '')[:50]}...")
         elif step["type"] == "assistant_message":
@@ -323,7 +326,10 @@ async def on_chat_resume(thread: ThreadDict):
             # await cl_msg.send()  # Disabled to avoid duplicate UI messages
             messages.append(AIMessage(content=step["output"], name=step["name"], metadata=meta))
             if step_id and not existing:
-                await vector_memory.put(content=step["output"], message_id=step_id, metadata={"type": "ai", "author": step.get("name", "Unknown"), "parent_id": parent_id})
+                meta = {"type": "ai", "author": step.get("name", "Unknown")}
+                if parent_id is not None:
+                    meta["parent_id"] = parent_id
+                await vector_memory.put(content=step["output"], message_id=step_id, metadata=meta)
             elif not step_id:
                 cl_logger.warning(f"Missing ID for assistant step in on_chat_resume: {step.get('output', '')[:50]}...")
 
