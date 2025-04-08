@@ -14,6 +14,8 @@ from src.agents import (
 )
 from src.config import IMAGE_GENERATION_ENABLED
 
+cl_logger = logging.getLogger("chainlit")
+
 
 @cl.command(name="roll", description="Roll dice (e.g., /roll 2d6 or /roll check perception)")
 async def command_roll(query: str):
