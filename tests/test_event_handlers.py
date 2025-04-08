@@ -329,6 +329,7 @@ async def test_on_message_normal_flow(mock_cl_environment):
     incoming_message.content = "Tell me a story"
     incoming_message.author = "test_user" # Match the user identifier
     incoming_message.id = "user-msg-id-1"
+    incoming_message.command = ""  # Explicitly set to empty string to avoid command dispatch
 
     final_ai_message = AIMessage(content="Once upon a time...", name="Game Master", metadata={"message_id": "ai-msg-id-1"})
     final_state = ChatState(messages=[
@@ -430,6 +431,7 @@ async def test_on_message_workflow_error(mock_cl_environment):
     incoming_message.content = "Cause an error"
     incoming_message.author = "test_user"
     incoming_message.id = "user-err-id-1"
+    incoming_message.command = ""  # Explicitly set to empty string to avoid command dispatch
 
     with patch("src.event_handlers.chat_workflow.ainvoke", new_callable=AsyncMock, side_effect=Exception("Workflow boom!")) as mock_workflow_ainvoke, \
          patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
