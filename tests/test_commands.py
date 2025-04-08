@@ -111,7 +111,7 @@ async def test_command_todo(mock_session_data):
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
          patch("src.commands.cl.user_session.set", new_callable=MagicMock) as mock_user_session_set, \
          patch("chainlit.Message", new_callable=MagicMock) as mock_cl_message_cls, \
-         patch("src.commands.todo_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_todo_agent:
+         patch("src.commands.call_todo_agent", new_callable=AsyncMock, return_value=[ai_response_msg]) as mock_call_todo_agent:
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.send.return_value = None
@@ -127,7 +127,7 @@ async def test_command_todo(mock_session_data):
         assert mock_cl_message_instance.author == "Player"
         # The /todo command triggers TWO sends: one for user message, one for AI reply
         assert mock_cl_message_instance.send.await_count == 2
-        mock_todo_agent.assert_awaited_once_with(state)
+        mock_call_todo_agent.assert_awaited_once_with(state)
 
         assert len(state.messages) == 2
         assert state.messages[1] == ai_response_msg
