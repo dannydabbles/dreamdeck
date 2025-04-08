@@ -26,6 +26,9 @@ from langchain_core.stores import BaseStore
 
 from src.config import DECISION_PROMPT
 
+from src.agents.dice_agent import dice_agent
+from src.agents.web_search_agent import web_search_agent
+
 import chainlit as cl
 
 

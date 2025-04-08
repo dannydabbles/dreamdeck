@@ -57,8 +57,9 @@ from src.stores import VectorStore  # Import VectorStore
 from src.agents.decision_agent import decision_agent
 from src.agents.writer_agent import writer_agent
 from src.agents.storyboard_editor_agent import storyboard_editor_agent
-from src.agents.dice_agent import dice_roll_agent
+from src.agents.dice_agent import dice_roll_agent, dice_agent
 from src.agents.web_search_agent import web_search_agent
+from src.agents.todo_agent import todo_agent
 from chainlit import user_session as cl_user_session  # Import cl_user_session
 from langchain_core.callbacks.manager import CallbackManagerForChainRun  # Import CallbackManagerForChainRun
 
