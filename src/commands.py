@@ -35,9 +35,10 @@ async def command_roll(query: str):
         return
 
     # Create and send user message
-    user_cl_msg = cl.Message()
-    user_cl_msg.content = f"/roll {query}"
-    user_cl_msg.author = "Player"
+    user_cl_msg = cl.Message(
+        content=f"/roll {query}",
+        author="Player"
+    )
     await user_cl_msg.send()
     user_cl_msg_id = user_cl_msg.id
 
@@ -83,9 +84,10 @@ async def command_search(query: str):
         return
 
     # Create and send user message
-    user_cl_msg = cl.Message()
-    user_cl_msg.content = f"/search {query}"
-    user_cl_msg.author = "Player"
+    user_cl_msg = cl.Message(
+        content=f"/search {query}",
+        author="Player"
+    )
     await user_cl_msg.send()
     user_cl_msg_id = user_cl_msg.id
 
@@ -131,9 +133,10 @@ async def command_todo(query: str):
         return
 
     # Create and send user message
-    user_cl_msg = cl.Message()
-    user_cl_msg.content = f"/todo {query}"
-    user_cl_msg.author = "Player"
+    user_cl_msg = cl.Message(
+        content=f"/todo {query}",
+        author="Player"
+    )
     await user_cl_msg.send()
     user_cl_msg_id = user_cl_msg.id
 
@@ -182,9 +185,10 @@ async def command_write(query: str):
         return
 
     # Create and send user message
-    user_cl_msg = cl.Message()
-    user_cl_msg.content = f"/write {query}"
-    user_cl_msg.author = "Player"
+    user_cl_msg = cl.Message(
+        content=f"/write {query}",
+        author="Player"
+    )
     await user_cl_msg.send()
     user_cl_msg_id = user_cl_msg.id
 
