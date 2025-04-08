@@ -198,6 +198,9 @@ async def on_chat_start():
             ]
         ).send()
 
+        # Persist initial chat settings in user session
+        cl.user_session.set("chat_settings", settings)
+
         # Launch knowledge loading in the background
         asyncio.create_task(load_knowledge_documents())
 
@@ -501,3 +504,8 @@ async def handle_delete_message(action: cl.Action):
         pass
 
     await cl.Message(content="Message deleted.").send()
+
+
+@cl.on_settings_update
+async def on_settings_update(settings):
+    cl.user_session.set("chat_settings", settings)

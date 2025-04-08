@@ -207,3 +207,70 @@ async def command_storyboard(query: str = ""):
     else:
         await cl.Message(content="Could not find a previous Game Master message with a valid ID to generate a storyboard for.").send()
         cl_logger.warning("Could not execute /storyboard: No suitable GM message found in state.")
+@cl.command(name="help", description="List all available slash commands")
+async def command_help():
+    help_text = """
+**Available Commands:**
+
+/roll [dice or description] — Roll dice (e.g., `/roll 2d6` or `/roll check perception`)
+/search [query] — Perform a web search
+/todo [note] — Add a TODO item
+/write [prompt] — Directly prompt the writer agent
+/storyboard — Generate storyboard images for the last Game Master message
+/help — Show this help message
+/reset — Reset the current story and start fresh
+/save — Export the current story as a markdown file
+"""
+    await cl.Message(content=help_text.strip()).send()
+
+
+@cl.command(name="reset", description="Reset the current story and start fresh")
+async def command_reset():
+    cl_logger.info("Resetting chat state and vector store")
+    # Clear state
+    state = ChatState(messages=[], thread_id=cl.context.session.thread_id)
+    cl.user_session.set("state", state)
+
+    # Clear vector store collection
+    vector_store: VectorStore = cl.user_session.get("vector_memory")
+    if vector_store:
+        try:
+            await vector_store.collection.delete(where={})
+        except Exception:
+            pass
+
+    # Send fresh start message
+    start_msg = cl.Message(content=START_MESSAGE, author="Game Master")
+    await start_msg.send()
+    state.messages.append(
+        AIMessage(content=START_MESSAGE, name="Game Master", metadata={"message_id": start_msg.id})
+    )
+    cl.user_session.set("state", state)
+
+
+@cl.command(name="save", description="Export the current story as a markdown file")
+async def command_save():
+    state: ChatState = cl.user_session.get("state")
+    if not state:
+        await cl.Message(content="No story to save.").send()
+        return
+
+    md_lines = []
+    for msg in state.messages:
+        if isinstance(msg, HumanMessage):
+            md_lines.append(f"**Player:** {msg.content}")
+        elif isinstance(msg, AIMessage):
+            md_lines.append(f"**{msg.name or 'AI'}:** {msg.content}")
+
+    md_content = "\n\n".join(md_lines)
+    # Send as downloadable file element
+    await cl.Message(
+        content="Here is your story so far:",
+        elements=[
+            cl.File(
+                name="story.md",
+                content=md_content.encode("utf-8"),
+                mime="text/markdown",
+            )
+        ],
+    ).send()
