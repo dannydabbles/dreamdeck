@@ -231,6 +231,9 @@ async def on_chat_start():
         # Update delete_action value and payload to real message id
         delete_action.value = start_cl_msg.id
         delete_action.payload = {"message_id": start_cl_msg.id}
+        # Update the button in the UI with the real message id
+        start_cl_msg.actions = [delete_action]
+        await start_cl_msg.update()
 
         # Create initial state
         state = ChatState(
