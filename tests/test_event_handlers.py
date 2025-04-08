@@ -217,8 +217,8 @@ async def test_on_chat_resume(mock_cl_environment):
         assert state.messages[1].name == "Game Master"
 
         # Verify vector store puts during reconstruction
-        mock_vector_store_instance.put.assert_any_await(content="Hello there", message_id="step1", metadata={"type": "human", "author": "Player"})
-        mock_vector_store_instance.put.assert_any_await(content="How can I help?", message_id="step2", metadata={"type": "ai", "author": "Game Master"})
+        mock_vector_store_instance.put.assert_any_await(content="Hello there", message_id="step1", metadata={"type": "human", "author": "Player", "parent_id": None})
+        mock_vector_store_instance.put.assert_any_await(content="How can I help?", message_id="step2", metadata={"type": "ai", "author": "Game Master", "parent_id": "step1"})
 
         # Verify knowledge loading called
         mock_load_knowledge.assert_awaited_once()
