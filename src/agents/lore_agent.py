@@ -1,4 +1,4 @@
-from src.config import config, OPENAI_SETTINGS
+from src.config import config, OPENAI_SETTINGS, LLM_TIMEOUT
 import logging
 from jinja2 import Template
 from langgraph.func import task
@@ -31,7 +31,7 @@ async def _lore(state: ChatState) -> list[BaseMessage]:
             max_tokens=final_max_tokens,
             streaming=False,
             verbose=True,
-            timeout=config.LLM_TIMEOUT,
+            timeout=LLM_TIMEOUT,
         )
 
         response = await llm.ainvoke([("system", formatted_prompt)])
