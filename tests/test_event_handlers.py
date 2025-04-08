@@ -15,6 +15,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 import chainlit as cl
 import asyncio
 import os
+from pathlib import Path  # Add missing import
 
 # Mock Chainlit context and user session globally for this module
 @pytest.fixture(autouse=True)
