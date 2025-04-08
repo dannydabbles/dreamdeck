@@ -32,6 +32,8 @@ from langchain_core.messages import (
 
 import logging
 
+MAX_CHAIN_LENGTH = 3  # or 4, adjust as desired
+
 cl_logger = logging.getLogger("chainlit")
 
 
@@ -64,47 +66,57 @@ async def _chat_workflow(
     )
 
     try:
-        # Call orchestrator agent to get ordered list of actions
-        actions = await orchestrator_agent(state)
-        cl_logger.info(f"Orchestrator actions: {actions}")
-
         vector_memory = cl.user_session.get("vector_memory")
 
-        # Remove any trailing 'write' or 'continue_story' to avoid double GM call
-        trailing_gm = False
-        if actions and actions[-1] in ("write", "continue_story"):
-            trailing_gm = True
-            gm_action = actions.pop()
+        chain_count = 0
+        actions = await orchestrator_agent(state)
+        cl_logger.info(f"Initial orchestrator actions: {actions}")
 
-        # Call each tool agent in order
-        for action in actions:
-            agent_func = agents_map.get(action)
-            if not agent_func:
-                cl_logger.warning(f"Unknown action from orchestrator: {action}")
-                continue
+        while actions and chain_count < MAX_CHAIN_LENGTH:
+            # Remove trailing GM call if present
+            if actions[-1] in ("write", "continue_story"):
+                gm_action = actions.pop()
+                gm_needed = True
+            else:
+                gm_needed = False
 
-            agent_response = await agent_func(state)
+            # Process tool actions
+            for action in actions:
+                agent_func = agents_map.get(action)
+                if not agent_func:
+                    cl_logger.warning(f"Unknown action from orchestrator: {action}")
+                    continue
 
-            for msg in agent_response:
-                state.messages.append(msg)
-                if vector_memory and msg.metadata and "message_id" in msg.metadata:
-                    await vector_memory.put(
-                        content=msg.content,
-                        message_id=msg.metadata["message_id"],
-                        metadata={"type": "ai", "author": msg.name},
-                    )
+                agent_response = await agent_func(state)
 
-        # Always call writer agent last
-        writer_response = await writer_agent(state)
-        if writer_response:
-            for msg in writer_response:
-                state.messages.append(msg)
-                if vector_memory and msg.metadata and "message_id" in msg.metadata:
-                    await vector_memory.put(
-                        content=msg.content,
-                        message_id=msg.metadata["message_id"],
-                        metadata={"type": "ai", "author": msg.name},
-                    )
+                for msg in agent_response:
+                    state.messages.append(msg)
+                    if vector_memory and msg.metadata and "message_id" in msg.metadata:
+                        await vector_memory.put(
+                            content=msg.content,
+                            message_id=msg.metadata["message_id"],
+                            metadata={"type": "ai", "author": msg.name},
+                        )
+
+            # After tools, decide next actions
+            chain_count += 1
+            if gm_needed or chain_count >= MAX_CHAIN_LENGTH:
+                # Call GM to continue story
+                writer_response = await writer_agent(state)
+                if writer_response:
+                    for msg in writer_response:
+                        state.messages.append(msg)
+                        if vector_memory and msg.metadata and "message_id" in msg.metadata:
+                            await vector_memory.put(
+                                content=msg.content,
+                                message_id=msg.metadata["message_id"],
+                                metadata={"type": "ai", "author": msg.name},
+                            )
+                break  # Always stop after GM
+            else:
+                # Re-orchestrate based on updated state
+                actions = await orchestrator_agent(state)
+                cl_logger.info(f"Next orchestrator actions: {actions}")
 
         # Trigger storyboard generation after GM response
         if IMAGE_GENERATION_ENABLED:
