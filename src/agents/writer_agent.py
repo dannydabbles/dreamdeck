@@ -87,3 +87,8 @@ async def generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
 
 
 writer_agent = generate_story  # Expose the function as writer_agent
+
+
+async def call_writer_agent(state: ChatState) -> list[BaseMessage]:
+    """Call the writer agent outside of LangGraph workflows (e.g., slash commands)."""
+    return await _generate_story(state)

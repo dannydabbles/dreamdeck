@@ -58,7 +58,8 @@ async def command_roll(query: str):
             cl_logger.warning(f"AIMessage from dice_agent missing message_id: {ai_msg.content}")
 
     # Immediately call writer agent to continue story
-    gm_responses = await writer_agent(state)
+    from src.agents.writer_agent import call_writer_agent
+    gm_responses = await call_writer_agent(state)
     if gm_responses:
         gm_msg = gm_responses[0]
         state.messages.append(gm_msg)
@@ -103,6 +104,15 @@ async def command_search(query: str):
         else:
             cl_logger.warning(f"AIMessage from web_search_agent missing message_id: {ai_msg.content}")
 
+    # Immediately call writer agent to continue story
+    from src.agents.writer_agent import call_writer_agent
+    gm_responses = await call_writer_agent(state)
+    if gm_responses:
+        gm_msg = gm_responses[0]
+        state.messages.append(gm_msg)
+        if gm_msg.metadata and "message_id" in gm_msg.metadata:
+            await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
+
     cl.user_session.set("state", state)
     cl_logger.info(f"/search command processed.")
 
@@ -141,6 +151,15 @@ async def command_todo(query: str):
         else:
             cl_logger.warning(f"AIMessage from todo_agent missing message_id: {ai_msg.content}")
 
+    # Immediately call writer agent to continue story
+    from src.agents.writer_agent import call_writer_agent
+    gm_responses = await call_writer_agent(state)
+    if gm_responses:
+        gm_msg = gm_responses[0]
+        state.messages.append(gm_msg)
+        if gm_msg.metadata and "message_id" in gm_msg.metadata:
+            await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
+
     cl.user_session.set("state", state)
     cl_logger.info(f"/todo command processed.")
 
@@ -168,7 +187,8 @@ async def command_write(query: str):
     await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player"})
 
     cl_logger.info(f"Executing /write command with query: {query}")
-    response_messages = await writer_agent(state)
+    from src.agents.writer_agent import call_writer_agent
+    response_messages = await call_writer_agent(state)
 
     # Update state and vector store for AI response
     if response_messages:
