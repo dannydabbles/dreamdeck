@@ -128,8 +128,6 @@ async def on_chat_start():
 
     Sets up the user session, initializes the chat state, and sends initial messages.
     """
-    # Import commands *inside* the function to ensure Chainlit is initialized
-    from src import commands
 
     try:
         # Initialize vector store
