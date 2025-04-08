@@ -51,8 +51,9 @@ class VectorStore:
         )
         documents_flat = results.get("documents", [[]])[0]
         metadatas_flat = results.get("metadatas", [[]])[0]
+        # Defensive: replace None metadata with empty dict
         return [
-            Document(page_content=doc, metadata=meta)
+            Document(page_content=doc, metadata=meta or {})
             for doc, meta in zip(documents_flat, metadatas_flat)
         ]
 
