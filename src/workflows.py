@@ -14,25 +14,26 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from .models import ChatState
-from .agents.decision_agent import decision_agent  # Import decide_action
-from .agents.writer_agent import writer_agent  # Import generate_story
+from .agents.orchestrator_agent import orchestrator_agent
+from .agents.writer_agent import writer_agent
 from .agents.storyboard_editor_agent import storyboard_editor_agent
-from src.config import (
-    IMAGE_GENERATION_ENABLED,
-    DECISION_PROMPT,  # Import DECISION_PROMPT
-)
+from src.config import IMAGE_GENERATION_ENABLED
 from .models import ChatState
 from langchain_core.stores import BaseStore
 
-from src.config import DECISION_PROMPT
-
 from src.agents.dice_agent import dice_agent
 from src.agents.web_search_agent import web_search_agent
+from src.agents.todo_agent import todo_agent
 
 import chainlit as cl
+from langchain_core.messages import (
+    BaseMessage,
+    AIMessage,
+    HumanMessage,
+)
 
+import logging
 
-# Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
 
@@ -40,38 +41,18 @@ cl_logger = logging.getLogger("chainlit")
 async def chat_workflow(
     inputs: dict,
 ) -> ChatState:
-    """Main chat workflow handling messages and state.
-
-    Args:
-        messages (List[BaseMessage]): List of incoming messages.
-        previous (Optional[ChatState], optional): Previous chat state. Defaults to None.
-
-    Returns:
-        ChatState: The updated chat state.
-    """
     messages = inputs.get("messages", [])
     previous = inputs.get("previous", None)
 
     cl_logger.info(f"Received {len(messages)} messages.")
 
-    # Call _chat_workflow with the correct arguments
     return await _chat_workflow(messages=messages, previous=previous)
 
 
 async def _chat_workflow(
-    messages: List[BaseMessage],
+    messages: list[BaseMessage],
     previous: ChatState,
 ) -> ChatState:
-    """
-    Main workflow:
-
-    - Receives new user messages
-    - Calls decision agent to classify input as 'roll', 'search', or 'continue_story'
-    - Invokes dice agent or web search agent if needed
-    - Always calls writer agent to generate the next story segment
-    - Optionally triggers storyboard image generation after writer agent
-    """
-
     cl_logger.info(f"Messages: {messages}")
     cl_logger.info(f"Previous state: {previous}")
 
@@ -82,77 +63,66 @@ async def _chat_workflow(
         messages=new_messages,
         thread_id=previous.thread_id,
         error_count=previous.error_count,
-        # Copy other fields as needed
     )
 
     try:
-        # Determine action
-        human_messages = [
-            msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)
-        ]
-        last_human_message = human_messages[0] if human_messages else None
-        new_message = None
-        if not last_human_message:
-            cl_logger.info("No human message found, defaulting to continue_story")
-            action = "continue_story"
-        else:
-            decision_response = await decision_agent(state)
-            action = decision_response[0].name
-            cl_logger.info(f"Action: {action}")
-            new_message = AIMessage(content=decision_response[0].name, name="decision", metadata={})
-            state.messages.append(new_message)
+        # Call orchestrator agent to get ordered list of actions
+        actions = await orchestrator_agent(state)
+        cl_logger.info(f"Orchestrator actions: {actions}")
 
-        vector_memory = cl.user_session.get("vector_memory")  # Retrieve vector store
+        vector_memory = cl.user_session.get("vector_memory")
 
-        if "roll" in action:
-            dice_response = await dice_agent(state)
-            new_message = dice_response[0]
-            state.messages.append(new_message)
-            if vector_memory:
-                if new_message.metadata and "message_id" in new_message.metadata:
+        # For each action, call the corresponding agent/tool
+        for action in actions:
+            agent_response = []
+            if action == "roll":
+                agent_response = await dice_agent(state)
+            elif action == "search":
+                agent_response = await web_search_agent(state)
+            elif action == "todo":
+                agent_response = await todo_agent(state)
+            elif action == "character":
+                # Placeholder: implement character agent
+                continue
+            elif action == "lore":
+                # Placeholder: implement lore agent
+                continue
+            elif action == "puzzle":
+                # Placeholder: implement puzzle agent
+                continue
+            elif action == "write":
+                # We will always call writer_agent at the end
+                continue
+            elif action == "continue_story":
+                # We will always call writer_agent at the end
+                continue
+            else:
+                cl_logger.warning(f"Unknown action from orchestrator: {action}")
+                continue
+
+            # Append agent response(s) to state and store in vector store
+            for msg in agent_response:
+                state.messages.append(msg)
+                if vector_memory and msg.metadata and "message_id" in msg.metadata:
                     await vector_memory.put(
-                        content=new_message.content,
-                        message_id=new_message.metadata["message_id"],
-                        metadata={"type": "ai", "author": new_message.name},
-                    )
-                else:
-                    cl_logger.warning(
-                        f"AIMessage from dice_agent missing message_id for vector store: {new_message.content}"
+                        content=msg.content,
+                        message_id=msg.metadata["message_id"],
+                        metadata={"type": "ai", "author": msg.name},
                     )
 
-        elif "search" in action:
-            web_search_response = await web_search_agent(state)
-            new_message = web_search_response[0]
-            state.messages.append(new_message)
-            if vector_memory:
-                if new_message.metadata and "message_id" in new_message.metadata:
-                    await vector_memory.put(
-                        content=new_message.content,
-                        message_id=new_message.metadata["message_id"],
-                        metadata={"type": "ai", "author": new_message.name},
-                    )
-                else:
-                    cl_logger.warning(
-                        f"AIMessage from web_search_agent missing message_id for vector store: {new_message.content}"
-                    )
-
+        # Always call writer agent last
         writer_response = await writer_agent(state)
         if writer_response:
-            new_message = writer_response[0]
-            state.messages.append(new_message)
-            if vector_memory:
-                if new_message.metadata and "message_id" in new_message.metadata:
+            for msg in writer_response:
+                state.messages.append(msg)
+                if vector_memory and msg.metadata and "message_id" in msg.metadata:
                     await vector_memory.put(
-                        content=new_message.content,
-                        message_id=new_message.metadata["message_id"],
-                        metadata={"type": "ai", "author": new_message.name},
-                    )
-                else:
-                    cl_logger.warning(
-                        f"AIMessage from writer_agent missing message_id for vector store: {new_message.content}"
+                        content=msg.content,
+                        message_id=msg.metadata["message_id"],
+                        metadata={"type": "ai", "author": msg.name},
                     )
 
-        # After all agent responses, trigger storyboard generation if enabled
+        # Trigger storyboard generation after GM response
         if IMAGE_GENERATION_ENABLED:
             last_ai_message = None
             if state.messages and isinstance(state.messages[-1], AIMessage):
@@ -171,7 +141,7 @@ async def _chat_workflow(
         cl_logger.error(f"Workflow failed: {e}")
         state.messages.append(
             AIMessage(
-                content="The adventure continues...",  # Match test expectation
+                content="The adventure continues...",
                 name="system",
                 metadata={}
             )
