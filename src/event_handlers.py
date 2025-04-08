@@ -272,72 +272,127 @@ async def on_chat_resume(thread: ThreadDict):
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    """Handle incoming messages.
-
-    Args:
-        message (cl.Message): The incoming message.
-    """
+    """Handle incoming messages, including commands."""
     state: ChatState = cl.user_session.get("state")
     vector_memory: VectorStore = cl.user_session.get("vector_memory")
 
-    if message.type != "user_message":
-        return
+    # Ensure message is from user before processing
+    if message.author == cl.User.get_current().identifier or message.author == "Player":
 
-    try:
-        # Add user message to state
+        # Add user message to state immediately
         user_msg = HumanMessage(content=message.content, name="Player", metadata={"message_id": message.id})
         state.messages.append(user_msg)
-
         # Add user message to vector memory
         await vector_memory.put(content=message.content, message_id=message.id, metadata={"type": "human", "author": "Player"})
 
-        # Put messages relevant to the player message into state.memories list for AI to use from the vector memory
-        state.memories = [
-            str(m.page_content) for m in vector_memory.get(message.content)
-        ]
-        cl_logger.info(f"Memories: {state.memories}")
+        # --- Command Handling ---
+        command_processed = False
+        response_messages = []
 
-        # Generate AI response using the chat workflow
-        thread_config = {
-            "configurable": {
-                "thread_id": state.thread_id,
-            }
-        }
+        if message.content.startswith("/roll"):
+            query = message.content[len("/roll"):].strip()
+            cl_logger.info(f"Executing /roll command with query: {query}")
+            response_messages = await dice_agent(state)
+            command_processed = True
 
-        cb = cl.AsyncLangchainCallbackHandler(
-            to_ignore=[
-                "ChannelRead",
-                "RunnableLambda",
-                "ChannelWrite",
-                "__start__",
-                "_execute",
-            ],
-        )
-        # state = await chat_workflow.ainvoke(input={"messages": state.messages, "store": cl.user_session.get("vector_memory"), "previous": state}, config=thread_config)
-        # gm_message = cl.Message(content="")
+        elif message.content.startswith("/search"):
+            query = message.content[len("/search"):].strip()
+            cl_logger.info(f"Executing /search command with query: {query}")
+            response_messages = await web_search_agent(state)
+            command_processed = True
 
-        inputs = {"messages": state.messages, "previous": state}
-        state = await chat_workflow.ainvoke(
-            inputs, config=RunnableConfig(callbacks=[cb], **thread_config)
-        )
+        elif message.content.startswith("/todo"):
+            query = message.content[len("/todo"):].strip()
+            cl_logger.info(f"Executing /todo command with query: {query}")
+            response_messages = await todo_agent(state)
+            command_processed = True
 
-        # Store final AI response in vector store
-        if state.messages and isinstance(state.messages[-1], AIMessage):
-            ai_msg = state.messages[-1]
-            if ai_msg.metadata and "message_id" in ai_msg.metadata:
-                await vector_memory.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+        elif message.content.startswith("/write"):
+            query = message.content[len("/write"):].strip()
+            cl_logger.info(f"Executing /write command with query: {query}")
+            response_messages = await writer_agent(state)
+            command_processed = True
+
+        elif message.content.startswith("/storyboard"):
+            if not IMAGE_GENERATION_ENABLED:
+                await cl.Message(content="Image generation is disabled.").send()
+                command_processed = True
             else:
-                cl_logger.warning(f"Final AIMessage missing message_id: {ai_msg.content}")
+                last_gm_message_id = None
+                for msg in reversed(state.messages[:-1]):
+                    if isinstance(msg, AIMessage) and msg.name == "Game Master":
+                        if msg.metadata and "message_id" in msg.metadata:
+                            last_gm_message_id = msg.metadata["message_id"]
+                            break
+                        else:
+                            cl_logger.warning(f"Found last GM message, but it's missing message_id in metadata: {msg.content[:50]}...")
 
-        cl.user_session.set("state", state)
+                if last_gm_message_id:
+                    cl_logger.info(f"Executing /storyboard command for message ID: {last_gm_message_id}")
+                    await cl.Message(content="Generating storyboard for the last scene...").send()
+                    await storyboard_editor_agent(state=state, gm_message_id=last_gm_message_id)
+                else:
+                    await cl.Message(content="Could not find a previous Game Master message with a valid ID to generate a storyboard for.").send()
+                    cl_logger.warning("Could not execute /storyboard: No suitable GM message found in state.")
+                command_processed = True
 
-    except Exception as e:
-        cl.element.logger.error(f"Runnable stream failed: {e}", exc_info=True)
-        cl.element.logger.error(f"State: {state}")  # Log the state
-        await cl.Message(
-            content="⚠️ An error occurred while generating the response. Please try again later.",
-        ).send()
-        return
+        if command_processed:
+            if response_messages:
+                for ai_msg in response_messages:
+                    state.messages.append(ai_msg)
+                    if ai_msg.metadata and "message_id" in ai_msg.metadata:
+                        await vector_memory.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+                    else:
+                        cl_logger.warning(f"AIMessage from command agent missing message_id: {ai_msg.content}")
+            cl.user_session.set("state", state)
+            cl_logger.info(f"Command '{message.content.split()[0]}' processed.")
+            return
+
+        try:
+            state.memories = [
+                str(m.page_content) for m in vector_memory.get(message.content)
+            ]
+            cl_logger.info(f"Memories: {state.memories}")
+
+            thread_config = {
+                "configurable": {
+                    "thread_id": state.thread_id,
+                }
+            }
+
+            cb = cl.AsyncLangchainCallbackHandler(
+                to_ignore=[
+                    "ChannelRead",
+                    "RunnableLambda",
+                    "ChannelWrite",
+                    "__start__",
+                    "_execute",
+                ],
+            )
+
+            inputs = {"messages": state.messages, "previous": state}
+            state = await chat_workflow.ainvoke(
+                inputs, config=RunnableConfig(callbacks=[cb], **thread_config)
+            )
+
+            if state.messages and isinstance(state.messages[-1], AIMessage):
+                ai_msg = state.messages[-1]
+                if ai_msg.metadata and "message_id" in ai_msg.metadata:
+                    await vector_memory.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+                else:
+                    cl_logger.warning(f"Final AIMessage from workflow missing message_id: {ai_msg.content}")
+
+            cl.user_session.set("state", state)
+
+        except Exception as e:
+            cl_logger.error(f"Runnable stream failed: {e}", exc_info=True)
+            cl_logger.error(f"State: {state}")
+            await cl.Message(
+                content="⚠️ An error occurred while generating the response. Please try again later.",
+            ).send()
+            return
+    else:
+        cl_logger.debug(f"Ignoring non-user message type: {message.type} from author: {message.author}")
 
 
 async def load_knowledge_documents():
