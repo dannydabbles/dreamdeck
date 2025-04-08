@@ -18,7 +18,7 @@ from src.agents import (
     writer_agent,
     storyboard_editor_agent,
 )
-from src.config import IMAGE_GENERATION_ENABLED
+from src.config import IMAGE_GENERATION_ENABLED, START_MESSAGE
 
 cl_logger = logging.getLogger("chainlit")
 
