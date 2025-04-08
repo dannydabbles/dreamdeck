@@ -57,6 +57,14 @@ async def command_roll(query: str):
         else:
             cl_logger.warning(f"AIMessage from dice_agent missing message_id: {ai_msg.content}")
 
+    # Immediately call writer agent to continue story
+    gm_responses = await writer_agent(state)
+    if gm_responses:
+        gm_msg = gm_responses[0]
+        state.messages.append(gm_msg)
+        if gm_msg.metadata and "message_id" in gm_msg.metadata:
+            await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
+
     cl.user_session.set("state", state)
     cl_logger.info(f"/roll command processed.")
 

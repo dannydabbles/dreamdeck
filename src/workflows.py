@@ -21,9 +21,7 @@ from src.config import IMAGE_GENERATION_ENABLED
 from .models import ChatState
 from langchain_core.stores import BaseStore
 
-from src.agents.dice_agent import dice_agent
-from src.agents.web_search_agent import web_search_agent
-from src.agents.todo_agent import todo_agent
+from src.agents import agents_map
 
 import chainlit as cl
 from langchain_core.messages import (
@@ -72,35 +70,21 @@ async def _chat_workflow(
 
         vector_memory = cl.user_session.get("vector_memory")
 
-        # For each action, call the corresponding agent/tool
+        # Remove any trailing 'write' or 'continue_story' to avoid double GM call
+        trailing_gm = False
+        if actions and actions[-1] in ("write", "continue_story"):
+            trailing_gm = True
+            gm_action = actions.pop()
+
+        # Call each tool agent in order
         for action in actions:
-            agent_response = []
-            if action == "roll":
-                agent_response = await dice_agent(state)
-            elif action == "search":
-                agent_response = await web_search_agent(state)
-            elif action == "todo":
-                agent_response = await todo_agent(state)
-            elif action == "character":
-                # Placeholder: implement character agent
-                continue
-            elif action == "lore":
-                # Placeholder: implement lore agent
-                continue
-            elif action == "puzzle":
-                # Placeholder: implement puzzle agent
-                continue
-            elif action == "write":
-                # We will always call writer_agent at the end
-                continue
-            elif action == "continue_story":
-                # We will always call writer_agent at the end
-                continue
-            else:
+            agent_func = agents_map.get(action)
+            if not agent_func:
                 cl_logger.warning(f"Unknown action from orchestrator: {action}")
                 continue
 
-            # Append agent response(s) to state and store in vector store
+            agent_response = await agent_func(state)
+
             for msg in agent_response:
                 state.messages.append(msg)
                 if vector_memory and msg.metadata and "message_id" in msg.metadata:
