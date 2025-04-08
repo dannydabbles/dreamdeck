@@ -5,6 +5,18 @@ import random
 import base64
 import httpx
 from typing import List, Optional
+
+# Define Chainlit commands for UI buttons
+commands = [
+    {"id": "roll", "icon": "dice-5", "description": "Roll dice"},
+    {"id": "search", "icon": "globe", "description": "Web search"},
+    {"id": "todo", "icon": "list", "description": "Add a TODO"},
+    {"id": "write", "icon": "pen-line", "description": "Direct prompt to writer"},
+    {"id": "storyboard", "icon": "image", "description": "Generate storyboard"},
+    {"id": "help", "icon": "help-circle", "description": "Show help"},
+    {"id": "reset", "icon": "refresh-ccw", "description": "Reset story"},
+    {"id": "save", "icon": "save", "description": "Export story"},
+]
 from chainlit.types import ThreadDict
 from tenacity import (
     retry,
@@ -152,6 +164,9 @@ async def on_chat_start():
         cl_user_session.set("storyboard_editor_agent", storyboard_editor_agent)
         cl_user_session.set("dice_roll_agent", dice_roll_agent)
         cl_user_session.set("web_search_agent", web_search_agent)
+
+        # Register Chainlit commands for UI buttons
+        await cl.context.emitter.set_commands(commands)
 
         # Define Chat Settings
         settings = await cl.ChatSettings(
@@ -355,6 +370,36 @@ async def on_message(message: cl.Message):
     if is_current_user or is_generic_player:
         if not is_current_user and is_generic_player:
             cl_logger.warning(f"Processing message from 'Player' author, but couldn't verify against session identifier '{current_user_identifier}'.")
+
+        # If the message is a command button click, handle it
+        if message.command:
+            cl_logger.info(f"Command button selected: {message.command}")
+            try:
+                from src import commands as cmd_mod
+                cmd_name = message.command.lower()
+                arg = ""  # No argument from button click
+                if cmd_name == "roll":
+                    await cmd_mod.command_roll(arg)
+                elif cmd_name == "search":
+                    await cmd_mod.command_search(arg)
+                elif cmd_name == "todo":
+                    await cmd_mod.command_todo(arg)
+                elif cmd_name == "write":
+                    await cmd_mod.command_write(arg)
+                elif cmd_name == "storyboard":
+                    await cmd_mod.command_storyboard(arg)
+                elif cmd_name == "help":
+                    await cmd_mod.command_help()
+                elif cmd_name == "reset":
+                    await cmd_mod.command_reset()
+                elif cmd_name == "save":
+                    await cmd_mod.command_save()
+                else:
+                    await cl.Message(content=f"Unknown command: {cmd_name}").send()
+            except Exception as e:
+                cl_logger.error(f"Error handling command button '{message.command}': {e}", exc_info=True)
+                await cl.Message(content=f"Error processing command '{message.command}': {e}").send()
+            return  # Skip normal message processing
 
         # If the message is a slash command, parse and dispatch
         if message.content.strip().startswith("/"):
