@@ -16,7 +16,7 @@ async def test_load_knowledge_documents(tmp_path, monkeypatch):
     # Create test files
     (mock_dir / "test.txt").write_text("Sample text content")
     (mock_dir / "subfolder").mkdir()
-    (mock_dir / "subfolder" / "test.pdf").touch()  # Empty PDF for coverage
+    (mock_dir / "subfolder" / "test.pdf").touch()
     
     # Mock dependencies
     vector_store_mock = MagicMock(spec=VectorStore)
@@ -26,22 +26,28 @@ async def test_load_knowledge_documents(tmp_path, monkeypatch):
     with patch("src.event_handlers._load_document") as load_doc_mock,\
          patch("src.event_handlers.RecursiveCharacterTextSplitter") as splitter_mock:
         
-        # Return dummy documents and splits
-        load_doc_mock.side_effect = lambda _: [Document(page_content="Loaded content")]
+        load_doc_mock.side_effect = lambda _: [Document(page_content="Loaded content", metadata={})]
         splitter_mock.return_value.split_documents.return_value = [
-            Document(page_content="Chunk 1"),
-            Document(page_content="Chunk 2")
+            Document(page_content="Chunk 1", metadata={}),
+            Document(page_content="Chunk 2", metadata={})
         ]
         
-        # Run the knowledge loader
         await load_knowledge_documents()
         
-        # Verify operations
-        assert load_doc_mock.call_count == 2  # Both txt and pdf
+        assert load_doc_mock.call_count == 2
         assert splitter_mock().split_documents.called
         
-        # Verify vector store receives chunks
         add_call = vector_store_mock.add_documents.call_args_list[0]
         added_docs = add_call.args[0]
-        assert len(added_docs) == 4  # 2 chunks/file × 2 files = 4 chunks
+        assert len(added_docs) == 4
         assert "Chunk 1" in [doc.page_content for doc in added_docs]
+
+        # Check metadata tagging
+        for doc in added_docs:
+            assert doc.metadata.get("type") == "knowledge"
+            assert "source" in doc.metadata
+
+        # Simulate retrieval
+        vector_store_mock.get = MagicMock(return_value=added_docs)
+        results = vector_store_mock.get("Chunk 1")
+        assert any("Chunk 1" in doc.page_content for doc in results)

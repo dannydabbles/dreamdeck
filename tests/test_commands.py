@@ -290,18 +290,23 @@ async def test_command_reset(mock_session_data):
         mock_cl_message_instance.id = "start-msg-id"
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
+        # Patch vector_store.collection.delete to track calls
+        vector_store.collection = AsyncMock()
+        vector_store.collection.delete = AsyncMock()
+
         from src.commands import command_reset
         await command_reset()
 
-        # Check start message sent
         mock_cl_message_instance.send.assert_awaited_once()
-        # Check state reset
         args, kwargs = mock_user_session_set.call_args_list[-1]
         assert args[0] == "state"
         new_state = args[1]
         assert new_state.messages
         assert isinstance(new_state.messages[0], AIMessage)
-        assert new_state.messages[0].content.startswith("Hello")  # START_MESSAGE
+        assert new_state.messages[0].content.startswith("Hello")
+
+        # Vector store cleared
+        vector_store.collection.delete.assert_awaited_once()
 
 @pytest.mark.asyncio
 async def test_command_save(mock_session_data):

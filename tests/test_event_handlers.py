@@ -184,49 +184,133 @@ async def test_on_chat_resume(mock_cl_environment):
                 "createdAt": "2023-01-01T10:00:20Z",
             },
         ],
-        "user": {"identifier": "test_user", "metadata": {}} # Add user dict
+        "user": {"identifier": "test_user", "metadata": {}}
     }
 
     with patch("src.event_handlers.VectorStore", new_callable=MagicMock) as mock_vector_store_cls, \
          patch("src.event_handlers.load_knowledge_documents", new_callable=AsyncMock) as mock_load_knowledge, \
-         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:  # Patch as MagicMock (class mock)
+         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
 
         mock_vector_store_instance = MagicMock()
-        mock_vector_store_instance.put = AsyncMock()  # Mock the put method
+        mock_vector_store_instance.put = AsyncMock()
+        mock_vector_store_instance.collection.get = MagicMock(return_value={"ids": ["step1", "step2"]})  # Simulate existing IDs
         mock_vector_store_cls.return_value = mock_vector_store_instance
 
-        # Make cl.Message() return an instance whose .send() is an AsyncMock
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         await on_chat_resume(thread_dict)
 
-        # Verify VectorStore initialization and storage
+        # VectorStore initialized
         mock_vector_store_cls.assert_called_once()
         assert user_session_store.get("vector_memory") is mock_vector_store_instance
 
-        # Verify state reconstruction
+        # State reconstructed
         state = user_session_store.get("state")
         assert isinstance(state, ChatState)
         assert state.thread_id == "resumed-thread-id"
         assert len(state.messages) == 2
         assert isinstance(state.messages[0], HumanMessage)
-        assert state.messages[0].content == "Hello there" # Output of user_message step
+        assert state.messages[0].content == "Hello there"
         assert isinstance(state.messages[1], AIMessage)
         assert state.messages[1].content == "How can I help?"
-        assert state.messages[1].name == "Game Master"
 
-        # Verify vector store puts during reconstruction
-        mock_vector_store_instance.put.assert_any_await(content="Hello there", message_id="step1", metadata={"type": "human", "author": "Player", "parent_id": None})
-        mock_vector_store_instance.put.assert_any_await(content="How can I help?", message_id="step2", metadata={"type": "ai", "author": "Game Master", "parent_id": "step1"})
+        # Since IDs exist, put() should NOT be called (duplicate prevention)
+        mock_vector_store_instance.put.assert_not_awaited()
 
-        # Verify knowledge loading called
+        # Knowledge loading called
         mock_load_knowledge.assert_awaited_once()
 
-        # Verify other session vars reset/initialized
+        # Session vars
         assert user_session_store.get("image_generation_memory") == []
         assert user_session_store.get("ai_message_id") is None
-        assert "gm_message" in user_session_store # Check if gm_message placeholder is set
+        assert "gm_message" in user_session_store
+
+@pytest.mark.asyncio
+async def test_thread_resume_consistency(mock_cl_environment):
+    # Start a new chat
+    with patch("src.event_handlers.VectorStore", new_callable=MagicMock) as mock_vector_store_cls, \
+         patch("src.event_handlers.cl.ChatSettings", new_callable=MagicMock) as mock_chat_settings_cls, \
+         patch("src.event_handlers.asyncio.create_task"), \
+         patch("src.event_handlers.load_knowledge_documents", new_callable=AsyncMock), \
+         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls, \
+         patch("src.event_handlers.DatabasePool.close", new_callable=AsyncMock):
+
+        mock_vector_store = MagicMock()
+        mock_vector_store.put = AsyncMock()
+        mock_vector_store.collection.get = MagicMock(return_value={"ids": []})
+        mock_vector_store_cls.return_value = mock_vector_store
+
+        mock_chat_settings = AsyncMock()
+        mock_chat_settings.send.return_value = None
+        mock_chat_settings_cls.return_value = mock_chat_settings
+
+        mock_cl_msg = AsyncMock()
+        mock_cl_msg.send.return_value = None
+        mock_cl_msg.id = "start-msg-id"
+        mock_cl_message_cls.return_value = mock_cl_msg
+
+        from src.event_handlers import on_chat_start
+        await on_chat_start()
+
+        state = mock_cl_environment.get("state")
+        vector_store = mock_cl_environment.get("vector_memory")
+
+        # Simulate user and AI messages
+        user_msg = HumanMessage(content="Hello", name="Player", metadata={"message_id": "u1"})
+        ai_msg = AIMessage(content="Hi there", name="Game Master", metadata={"message_id": "a1", "parent_id": "u1"})
+        state.messages.append(user_msg)
+        state.messages.append(ai_msg)
+
+        # Add to vector store
+        await vector_store.put(content=user_msg.content, message_id="u1", metadata={"type": "human", "author": "Player"})
+        await vector_store.put(content=ai_msg.content, message_id="a1", metadata={"type": "ai", "author": "Game Master", "parent_id": "u1"})
+
+        # Simulate saved thread dict
+        thread_dict = {
+            "id": state.thread_id,
+            "steps": [
+                {
+                    "id": "u1",
+                    "type": "user_message",
+                    "output": "Hello",
+                    "name": "Player",
+                    "parentId": None,
+                    "createdAt": "2023-01-01T10:00:00Z",
+                },
+                {
+                    "id": "a1",
+                    "type": "assistant_message",
+                    "output": "Hi there",
+                    "name": "Game Master",
+                    "parentId": "u1",
+                    "createdAt": "2023-01-01T10:00:01Z",
+                },
+            ],
+            "user": {"identifier": "test_user", "metadata": {}}
+        }
+
+        # Patch vector_store.collection.get to simulate existing IDs
+        vector_store.collection.get = MagicMock(side_effect=lambda ids=None, **kwargs: {"ids": ids or []})
+
+        # Reset vector_store.put mock
+        vector_store.put.reset_mock()
+
+        # Call resume
+        from src.event_handlers import on_chat_resume
+        await on_chat_resume(thread_dict)
+
+        resumed_state = mock_cl_environment.get("state")
+        assert len(resumed_state.messages) == 2
+        assert resumed_state.messages[0].content == "Hello"
+        assert resumed_state.messages[1].content == "Hi there"
+        # Metadata preserved
+        assert resumed_state.messages[0].metadata.get("message_id") == "u1"
+        assert resumed_state.messages[1].metadata.get("message_id") == "a1"
+        assert resumed_state.messages[1].metadata.get("parent_id") == "u1"
+
+        # Vector store put should NOT be called again for existing IDs
+        vector_store.put.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -460,25 +544,25 @@ async def test_handle_delete_message(mock_cl_environment):
     from langchain_core.messages import HumanMessage, AIMessage
     from src.stores import VectorStore
 
-    # Setup state with parent and child messages
     parent_id = "parent-id"
     child_id = "child-id"
+    grandchild_id = "grandchild-id"
+
     state = ChatState(
         thread_id="test",
         messages=[
             HumanMessage(content="hi", name="Player", metadata={"message_id": parent_id}),
             AIMessage(content="reply", name="GM", metadata={"message_id": child_id, "parent_id": parent_id}),
+            AIMessage(content="subreply", name="GM", metadata={"message_id": grandchild_id, "parent_id": child_id}),
         ]
     )
     mock_cl_environment["state"] = state
 
-    # Mock vector store
     vector_store = AsyncMock(spec=VectorStore)
     vector_store.collection = AsyncMock()
     vector_store.collection.delete = AsyncMock()
     mock_cl_environment["vector_memory"] = vector_store
 
-    # Patch DB pool
     with patch("src.event_handlers.DatabasePool.get_pool", new_callable=AsyncMock) as mock_get_pool, \
          patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
 
@@ -494,18 +578,19 @@ async def test_handle_delete_message(mock_cl_environment):
 
         await handle_delete_message(action)
 
-        # Parent and child should be deleted from state
         remaining_ids = [m.metadata.get("message_id") for m in mock_cl_environment["state"].messages]
         assert parent_id not in remaining_ids
         assert child_id not in remaining_ids
+        assert grandchild_id not in remaining_ids
 
-        # Vector store delete called for both
+        # Vector store delete called for all
         vector_store.collection.delete.assert_any_await(ids=[parent_id])
         vector_store.collection.delete.assert_any_await(ids=[child_id])
+        vector_store.collection.delete.assert_any_await(ids=[grandchild_id])
 
-        # DB delete called for both
+        # DB delete called for all
         mock_db.delete_message.assert_any_await(parent_id)
         mock_db.delete_message.assert_any_await(child_id)
+        mock_db.delete_message.assert_any_await(grandchild_id)
 
-        # Confirmation message sent
         mock_cl_message_instance.send.assert_awaited_once()

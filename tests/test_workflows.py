@@ -11,24 +11,34 @@ def mock_chat_state():
     return ChatState(messages=[], thread_id="test-thread-id")
 
 @pytest.mark.asyncio
-async def test_chat_workflow(mock_chat_state):
-    from src.agents.decision_agent import decide_action
-    from langgraph.func import task
-    from unittest.mock import MagicMock
+async def test_chat_workflow_memory_updates(mock_chat_state):
+    dummy_ai_msg1 = AIMessage(content="Tool1 done", name="tool1", metadata={"message_id": "m1"})
+    dummy_ai_msg2 = AIMessage(content="Tool2 done", name="tool2", metadata={"message_id": "m2"})
+    dummy_gm_msg = AIMessage(content="Story continues", name="Game Master", metadata={"message_id": "gm1"})
 
-    with (
-        patch("langgraph.func.task", new=lambda f: f),
-        patch("langchain_openai.ChatOpenAI.ainvoke") as mock_llm_invoke,
-        patch("chainlit.user_session") as mock_cl_session,
-        patch("langgraph.config.get_config") as mock_get_config,  # New mock
-        patch("langchain_core.runnables.config.RunnableConfig") as mock_runnable_config,
-    ):
-        mock_get_config.return_value = {"some_key": "value"}  # Provide fake config
-        mock_cl_session.get.return_value = MagicMock(vector_store=MagicMock())
-        mock_llm_invoke.return_value = MagicMock(content="continue_story")
+    with patch("src.workflows.orchestrator_agent", new_callable=AsyncMock) as mock_orchestrator, \
+         patch("src.workflows.agents_map", {"tool1": AsyncMock(return_value=[dummy_ai_msg1]), "tool2": AsyncMock(return_value=[dummy_ai_msg2])}), \
+         patch("src.workflows.writer_agent", new_callable=AsyncMock, return_value=[dummy_gm_msg]), \
+         patch("src.workflows.cl.user_session.get", new_callable=MagicMock) as mock_user_session_get:
+
+        vector_store = AsyncMock()
+        mock_user_session_get.return_value = vector_store
 
         initial_state = mock_chat_state
-        new_messages = [HumanMessage(content="Test input")]
+        initial_state.messages.append(HumanMessage(content="Hi"))
 
-        updated_state = await _chat_workflow(new_messages, previous=initial_state)
-        assert updated_state.messages[-1].content == "The adventure continues..."
+        mock_orchestrator.return_value = ["tool1", "tool2"]
+
+        updated_state = await _chat_workflow([], previous=initial_state)
+
+        # All AI messages appended
+        assert dummy_ai_msg1 in updated_state.messages
+        assert dummy_ai_msg2 in updated_state.messages
+        assert dummy_gm_msg in updated_state.messages
+
+        # Vector store put called for each AI message
+        calls = [call.kwargs for call in vector_store.put.await_args_list]
+        msg_ids = [c["message_id"] for c in calls]
+        assert "m1" in msg_ids
+        assert "m2" in msg_ids
+        assert "gm1" in msg_ids
