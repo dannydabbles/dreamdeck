@@ -233,10 +233,10 @@ async def test_command_missing_state():
     query = "anything"
 
     with patch("src.commands.cl.user_session.get", side_effect=user_session_get), \
-         patch("chainlit.Message", new_callable=AsyncMock) as mock_cl_message_cls:
+         patch("chainlit.Message", new_callable=MagicMock) as mock_cl_message_cls:
 
         mock_cl_message_instance = AsyncMock()
-        mock_cl_message_instance.send.return_value = None  # Configure await result
+        mock_cl_message_instance.send = AsyncMock(return_value=None)
         mock_cl_message_cls.return_value = mock_cl_message_instance
 
         # Test one command, the logic is the same for all
