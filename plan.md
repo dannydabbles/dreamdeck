@@ -1,507 +1,121 @@
-# Dreamdeck Improvement Plan
+# Dreamdeck Improvement Plan (Revised)
 
-This plan outlines the steps to enhance the Dreamdeck application by integrating Chainlit features more deeply,
-improving configuration management, and adding new functionalities like message deletion.
+This plan outlines the next phases of development for the Dreamdeck application, building upon the initial setup and focusing on enhancing player experience, stability, and core storytelling features.
 
 **Understanding & Context:**
 
-1.  **Current State:** The app uses LangGraph for workflow management (`chat_workflow` in `src/workflows.py`), routing user input via a `decision_agent` to specialized agents (`writer_agent`, `dice_agent`, `web_search_agent`, `storyboard_editor_agent`, `todo_agent`). State is managed in `ChatState` (Pydantic model) and persisted partly in Chainlit's history and a ChromaDB vector store (`VectorStore` in `src/stores.py`). Configuration is handled via `config.yaml` and `src/config.py`. Chainlit integration happens in `src/event_handlers.py`. Prompts are currently embedded in `config.yaml`. Image generation is handled separately. Testing uses helper functions (`_dice_roll`, `_generate_story`, etc.) due to context issues.
-2.  **Chainlit Concepts:**
-    *   **`@cl.command`:** Allows defining slash commands (e.g., `/roll`, `/todo`) callable directly from the chat input. Useful for bypassing the decision agent.
-    *   **`cl.ChatSettings`:** Defines user-configurable settings (sliders, text inputs) accessible via the settings icon in the chat UI. Perfect for overriding agent parameters like temperature or endpoints. Defined in `on_chat_start`.
-    *   **`cl.Action`:** Buttons attached to messages, triggering callbacks (`@cl.action_callback`). Ideal for the "delete message" functionality.
-    *   **`cl.Message`:** Represents messages in the UI. Has `id`, `parent_id`, `actions`, `elements`. Can be created, sent, and potentially updated or deleted (need to verify deletion API in v2).
-    *   **`cl.user_session`:** A dictionary for storing session-specific data, like our `ChatState`, `VectorStore` instance, and user overrides from `cl.ChatSettings`.
-    *   **`on_chat_start`, `on_message`, `on_chat_resume`:** Key lifecycle hooks for initialization, message handling, and resuming sessions.
-    *   **`Elements`:** Used for displaying non-text content like images (already used for storyboards).
-3.  **Integration Strategy:**
-    *   Use `@cl.command` for direct agent access.
-    *   Use `cl.ChatSettings` in `on_chat_start` to define user overrides for agent parameters. Agents will need to read these from `cl.user_session` and merge with defaults from `config.yaml`.
-    *   Use `cl.Action` on messages to trigger a deletion callback.
-    *   The deletion callback (`@cl.action_callback`) needs to:
-        *   Modify the `ChatState` in `cl.user_session` (remove the message).
-        *   Update the `VectorStore` (remove the corresponding entry).
-        *   Remove the message from the Chainlit UI (if possible).
-    *   Refactor config to separate prompts and add per-agent endpoint/parameter overrides.
-    *   Ensure agent/workflow structure remains modular.
+1.  **Current State:** The app uses LangGraph for workflow management (`chat_workflow` in `src/workflows.py`), routing user input via a `decision_agent` or direct `@cl.command` calls to specialized agents (`writer_agent`, `dice_agent`, `web_search_agent`, `storyboard_editor_agent`, `todo_agent`). State is managed in `ChatState` (Pydantic model) and persisted partly in Chainlit's history and a ChromaDB vector store (`VectorStore` in `src/stores.py`). Configuration (`config.yaml`, `src/config.py`) includes externalized prompts and agent parameter defaults. Chainlit `ChatSettings` allow user overrides for agent parameters (temp, max_tokens, endpoint). Chainlit integration happens in `src/event_handlers.py`.
+2.  **Completed Work (Original Plan):**
+    *   Phase 1: Configuration Refactoring & Prompt Externalization.
+    *   Phase 2: Implemented Chainlit Commands (`/roll`, `/search`, etc.).
+    *   Phase 3: Implemented Chainlit Chat Settings for agent parameter overrides.
+3.  **Chainlit Concepts:** We leverage `@cl.command`, `cl.ChatSettings`, `cl.Message`, `cl.user_session`, lifecycle hooks (`on_chat_start`, `on_message`, etc.), and `Elements` (for images). We can further explore `cl.Action`, `cl.AskUser`, `cl.Step`, and `Chat Profiles`.
+4.  **Revised Strategy:** Focus on stabilizing the current features, enhancing player interaction through explicit choices, deepening the narrative state, improving observability, and then considering advanced features like message editing or more complex state management. Full message deletion is deferred due to complexity and potential impact on narrative consistency.
 
 **Improvement Plan:**
 
-**Phase 1: Configuration Refactoring & Prompt Externalization**
+**Phase 1: Stabilization & Core Refinement**
 
-*   **Goal:** Clean up `config.yaml`, make prompts external, and prepare agent configurations for overrides.
+*   **Goal:** Solidify the existing features, improve observability, ensure configuration is comprehensive, and fix bugs.
 *   **Tasks:**
-    1.  Create a new directory `src/prompts/`.
-    2.  ✅ Move the Jinja template content for `web_search_prompt`, `dice_processing_prompt`, `ai_writer_prompt`, `storyboard_generation_prompt`, and `decision_prompt` from `config.yaml` into separate files within `src/prompts/` (e.g., `web_search.j2`, `dice_processing.j2`, etc.).
-    3.  Update `config.yaml`:
-        *   ✅ Replace the prompt content under `prompts:` with filenames (e.g., `web_search_prompt: "web_search.j2"`).
-        *   ✅ Modify the `agents:` section. For each agent (`decision_agent`, `writer_agent`, etc.), add optional fields for `base_url`. Define the *current* values as defaults here.
-        ```yaml
-        # Example for writer_agent in config.yaml
-        agents:
-          # ... other agents
-          writer_agent:
-            temperature: 0.7
-            max_tokens: 8000
-            streaming: true
-            verbose: true
-            # Add optional overrides - these are defaults if not set by user
-            base_url: "http://192.168.1.111:5000/v1" # Default endpoint
-            # temperature_override: null # Can be set via ChatSettings
-            # max_tokens_override: null # Can be set via ChatSettings
-        ```
-    4.  Update `src/config.py`:
-        *   Modify the Pydantic models (`DecisionAgentConfig`, `WriterAgentConfig`, etc.) to include the new optional fields (`base_url: Optional[str] = None`, etc.).
-        *   ✅ Add fields to `ConfigSchema` to store the *loaded prompt content* (not just filenames).
-        *   ✅ Add logic during config loading to read the prompt files specified in `config.yaml` (using the filenames) and store their content in the `config` object.
+    1.  **Bug Fixing & Polish:**
+        *   Address any known bugs or inconsistencies from the initial implementation (logging, error handling, UI glitches).
+        *   Ensure `message_id` is consistently captured in `AIMessage` and `HumanMessage` metadata within `ChatState` for all creation points (commands, `on_message`, agent responses).
+        *   Verify that `VectorStore.put` is always called with the `message_id` when available.
+    2.  **Enhance Observability with `cl.Step`:**
+        *   In `src/workflows.py` (`_chat_workflow`) and potentially within key agent functions (`_generate_story`, `_dice_roll`, etc.), wrap logical blocks or agent calls with `async with cl.Step(name="...", type="...") as step:` (e.g., "Deciding Action", "Rolling Dice", "Generating Story Segment", "Invoking Web Search").
+        *   Set `step.input` and `step.output` where appropriate to show data flow (e.g., input prompt, agent decision, tool results, generated text). This will help debug the flow directly in the UI.
         ```python
-        # Example in src/config.py (Actual implementation done)
-        from pathlib import Path
-        # ... other imports
+        # Example in _chat_workflow
+        async with cl.Step(name="Decide Action", type="llm") as step:
+            decision_response = await decision_agent(state)
+            action = decision_response[0].name
+            step.output = action # Log the decided action
+            # ... rest of decision logic ...
 
-        PROMPTS_DIR = Path(__file__).parent / "prompts"
-
-        class ConfigSchema(BaseModel):
-            # ... existing fields ...
-            prompt_files: dict = Field(alias="prompts") # Store filenames from yaml
-            loaded_prompts: dict = {} # Store loaded content
-
-        def load_config():
-            config_data = yaml.safe_load(CONFIG_FILE.read_text())
-            schema = ConfigSchema.model_validate(config_data)
-
-            # Load prompts from files
-            for key, filename in schema.prompt_files.items():
-                prompt_path = PROMPTS_DIR / filename
-                if prompt_path.exists():
-                    schema.loaded_prompts[key] = prompt_path.read_text()
-                else:
-                    cl_logger.error(f"Prompt file not found: {prompt_path}")
-                    schema.loaded_prompts[key] = f"ERROR: Prompt file {filename} not found."
-            return schema
-
-        config = load_config() # Actual implementation done
-
-        # ✅ Update constants to use loaded prompts
-        AI_WRITER_PROMPT = config.loaded_prompts.get("ai_writer_prompt", "Write a story.")
-        # ... other prompts ...
-
-        # ✅ Update agent configs to expose new fields if needed
-        # Example:
-        WRITER_AGENT_BASE_URL = config.agents.writer_agent.base_url
-        # ... other agent base URLs ...
+        # Example in _dice_roll
+        async with cl.Step(name="Process Dice Request", type="tool") as step:
+            step.input = input_msg.content
+            # ... llm call for specs/reasons ...
+            # ... perform rolls ...
+            step.output = lang_graph_msg # Log the formatted result
+            # ... send cl.Message ...
         ```
-    5.  Update agent files (`src/agents/*.py`): Modify the `_helper` functions (e.g., `_generate_story`, `_dice_roll`) to use the loaded prompt content from `src.config` (e.g., `src.config.AI_WRITER_PROMPT`) instead of accessing `config.prompts`. Ensure they use the base URL from `src.config` when initializing `ChatOpenAI`.
+    3.  **Comprehensive Chat Settings:**
+        *   Review `src/event_handlers.py` (`on_chat_start`) and `src/config.py`. Ensure all key agent parameters (temperature, max_tokens, base_url) for *all* agents (`decision`, `writer`, `storyboard`, `dice` LLM, `web_search` LLM) are exposed via `cl.ChatSettings`.
+        *   Ensure all agents correctly read and prioritize these user settings over the defaults from `config.yaml`.
+    4.  **Storyboard Reliability:**
+        *   Review the `generate_storyboard` task and `process_storyboard_images` in `src/agents/storyboard_editor_agent.py`. Improve error handling and logging.
+        *   Ensure the `gm_message_id` is reliably passed and used for parenting the image messages.
+    5.  **Testing:**
+        *   Update existing tests (`tests/`) to reflect the use of `cl.Step` if it impacts logic flow (it shouldn't significantly).
+        *   Add tests specifically verifying that agents correctly pick up overridden parameters from mocked `cl.user_session.get("chat_settings")`.
 
-*   **Chainlit Docs Snippet:** (Not directly applicable, but sets up for Phase 3)
+**Phase 2: Enhancing Player Interaction & State**
 
-**Phase 2: Implement Chainlit Commands**
-
-*   **Goal:** Allow direct invocation of agents via slash commands.
+*   **Goal:** Introduce explicit player choices and begin tracking basic character/world state.
 *   **Tasks:**
-    1.  ✅ Create a new file `src/commands.py`.
-    2.  ✅ In `src/commands.py`, define async functions decorated with `@cl.command` for each agent: `roll`, `search`, `todo`, `write`, `storyboard`.
-    3.  ✅ Each command function should:
-        *   ✅ Accept user input (e.g., `query: str`).
-        *   ✅ Retrieve the current `ChatState` and `VectorStore` from `cl.user_session`.
-        *   ✅ Create a `HumanMessage` from the `query`.
-        *   ✅ *Option B (More integrated):* Add the `HumanMessage` to the main `ChatState`, call the agent *task* (e.g., `dice_agent(state)`), add the agent's `AIMessage` response back to the `ChatState`, update the vector store, and send the `cl.Message`. This keeps the command interaction in the history.
-    4.  ✅ In `src/event_handlers.py`, import the command functions from `src/commands.py` to make them available to Chainlit.
+    1.  **Explicit Choices with `cl.Action`:**
+        *   Modify the `writer_agent` (`_generate_story` in `src/agents/writer_agent.py`). When the GM should present distinct choices (as described in the `AI_WRITER_PROMPT` guidelines), the LLM response should include a marker or structured format indicating these choices (e.g., `[CHOICE: Go left | Go right | Wait here]`).
+        *   Update the logic that processes the `writer_agent` response (likely in `_chat_workflow` or just before sending the `cl.Message`). If choices are detected:
+            *   Parse the choices.
+            *   Create `cl.Action` buttons for each choice. The `action.value` should contain the text of the choice. Use a unique `action.name` (e.g., "make_choice").
+            *   Attach these actions to the `cl.Message` sent by the GM.
+        *   Implement an `@cl.action_callback("make_choice")` in `src/event_handlers.py`. This callback should:
+            *   Get the chosen text from `action.value`.
+            *   Create a `HumanMessage` representing the player's choice (e.g., `HumanMessage(content=action.value)`).
+            *   Add this message to the `ChatState`.
+            *   Optionally, disable or remove the choice buttons (`await action.remove()` might remove just the clicked one, or update the message to remove all).
+            *   Trigger the `_chat_workflow` again to continue the story based on the choice.
+    2.  **Basic Character State:**
+        *   Modify `src/models.py`: Add a simple dictionary `character_state: dict = {}` to the `ChatState` model.
+        *   Modify the `AI_WRITER_PROMPT`: Instruct the GM to occasionally update or reference simple character state elements (like inventory items or key conditions) using a specific format (e.g., `[STATE_UPDATE: inventory={'key': 1}, status='Injured']`).
+        *   In `src/workflows.py` (`_chat_workflow`), after the `writer_agent` responds:
+            *   Check the AI message content for the state update format.
+            *   If found, parse the update and merge it into `state.character_state`.
+            *   Ensure the updated `state` (including `character_state`) is saved back to `cl.user_session`.
+        *   Modify `AI_WRITER_PROMPT` again: Instruct the GM to consider the `{{ state.character_state }}` (pass this into the template render context) when generating the narrative.
+        *   (Optional) Display Character State: Add a small section in the UI (perhaps using `cl.Text` element updated periodically or on demand via a command) to show the current `character_state`.
 
-*   **Chainlit Docs Snippet:**
-    > ```python
-    > @cl.command(name="my-command", description="Description of my command")
-    > async def my_command(query: str):
-    >     # query is the text entered by the user after the command name
-    >     await cl.Message(content=f"Command received: {query}").send()
-    > ```
+**Phase 3: Storytelling & World Building Enhancements**
 
-**Phase 3: Implement Chainlit Chat Settings**
-
-*   **Goal:** Allow users to override agent parameters via the UI.
+*   **Goal:** Improve the storyboard feature and potentially add basic NPC tracking.
 *   **Tasks:**
-    1.  In `src/event_handlers.py` (`on_chat_start`):
-        *   Define `cl.ChatSettings`.
-        *   Add input fields (`cl.input_widget.TextInput`, `cl.input_widget.Slider`) for parameters you want to make configurable (e.g., `Writer Temperature`, `Writer Max Tokens`, `Writer Endpoint`, `Storyboard Endpoint`, `Decision Temp`, etc.). Use descriptive IDs.
-        *   Load default values from `src.config` (e.g., `src.config.WRITER_AGENT_TEMPERATURE`).
-        ```python
-        # src/event_handlers.py
-        import chainlit as cl
-        from chainlit.input_widget import Slider, TextInput # Import widgets
-        from src import config # Import your config
+    1.  **Storyboard Control:**
+        *   Add `ChatSettings` for storyboard parameters (e.g., aspect ratio preset, maybe a style keyword input).
+        *   Modify `src/image_generation.py` and `src/agents/storyboard_editor_agent.py` to use these settings when generating prompts and calling the image API.
+        *   Consider adding a `cl.Action` to GM messages: "Regenerate Storyboard". The callback would re-run `storyboard_editor_agent` for that specific GM message ID.
+    2.  **Basic NPC Tracking:**
+        *   Similar to character state, add `npc_state: dict = {}` to `ChatState`.
+        *   Update `AI_WRITER_PROMPT` to instruct the GM to track key NPCs encountered and their basic status or relationship to the player using a format like `[NPC_UPDATE: 'Guard Captain': {'status': 'Suspicious', 'location': 'Gate'}, 'Mystic': {'status': 'Helpful'}]`.
+        *   Update `_chat_workflow` to parse and merge these updates into `state.npc_state`.
+        *   Pass `{{ state.npc_state }}` into the `AI_WRITER_PROMPT` context for the GM to reference.
 
-        @cl.on_chat_start
-        async def on_chat_start():
-            # ... existing setup ...
+**Phase 4: Advanced Features & Polish**
 
-            settings = await cl.ChatSettings(
-                [
-                    Slider(
-                        id="writer_temp",
-                        label="Writer Agent - Temperature",
-                        min=0.0, max=2.0, step=0.1, initial=config.WRITER_AGENT_TEMPERATURE
-                    ),
-                    TextInput(
-                        id="writer_endpoint",
-                        label="Writer Agent - OpenAI Endpoint URL",
-                        initial=config.WRITER_AGENT_BASE_URL or "", # Use loaded default
-                        placeholder="e.g., http://localhost:5000/v1"
-                    ),
-                    # ... Add settings for other agents/parameters ...
-                    Slider(
-                        id="storyboard_temp",
-                        label="Storyboard Agent - Temperature",
-                        min=0.0, max=2.0, step=0.1, initial=config.STORYBOARD_EDITOR_AGENT_TEMPERATURE
-                    ),
-                     TextInput(
-                        id="storyboard_endpoint",
-                        label="Storyboard Agent - OpenAI Endpoint URL",
-                        initial=config.STORYBOARD_EDITOR_AGENT_BASE_URL or "", # Assuming you add this to config
-                        placeholder="e.g., http://localhost:5000/v1"
-                    ),
-                ]
-            ).send() # Send settings to the UI
-
-            # Store initial settings in the session if needed, or retrieve on demand
-            # cl.user_session.set("chat_settings", settings) # Settings are automatically available
-
-            # ... rest of on_chat_start ...
-        ```
-    2.  Modify agent `_helper` functions (e.g., `_generate_story`, `_generate_storyboard`) in `src/agents/*.py`:
-        *   Before initializing `ChatOpenAI`:
-            *   Retrieve user settings using `cl.user_session.get("chat_settings")`. This returns a dictionary like `{"writer_temp": 0.8, "writer_endpoint": "..."}`.
-            *   Get the default values from `src.config`.
-            *   Determine the final value to use, prioritizing the user setting if it exists and is valid, otherwise falling back to the default.
-            *   Pass the final values (`temperature`, `base_url`, `max_tokens`) to the `ChatOpenAI` constructor.
-        ```python
-        # Example in src/agents/writer_agent.py (_generate_story)
-        from langchain_openai import ChatOpenAI
-        from src import config
-        import chainlit as cl
-
-        async def _generate_story(state: ChatState) -> list[BaseMessage]:
-            try:
-                # ... get prompt, etc. ...
-
-                # Get user settings and defaults
-                user_settings = cl.user_session.get("chat_settings", {})
-                final_temp = user_settings.get("writer_temp", config.WRITER_AGENT_TEMPERATURE)
-                final_endpoint = user_settings.get("writer_endpoint") or config.WRITER_AGENT_BASE_URL # Prioritize non-empty user setting
-                # final_max_tokens = user_settings.get("writer_max_tokens", config.WRITER_AGENT_MAX_TOKENS) # If you add this setting
-
-                # Initialize the LLM with potentially overridden settings
-                llm = ChatOpenAI(
-                    base_url=final_endpoint, # Use final endpoint
-                    temperature=final_temp, # Use final temperature
-                    max_tokens=config.WRITER_AGENT_MAX_TOKENS, # Use default or add override
-                    streaming=config.WRITER_AGENT_STREAMING,
-                    verbose=config.WRITER_AGENT_VERBOSE,
-                    timeout=config.LLM_TIMEOUT,
-                )
-
-                # ... rest of the function ...
-            except Exception as e:
-                # ... error handling ...
-        ```
-*   **Chainlit Docs Snippet:**
-    > ```python
-    > from chainlit.input_widget import Select, Slider, Switch
-    >
-    > settings = await cl.ChatSettings(
-    >     [
-    >         Select(
-    >             id="Model",
-    >             label="OpenAI - Model",
-    >             values=["gpt-3.5-turbo", "gpt-4"],
-    >             initial_index=0,
-    >         ),
-    >         Switch(id="Streaming", label="OpenAI - Stream Tokens", initial=True),
-    >         Slider(
-    >             id="Temperature",
-    >             label="OpenAI - Temperature",
-    >             min=0.0,
-    >             max=1.0,
-    >             step=0.1,
-    >             initial=1.0,
-    >         ),
-    >     ]
-    > ).send()
-    > # settings is a dict {'Model': 'gpt-3.5-turbo', 'Streaming': True, 'Temperature': 1.0}
-    > ```
-
-**Phase 4: Message Deletion - Backend Logic**
-
-*   **Goal:** Implement the logic to remove messages from `ChatState` and `VectorStore`.
+*   **Goal:** Explore message editing, chat profiles, and further memory enhancements.
 *   **Tasks:**
-    1.  Modify `src/stores.py` (`VectorStore`):
-        *   Update the `put` method to accept an optional `message_id: str` and store it in the ChromaDB document
-metadata.
-        *   Add a `delete_by_message_id(self, message_id: str)` method that queries ChromaDB for documents with the matching `message_id` in their metadata and deletes them. ChromaDB's `delete` method usually works with document IDs, so you might need to `get` the document first to find its internal Chroma ID based on the metadata query, then `delete` using that ID.
-        ```python
-        # src/stores.py
-        # ... imports ...
-        from chromadb.types import Where # Import Where
+    1.  **Message Editing:**
+        *   Investigate Chainlit v2 capabilities for message editing. Can `cl.Message.update()` change content effectively?
+        *   If feasible, add an "Edit" `cl.Action` to user messages.
+        *   The callback (`@cl.action_callback("edit_message")`) would likely need to:
+            *   Use `cl.AskUserMessage` to get the new content from the user.
+            *   Update the corresponding message in `ChatState`.
+            *   Update the entry in `VectorStore` (delete old, put new).
+            *   Update the message in the Chainlit UI using `cl.Message(id=...).update(content=...)`.
+            *   *Challenge:* Decide if/how this should affect subsequent messages or trigger recalculations. Start simple (just edit the text).
+    2.  **Chat Profiles:**
+        *   Explore `cl.ChatProfile` to allow users to select different GM personas or game genres at the start of a chat.
+        *   Each profile could load slightly different system prompts (especially for `writer_agent`) or potentially different default `ChatSettings`.
+        *   Implement different prompt files (e.g., `ai_writer_prompt_fantasy.j2`, `ai_writer_prompt_scifi.j2`) and load the appropriate one based on the selected profile in `on_chat_start`.
+    3.  **Memory Enhancements:**
+        *   Review the effectiveness of the current vector store memory (`state.memories`).
+        *   Consider adding summarization steps or more sophisticated retrieval strategies if context seems lacking for the LLMs.
 
-        class VectorStore:
-            # ... __init__ ...
+**Ongoing:**
 
-            async def put(self, content: str, message_id: Optional[str] = None) -> None:
-                """Store new content in ChromaDB with optional message_id metadata."""
-                doc_id = str(uuid.uuid4())
-                metadata = {"message_id": message_id} if message_id else None
-                await asyncio.to_thread(
-                    self.collection.add,
-                    ids=[doc_id],
-                    documents=[content],
-                    metadatas=[metadata] if metadata else None # Add metadata if provided
-                )
-
-            async def delete_by_message_id(self, message_id: str) -> None:
-                """Delete documents from ChromaDB based on message_id metadata."""
-                if not message_id:
-                    return
-                try:
-                    # Query to find ChromaDB internal IDs based on metadata
-                    results = await asyncio.to_thread(
-                        self.collection.get,
-                        where=Where({"message_id": message_id}) # Use Where clause
-                    )
-                    ids_to_delete = results.get("ids", [])
-                    if ids_to_delete:
-                        cl_logger.info(f"Deleting vector store entries for message_id: {message_id}, Chroma IDs: {ids_to_delete}")
-                        await asyncio.to_thread(
-                            self.collection.delete,
-                            ids=ids_to_delete
-                        )
-                    else:
-                         cl_logger.warning(f"No vector store entries found for message_id: {message_id}")
-                except Exception as e:
-                    cl_logger.error(f"Failed to delete vector store entry for message_id {message_id}: {e}")
-
-            # ... get, add_documents ...
-        ```
-    2.  Modify `src/models.py` (`ChatState`):
-        *   Add a `delete_message(self, message_id: str, vector_store: VectorStore)` method.
-        *   This method should:
-            *   Find the index of the message in `self.messages` where `message.metadata.get('message_id') == message_id`.
-            *   If found, store the message content.
-            *   Remove the message from `self.messages`.
-            *   Call `await vector_store.delete_by_message_id(message_id)`.
-            *   *Note:* Handling child messages automatically is complex with the current flat list structure. We'll start by deleting only the target message. Recursive deletion would require traversing `parent_id` relationships in the Chainlit UI messages, which isn't directly represented in our `ChatState` list.
-        ```python
-        # src/models.py
-        # ... imports ...
-        from src.stores import VectorStore # Import VectorStore
-
-        class ChatState(BaseModel):
-            # ... existing fields and methods ...
-
-            async def delete_message(self, message_id: str, vector_store: VectorStore):
-                """Deletes a message from the state and vector store by its Chainlit ID."""
-                message_to_delete = None
-                message_index = -1
-
-                for i, msg in enumerate(self.messages):
-                    # Ensure metadata exists and contains the key before accessing
-                    if isinstance(msg, (HumanMessage, AIMessage)) and hasattr(msg, 'metadata') and msg.metadata and msg.metadata.get("message_id") == message_id:
-                        message_to_delete = msg
-                        message_index = i
-                        break
-
-                if message_index != -1:
-                    cl_logger.info(f"Deleting message with ID: {message_id} from ChatState.")
-                    del self.messages[message_index]
-                    # Delete from vector store
-                    await vector_store.delete_by_message_id(message_id)
-                else:
-                    cl_logger.warning(f"Message with ID: {message_id} not found in ChatState for deletion.")
-
-            # Add metadata field to BaseMessage if needed, or rely on dynamic addition
-            # Pydantic v2 allows extra fields if not forbidden, or use metadata dict
-            # Ensure messages have metadata: dict = {}
-            # Langchain BaseMessage already has a metadata field
-    ```
-    3.  Modify message creation points (`on_message`, agent responses that add to state) to include the `cl.Message.id` in the `metadata` of the `HumanMessage` or `AIMessage` being added to `ChatState`. This requires getting the ID *after* the `cl.Message` is sent.
-        ```python
-        # Example modification in on_message after invoking workflow
-        # This is conceptual - the workflow needs to return the cl.Message objects or their IDs
-
-        # --- Inside on_message (Conceptual - needs adjustment based on workflow return) ---
-        # Assume workflow now somehow provides the ID of the cl.Message it sent
-        # Maybe the agent sends the message and returns its ID?
-
-        # --- Modification within an agent that sends a message ---
-        # Example in src/agents/dice_agent.py (_dice_roll)
-        async def _dice_roll(state: ChatState) -> List[BaseMessage]:
-            # ... logic ...
-            try:
-                # ... generate results ...
-                cl_msg_content = f"**Dice Rolls:**\n\n..."
-                cl_msg = CLMessage(content=cl_msg_content, parent_id=None)
-                await cl_msg.send() # Send the message
-
-                lang_graph_msg_content = "\n".join([...])
-                # Create AIMessage with metadata containing the ID
-                ai_msg = AIMessage(
-                    content=lang_graph_msg_content,
-                    name="dice_roll",
-                    metadata={"message_id": cl_msg.id} # Store the ID here
-                )
-                return [ai_msg]
-            except Exception as e:
-                # ... error handling ...
-
-        # --- Modification in on_message to store user message ID ---
-        @cl.on_message
-        async def on_message(message: cl.Message):
-            # ... get state, vector_memory ...
-            if message.type != "user_message": return
-
-            try:
-                # Add user message to state WITH metadata
-                user_msg = HumanMessage(
-                    content=message.content,
-                    name="Player",
-                    metadata={"message_id": message.id} # Store user message ID
-                )
-                state.messages.append(user_msg)
-                await vector_memory.put(content=message.content, message_id=message.id) # Pass ID to put
-
-                # ... rest of the logic ...
-
-                # After workflow runs, ensure the AI message added to state also has its ID
-                # This requires the workflow/agents to return messages with metadata populated
-                # Example: last_ai_msg = state.messages[-1]
-                # if isinstance(last_ai_msg, AIMessage) and "message_id" in last_ai_msg.metadata:
-                #    await vector_memory.put(content=last_ai_msg.content, message_id=last_ai_msg.metadata["message_id"])
-
-
-            except Exception as e:
-                # ... error handling ...
-        ```
-
-*   **Chainlit Docs Snippet:** (Focus on `cl.Message` properties and `cl.user_session`)
-
-**Phase 5: Message Deletion - UI Integration**
-
-*   **Goal:** Add "Delete" buttons to messages and handle the callback.
-*   **Tasks:**
-    1.  Define the action callback in `src/event_handlers.py`:
-        ```python
-        # src/event_handlers.py
-        import chainlit as cl
-        from src.models import ChatState
-        from src.stores import VectorStore
-
-        @cl.action_callback("delete_message")
-        async def on_delete_message(action: cl.Action):
-            message_id = action.value # Get message ID from action value
-            if not message_id:
-                await cl.ErrorMessage(content="Error: Delete action missing message ID.").send()
-                return
-
-            await cl.Message(content=f"Attempting to delete message {message_id}...").send() # User feedback
-
-            state: ChatState = cl.user_session.get("state")
-            vector_store: VectorStore = cl.user_session.get("vector_memory")
-
-            if not state or not vector_store:
-                await cl.ErrorMessage(content="Error: Session state not found for deletion.").send()
-                return
-
-            try:
-                # Call the backend deletion logic
-                await state.delete_message(message_id, vector_store)
-
-                # Update state in session
-                cl.user_session.set("state", state)
-
-                # Remove message from UI (Requires Chainlit API call - check docs for v2)
-                # Placeholder - Verify correct API call for Chainlit v2
-                try:
-                     # Check Chainlit documentation for the correct way to remove a message by ID in v2.x
-                     # This might involve sending a specific message type or using a JS call.
-                     # For now, log and inform user.
-                     cl_logger.info(f"Message {message_id} deleted from state/vector store. UI removal needs verification.")
-                     await cl.Message(content=f"Message {message_id} deleted from history. UI may need refresh to reflect removal.").send()
-                except Exception as ui_err:
-                     cl_logger.error(f"Error attempting UI removal for message {message_id}: {ui_err}")
-                     await cl.ErrorMessage(content=f"Failed to update UI for message {message_id} removal.").send()
-
-            except Exception as e:
-                cl_logger.error(f"Failed to delete message {message_id}: {e}")
-                await cl.ErrorMessage(content=f"Error deleting message {message_id}.").send()
-        ```
-    2.  Modify message sending points (`on_chat_start`, agent `cl.Message.send()` calls, command responses) to add the `cl.Action`. This is tricky because the `message.id` is usually assigned *after* sending. The best approach is often to send, then update.
-        ```python
-        # Example modification for an agent sending a message
-        # In src/agents/dice_agent.py (_dice_roll)
-
-        # ... inside the try block ...
-        cl_msg_content = f"**Dice Rolls:**\n\n..."
-        cl_msg = CLMessage(content=cl_msg_content, author="Dice Roller") # Set author clearly
-        await cl_msg.send() # Send first to get the ID
-
-        # Now update the message to add the action
-        delete_action = cl.Action(
-            name="delete_message",
-            value=cl_msg.id, # Use the ID from the sent message
-            label="Delete",
-            description="Remove this dice roll message"
-        )
-        cl_msg.actions = [delete_action]
-        await cl_msg.update() # Update the message in the UI
-
-        # Create AIMessage for state with metadata
-        ai_msg = AIMessage(
-            content=lang_graph_msg_content,
-            name="dice_roll",
-            metadata={"message_id": cl_msg.id} # Store the ID
-        )
-        return [ai_msg]
-
-        # --- Similar update needed for user messages in on_message ---
-        # This is harder as on_message receives the message object directly.
-        # Chainlit v2 might allow adding actions to incoming messages via config or hooks.
-        # If not, we might need to intercept/wrap the message display or use JS.
-        # Let's focus on agent messages first. We can add actions to the initial GM message too.
-        # In on_chat_start:
-        initial_msg = await cl.Message(content=START_MESSAGE, author="Game Master").send()
-        initial_msg.actions = [cl.Action(name="delete_message", value=initial_msg.id, label="Delete")]
-        await initial_msg.update()
-        # Ensure the AIMessage in initial state also gets the ID in metadata
-        state = ChatState(
-            messages=[AIMessage(content=START_MESSAGE, name="Game Master", metadata={"message_id": initial_msg.id})],
-            # ... rest of state init ...
-        )
-
-        ```
-*   **Chainlit Docs Snippet:**
-    > ```python
-    > actions = [
-    >     cl.Action(name="action_button", value="example_value", description="Click me!")
-    > ]
-    >
-    > await cl.Message(content="Here is a message with an action", actions=actions).send()
-    >
-    > @cl.action_callback("action_button")
-    > async def on_action(action: cl.Action):
-    >     print("The user clicked on the action button!")
-    >     # Action value is available in action.value
-    >     await cl.Message(content=f"Action {action.name} received with value {action.value}").send()
-    >     # Optionally remove the action button from the message
-    >     await action.remove()
-    > ```
-    > (Note: `action.remove()` removes the button, not the message. Message removal API needs verification for v2).
-
-**Phase 6: Structure for Expansion & Bug Fixes**
-
-*   **Goal:** Ensure the codebase is robust, maintainable, and ready for future agents/workflows. Fix any minor
-issues found.
-*   **Tasks:**
-    1.  **Review Agent/Workflow Structure:** Confirm the pattern of `@task` calling `_helper` is consistently applied. Ensure `ChatState` provides sufficient context. The current `chat_workflow` using `decision_agent` is suitable for adding more *tools* or *agents* triggered by the decision. Adding entirely new *workflows* (e.g., a document processing workflow) might involve creating separate LangGraph graphs or entry points, potentially selectable via Chat Profiles or initial user choice.
-    2.  **Review Config:** Check `config.yaml` and `src/config.py` for clarity and ease of adding new agent sections or global settings.
-    3.  **Bug Fixes:** Address any small bugs or inconsistencies noticed during previous phases (e.g., logging, error handling, prompt formatting issues, ensuring `message_id` is consistently added to metadata).
-    4.  **Testing:** Update existing tests to reflect changes (especially config loading and agent initialization). Add new tests for commands and deletion logic *if feasible* within the context limitations (testing Chainlit callbacks and UI interactions might be hard). Continue using the `_helper` pattern for direct agent logic tests.
-    5.  **Code Quality:** Run linters/formatters (`make format`, `make lint`). Add type hints where missing. Review error handling and logging.
+*   **Testing:** Continuously update and add tests for new features, focusing on agent logic and state manipulation.
+*   **Documentation:** Keep `README.md` and `chainlit.md` updated with new features and usage instructions. Add code comments.
+*   **Code Quality:** Regularly run linters/formatters (`make format`, `make lint`). Refactor as needed for clarity and maintainability.
+*   **Dependency Updates:** Periodically review and update dependencies (`poetry update`).
 
