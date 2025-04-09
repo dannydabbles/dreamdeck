@@ -18,3 +18,10 @@ async def default_profile():
     """Default profile if none is selected."""
     cl.user_session.set("current_persona", "Default")
     await cl.Message(content="Starting chat with the **Default** persona.").send()
+
+
+from src.event_handlers import *  # Register all event handlers
+from src.commands import *        # Register slash commands
+
+import logging
+logging.getLogger("chainlit").info("Dreamdeck app loaded with profiles and event handlers.")
