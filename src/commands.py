@@ -159,9 +159,6 @@ async def command_todo(query: str):
         else:
             cl_logger.warning(f"AIMessage from todo_agent missing message_id: {ai_msg.content}")
 
-        # Send the AI response as a Chainlit message
-        await cl.Message(content=str(ai_msg.content or "")).send()
-
     # Immediately call writer agent to continue story
     from src.agents.writer_agent import call_writer_agent
     gm_responses = await call_writer_agent(state)
