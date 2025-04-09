@@ -66,9 +66,11 @@ async def command_roll(query: str = ""):
     gm_responses = await call_writer_agent(state)
     if gm_responses:
         gm_msg = gm_responses[0]
-        state.messages.append(gm_msg)
-        if gm_msg.metadata and "message_id" in gm_msg.metadata:
-            await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
+        # Only append if not an error message
+        if gm_msg.name != "error":
+            state.messages.append(gm_msg)
+            if gm_msg.metadata and "message_id" in gm_msg.metadata:
+                await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/roll command processed.")
@@ -116,9 +118,11 @@ async def command_search(query: str = ""):
     gm_responses = await call_writer_agent(state)
     if gm_responses:
         gm_msg = gm_responses[0]
-        state.messages.append(gm_msg)
-        if gm_msg.metadata and "message_id" in gm_msg.metadata:
-            await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
+        # Only append if not an error message
+        if gm_msg.name != "error":
+            state.messages.append(gm_msg)
+            if gm_msg.metadata and "message_id" in gm_msg.metadata:
+                await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/search command processed.")
@@ -167,9 +171,11 @@ async def command_todo(query: str = ""):
     gm_responses = await call_writer_agent(state)
     if gm_responses:
         gm_msg = gm_responses[0]
-        state.messages.append(gm_msg)
-        if gm_msg.metadata and "message_id" in gm_msg.metadata:
-            await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
+        # Only append if not an error message
+        if gm_msg.name != "error":
+            state.messages.append(gm_msg)
+            if gm_msg.metadata and "message_id" in gm_msg.metadata:
+                await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/todo command processed.")
