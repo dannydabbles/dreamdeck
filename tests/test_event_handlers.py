@@ -348,7 +348,7 @@ async def test_on_message_normal_flow(mock_cl_environment):
         assert initial_state.messages[0].metadata["message_id"] == "user-msg-id-1"
 
         # Verify vector store put for user message
-        mock_vector_memory.put.assert_any_await(content="Tell me a story", message_id="user-msg-id-1", metadata={'type': 'human', 'author': 'Player'})
+        mock_vector_memory.put.assert_any_await(content="Tell me a story", message_id="user-msg-id-1", metadata={'type': 'human', 'author': 'Player', 'persona': 'Default'})
 
         # Verify vector store get called for memories
         mock_vector_memory.get.assert_called_once_with("Tell me a story")
@@ -454,7 +454,7 @@ async def test_on_message_workflow_error(mock_cl_environment):
         assert initial_state.messages[0].content == "Cause an error"
 
         # Verify vector store put for user message happened
-        mock_vector_memory.put.assert_awaited_once_with(content="Cause an error", message_id="user-err-id-1", metadata={'type': 'human', 'author': 'Player'})
+        mock_vector_memory.put.assert_awaited_once_with(content="Cause an error", message_id="user-err-id-1", metadata={'type': 'human', 'author': 'Player', 'persona': 'Default'})
 
 
 # Test for load_knowledge_documents (can reuse from test_knowledge_loading if desired, or keep separate)

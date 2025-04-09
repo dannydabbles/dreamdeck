@@ -62,7 +62,7 @@ async def test_command_roll(mock_session_data):
 
         # Check vector store puts
         assert vector_store.put.await_count == 2
-        vector_store.put.assert_any_await(content=f"/roll {query}", message_id="user-roll-msg-id", metadata={'type': 'human', 'author': 'Player'})
+        vector_store.put.assert_any_await(content=f"/roll {query}", message_id="user-roll-msg-id", metadata={'type': 'human', 'author': 'Player', 'persona': 'Default'})
         vector_store.put.assert_any_await(content="Rolled 2d6: 7", message_id="ai-roll-msg-id", metadata={'type': 'ai', 'author': 'dice_roll'})
 
         mock_user_session_set.assert_called_with("state", state)
@@ -96,7 +96,7 @@ async def test_command_search(mock_session_data):
         assert len(state.messages) == 2
         assert state.messages[1] == ai_response_msg
         assert vector_store.put.await_count == 2
-        vector_store.put.assert_any_await(content=f"/search {query}", message_id="user-search-msg-id", metadata={'type': 'human', 'author': 'Player'})
+        vector_store.put.assert_any_await(content=f"/search {query}", message_id="user-search-msg-id", metadata={'type': 'human', 'author': 'Player', 'persona': 'Default'})
         vector_store.put.assert_any_await(content="Search results...", message_id="ai-search-msg-id", metadata={'type': 'ai', 'author': 'web_search'})
 
         mock_user_session_set.assert_called_with("state", state)
@@ -132,7 +132,7 @@ async def test_command_todo(mock_session_data):
         assert len(state.messages) == 2
         assert state.messages[1] == ai_response_msg
         assert vector_store.put.await_count == 2
-        vector_store.put.assert_any_await(content=f"/todo {query}", message_id="user-todo-msg-id", metadata={'type': 'human', 'author': 'Player'})
+        vector_store.put.assert_any_await(content=f"/todo {query}", message_id="user-todo-msg-id", metadata={'type': 'human', 'author': 'Player', 'persona': 'Default'})
         vector_store.put.assert_any_await(content="Added: buy milk", message_id="ai-todo-msg-id", metadata={'type': 'ai', 'author': 'todo'})
 
         mock_user_session_set.assert_called_with("state", state)
@@ -166,7 +166,7 @@ async def test_command_write(mock_session_data):
         assert len(state.messages) == 2
         assert state.messages[1] == ai_response_msg
         assert vector_store.put.await_count == 2
-        vector_store.put.assert_any_await(content=f"/write {query}", message_id="user-write-msg-id", metadata={'type': 'human', 'author': 'Player'})
+        vector_store.put.assert_any_await(content=f"/write {query}", message_id="user-write-msg-id", metadata={'type': 'human', 'author': 'Player', 'persona': 'Default'})
         vector_store.put.assert_any_await(content="The wizard says hello.", message_id="ai-write-msg-id", metadata={'type': 'ai', 'author': 'Game Master'})
 
         mock_user_session_set.assert_called_with("state", state)
