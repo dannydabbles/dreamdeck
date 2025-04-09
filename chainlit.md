@@ -1,5 +1,7 @@
 # Dreamdeck: Your AI-Powered Storytelling Companion
 
+Dreamdeck combines AI storytelling, dice rolling, web search, TODO management, and image generation into a seamless experience.
+
 Welcome to Dreamdeck! This application is your gateway to creating and managing immersive, collaborative stories with the help of AI. Whether you're a game master (GM) or a player, Dreamdeck will help you craft dynamic and engaging narratives, providing a Holodeck-like experience.
 
 ## Slash Commands
@@ -12,7 +14,7 @@ Welcome to Dreamdeck! This application is your gateway to creating and managing 
 | `/write`       | Directly prompt the writer agent                                 | `/write The wizard casts a spell`              |
 | `/storyboard`  | Generate storyboard images for the last Game Master message      | `/storyboard`                                 |
 
-- **Slash commands bypass the decision agent** and directly invoke the relevant tool or agent.
+Slash commands bypass the AI director and directly invoke the relevant tool or agent.
 - `/storyboard` generates images for the **last Game Master message**.
 - `/todo` saves reminders and notes in local markdown files under `./helper/YYYY-MM-DD/todo.md`.
 
@@ -62,14 +64,14 @@ Dreamdeck is designed to:
 ### Manage TODOs
 
 - Use `/todo` to save reminders and notes.
-- TODO items are saved locally in markdown files under `./helper/YYYY-MM-DD/todo.md`.
+- TODO items are saved as markdown files organized by date and persona, under `./helper/<persona>/<YYYY-MM-DD>/todo.md`.
 
 ### Knowledge Management
 
 - **Location**: The knowledge directory MUST reside at the root of your project (`./knowledge`). 
 - **Container Sync**: When running in Docker, ensure the `knowledge` folder is mounted or copied into the container.
 - Files are **chunked and indexed** on startup or chat resume.
-- The knowledge base is used for **retrieval-augmented generation** to enrich the story.
+- The knowledge base enriches the story by providing relevant background, lore, or factual information retrieved during the conversation.
 
 ### Troubleshooting
 If the system reports the knowledge directory is missing:
