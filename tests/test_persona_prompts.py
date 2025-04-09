@@ -4,6 +4,35 @@ from src.models import ChatState
 from src.config import config
 
 
+@pytest.fixture(autouse=True, scope="module")
+def patch_persona_configs():
+    # Patch writer_agent personas
+    if not hasattr(config.agents.writer_agent, "personas") or not config.agents.writer_agent.personas:
+        config.agents.writer_agent.personas = {
+            "Storyteller GM": {"prompt_key": "storyteller_gm_prompt"},
+            "Therapist": {"prompt_key": "therapist_writer_prompt"},
+            "Coder": {"prompt_key": "coder_writer_prompt"},
+            "Secretary": {"prompt_key": "secretary_writer_prompt"},
+            "Default": {"prompt_key": "default_writer_prompt"},
+        }
+    # Patch todo_agent personas
+    if not hasattr(config.agents, "todo_agent") or not getattr(config.agents, "todo_agent", None):
+        config.agents.todo_agent = {}
+    if "personas" not in config.agents.todo_agent or not config.agents.todo_agent.get("personas"):
+        config.agents.todo_agent["personas"] = {
+            "Secretary": {"prompt_key": "secretary_todo_prompt"},
+            "Default": {"prompt_key": "todo_prompt"},
+        }
+    # Patch knowledge_agent personas
+    if not hasattr(config.agents, "knowledge_agent") or not getattr(config.agents, "knowledge_agent", None):
+        config.agents.knowledge_agent = {}
+    if "personas" not in config.agents.knowledge_agent or not config.agents.knowledge_agent.get("personas"):
+        config.agents.knowledge_agent["personas"] = {
+            "Lorekeeper": {"prompt_key": "lore_knowledge_prompt"},
+            "Default": {"prompt_key": "lore_prompt"},
+        }
+
+
 @pytest.fixture
 def dummy_state():
     return ChatState(messages=[], thread_id="test_thread", current_persona="Default")
