@@ -4,17 +4,13 @@ from unittest.mock import AsyncMock, patch
 from langchain_core.messages import HumanMessage, AIMessage
 from src.models import ChatState
 import src.workflows as workflows_module
+import copy
+from src.config import PERSONA_TOOL_PREFERENCES as CONFIG_PREFS
 
 @pytest.mark.asyncio
 async def test_persona_workflow_filters_and_reorders(monkeypatch):
-    # Explicitly override PERSONA_TOOL_PREFERENCES inside the test
-    workflows_module.PERSONA_TOOL_PREFERENCES = {
-        "therapist": {
-            "avoid": ["roll"],
-            "prefer": ["knowledge"]
-        },
-        "default": {}
-    }
+    # Use the real config persona preferences instead of hardcoded dict
+    workflows_module.PERSONA_TOOL_PREFERENCES = copy.deepcopy(CONFIG_PREFS)
 
     # Prepare dummy previous state
     state = ChatState(
