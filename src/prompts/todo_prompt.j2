@@ -28,14 +28,6 @@ You can add, remove, or modify tasks to best reflect the current state.
 8) If no tasks exist in a section, leave it empty but keep the section header.
 </guidelines>
 
-<existing_todo>
-{{ existing_todo_file }}
-</existing_todo>
-
-<user_input>
-{{ user_input }}
-</user_input>
-
 <chat_history>
 {{ recent_chat_history }}
 </chat_history>
@@ -179,4 +171,12 @@ Updated TODO file:
 
 </examples>
 
-Update the TODO list based on the user input and existing TODO file above. Output ONLY the full updated markdown TODO list, and nothing else.
+<existing_todo_file>
+{{ existing_todo_file }}
+</existing_todo>
+
+<user_input>
+{{ user_input }}
+</user_input>
+
+Update the TODO list based on the user input and existing TODO file above. Output ONLY the full updated markdown TODO list, and nothing else. Your unedited response will become the new todo file text.
