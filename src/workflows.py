@@ -33,7 +33,7 @@ from langchain_core.messages import (
 
 import logging
 
-from src.config import MAX_CHAIN_LENGTH
+from src.config import MAX_CHAIN_LENGTH, config
 
 cl_logger = logging.getLogger("chainlit")
 
