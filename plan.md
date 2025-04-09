@@ -16,15 +16,13 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 
 ## **Phases**
 
-### **1. Persona Classifier Agent**
+### **1. Persona Classifier Agent** ✅ **Completed**
 
-- **Create** `src/agents/persona_classifier_agent.py`.
-- **Input**: recent chat, memories, tool results.
-- **Output**: JSON like `{"persona": "therapist", "reason": "User is discussing emotional issues"}`.
-- **Prompt**: instruct LLM to suggest persona from a fixed list:  
-  `"storyteller_gm"`, `"therapist"`, `"secretary"`, `"coder"`, `"friend"`, `"lorekeeper"`, `"dungeon_master"`, `"default"`.
-- **Run** after each user message, **store suggestion** in `cl.user_session["suggested_persona"]`.
-- **Fallback**: if classifier fails, keep current persona.
+- Implemented `src/agents/persona_classifier_agent.py`.
+- Classifies persona after each user message.
+- Stores suggestion in `cl.user_session["suggested_persona"]`.
+- Falls back to "default" on error.
+- Next: integrate user confirmation flow.
 
 ---
 
@@ -136,7 +134,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 
 | Phase | Description                          | Key Deliverables                          |
 |--------|--------------------------------------|-------------------------------------------|
-| 1      | Persona classifier agent             | Classifier agent, prompt, config          |
+| 1      | Persona classifier agent             | **✅ Completed**                          |
 | 2      | User confirmation flow               | UI prompt, update persona on confirm      |
 | 3      | Persona-aware prompts                | Config, prompt templates, agent updates   |
 | 4      | Persona-aware director               | Director prompt update, tool prefs config |

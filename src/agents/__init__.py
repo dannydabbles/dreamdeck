@@ -8,6 +8,7 @@ from .writer_agent import writer_agent
 from .director_agent import director_agent
 from .todo_agent import todo_agent
 from .knowledge_agent import knowledge_agent
+from .persona_classifier_agent import persona_classifier_agent
 
 __all__ = [
     "web_search_agent",
@@ -16,6 +17,7 @@ __all__ = [
     "director_agent",
     "todo_agent",
     "knowledge_agent",
+    "persona_classifier_agent",
 ]
 
 agents_map = {

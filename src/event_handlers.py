@@ -426,6 +426,15 @@ async def on_message(message: cl.Message):
         # Add user message to vector memory
         await vector_memory.put(content=message.content, message_id=message.id, metadata={"type": "human", "author": "Player", "persona": state.current_persona})
 
+        # Run persona classifier after user message
+        try:
+            from src.agents.persona_classifier_agent import persona_classifier_agent
+            suggestion = await persona_classifier_agent(state)
+            # Save suggestion in session (redundant, but safe)
+            cl.user_session.set("suggested_persona", suggestion)
+        except Exception as e:
+            cl_logger.error(f"Persona classifier error: {e}")
+
         try:
             state.memories = [
                 str(m.page_content) for m in vector_memory.get(message.content)
