@@ -5,7 +5,7 @@ import re
 from chainlit import Message as CLMessage
 import chainlit as cl
 from langgraph.func import task
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from src.models import ChatState
 from langchain_openai import ChatOpenAI
 from jinja2 import Template

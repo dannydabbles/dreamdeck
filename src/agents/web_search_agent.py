@@ -2,6 +2,7 @@ from src.config import config
 import os
 import requests
 import logging
+import urllib.parse
 from jinja2 import Template
 from uuid import uuid4  # Import uuid4
 from langgraph.prebuilt import create_react_agent
@@ -26,12 +27,15 @@ cl_logger = logging.getLogger("chainlit")
 async def _web_search(state: ChatState) -> list[BaseMessage]:
     """Generate a search query, call SerpAPI, and summarize results."""
     if not WEB_SEARCH_ENABLED:
-        return [AIMessage(content="Web search is disabled.", name="error")]
+        return [AIMessage(content="Web search is disabled.", name="error", metadata={"message_id": None})]
+
+    if not SERPAPI_KEY:
+        return [AIMessage(content="SerpAPI key is missing.", name="error", metadata={"message_id": None})]
 
     # Get user input and context
     user_query = state.get_last_human_message()
     if not user_query:
-        return [AIMessage(content="No user input found for search.", name="error")]
+        return [AIMessage(content="No user input found for search.", name="error", metadata={"message_id": None})]
     recent_chat = state.get_recent_history_str()
 
     # Generate search query using LLM
@@ -53,8 +57,9 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
         response = await llm.ainvoke([("system", formatted_prompt)])
         search_query = response.content.strip()
 
-        # Proceed with search execution
-        url = f"https://serpapi.com/search.json?q={search_query}&api_key={SERPAPI_KEY}"
+        # URL encode the search query
+        encoded_query = urllib.parse.quote_plus(search_query)
+        url = f"https://serpapi.com/search.json?q={encoded_query}&api_key={SERPAPI_KEY}"
         resp = requests.get(url)
         data = resp.json()
 
@@ -80,7 +85,7 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
         ]
     except Exception as e:
         cl_logger.error(f"Search failed: {str(e)}")
-        return [AIMessage(content=f"Search failed: {str(e)}", name="error")]
+        return [AIMessage(content=f"Search failed: {str(e)}", name="error", metadata={"message_id": None})]
 
 
 @task
