@@ -15,8 +15,17 @@ cl_logger = logging.getLogger("chainlit")
 async def _knowledge(state: ChatState, knowledge_type: str) -> list[BaseMessage]:
     """Generates knowledge content (character, lore, puzzle) based on type."""
     try:
-        # Determine prompt key and default prompt text dynamically
+        persona = getattr(state, "current_persona", "Default")
         prompt_key = f"{knowledge_type}_prompt"
+        try:
+            persona_configs = getattr(config.agents, "knowledge_agent", {}).get("personas", {})
+            if isinstance(persona_configs, dict):
+                persona_entry = persona_configs.get(persona)
+                if persona_entry and isinstance(persona_entry, dict):
+                    prompt_key = persona_entry.get("prompt_key", prompt_key)
+        except Exception:
+            pass  # fallback to default
+
         default_prompt_text = f"Generate some {knowledge_type} information."
         prompt_template_str = config.loaded_prompts.get(prompt_key, default_prompt_text)
 

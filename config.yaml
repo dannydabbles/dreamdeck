@@ -26,6 +26,11 @@ prompts:
   default_writer_prompt: "ai_writer_prompt.j2" # Explicit key for default writer
   todo_prompt: "todo_prompt.j2"
   persona_classifier_prompt: "persona_classifier_prompt.j2"
+  therapist_writer_prompt: "therapist_writer_prompt.j2"
+  coder_writer_prompt: "coder_writer_prompt.j2"
+  secretary_writer_prompt: "secretary_writer_prompt.j2"
+  secretary_todo_prompt: "secretary_todo_prompt.j2"
+  lore_knowledge_prompt: "lore_knowledge_prompt.j2"
 
 image_generation_payload:
   url: "http://192.168.1.4:7860"
@@ -102,11 +107,25 @@ agents:
     max_tokens: 8000
     streaming: true
     verbose: true
-    personas: # Add persona-specific settings
+    personas:
       "Storyteller GM":
         prompt_key: "storyteller_gm_prompt"
+      "Therapist":
+        prompt_key: "therapist_writer_prompt"
+      "Coder":
+        prompt_key: "coder_writer_prompt"
+      "Secretary":
+        prompt_key: "secretary_writer_prompt"
       "Default":
         prompt_key: "default_writer_prompt"
+  todo_agent:
+    personas:
+      "Secretary":
+        prompt_key: "secretary_todo_prompt"
+  knowledge_agent:
+    personas:
+      "Lorekeeper":
+        prompt_key: "lore_knowledge_prompt"
   storyboard_editor_agent:
     base_url: "http://192.168.1.111:5000/v1"
     temperature: 0.7

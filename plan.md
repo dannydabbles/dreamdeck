@@ -37,26 +37,12 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 
 ---
 
-### **3. Persona-Aware Prompts**
+### **3. Persona-Aware Prompts** ✅ **Completed**
 
-- In `config.yaml`, define **persona-specific prompt keys** for all agents:  
-  ```yaml
-  agents:
-    writer_agent:
-      personas:
-        therapist: { prompt_key: "therapist_writer_prompt" }
-        coder: { prompt_key: "coder_writer_prompt" }
-        secretary: { prompt_key: "secretary_todo_prompt" }
-        # etc.
-    todo_agent:
-      personas:
-        secretary: { prompt_key: "secretary_todo_prompt" }
-    knowledge_agent:
-      personas:
-        lorekeeper: { prompt_key: "lore_knowledge_prompt" }
-  ```
-- **Create prompt templates** for each persona/agent combo.
-- **Modify agents** to select prompt based on `state.current_persona`.
+- Config now supports persona-specific prompt keys for writer, todo, and knowledge agents.
+- Agents dynamically select prompt template based on `ChatState.current_persona`.
+- New prompt templates added for therapist, coder, secretary, lorekeeper personas.
+- Next: **Phase 4** will update the director prompt and tool preferences.
 
 ---
 

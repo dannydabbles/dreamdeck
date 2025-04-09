@@ -46,7 +46,18 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
                 existing_content = f.read()
 
         # Prepare prompt
-        prompt_template_str = config.loaded_prompts.get("todo_prompt", "").strip()
+        persona = getattr(state, "current_persona", "Default")
+        prompt_key = "todo_prompt"
+        try:
+            persona_configs = getattr(config.agents, "todo_agent", {}).get("personas", {})
+            if isinstance(persona_configs, dict):
+                persona_entry = persona_configs.get(persona)
+                if persona_entry and isinstance(persona_entry, dict):
+                    prompt_key = persona_entry.get("prompt_key", prompt_key)
+        except Exception:
+            pass  # fallback to default
+
+        prompt_template_str = config.loaded_prompts.get(prompt_key, "").strip()
         if not prompt_template_str:
             cl_logger.error("Todo prompt template is empty!")
             prompt = f"User input: {original_user_input}\nExisting TODO:\n{existing_content}"
