@@ -16,14 +16,14 @@ from src.config import (
     DECISION_AGENT_VERBOSE,
     LLM_TIMEOUT,
     DECISION_AGENT_BASE_URL,
-    ORCHESTRATOR_PROMPT,
+    DIRECTOR_PROMPT,
 )
 import chainlit as cl
 
 cl_logger = logging.getLogger("chainlit")
 
 
-async def _decide_actions(state) -> list[str]:
+async def _direct_actions(state) -> list[str]:
     """
     Determine the ordered list of actions to perform based on user input.
 
@@ -39,7 +39,7 @@ async def _decide_actions(state) -> list[str]:
         return ["continue_story"]
 
     try:
-        template = Template(ORCHESTRATOR_PROMPT)
+        template = Template(DIRECTOR_PROMPT)
         formatted_prompt = template.render(
             user_input=user_input.content,
             chat_history=state.get_recent_history_str(),
@@ -60,7 +60,7 @@ async def _decide_actions(state) -> list[str]:
         )
 
         response = await llm.ainvoke([("system", formatted_prompt)])
-        cl_logger.info(f"Orchestrator response: {response.content}")
+        cl_logger.info(f"Director response: {response.content}")
 
         try:
             content = response.content.strip()
@@ -73,23 +73,23 @@ async def _decide_actions(state) -> list[str]:
             actions = parsed.get("actions", [])
             # Validate actions is a list and contains strings or dicts
             if not isinstance(actions, list) or not all(isinstance(a, (str, dict)) for a in actions):
-                cl_logger.warning(f"Orchestrator returned invalid actions format: {actions}. Defaulting to continue_story.")
+                cl_logger.warning(f"Director returned invalid actions format: {actions}. Defaulting to continue_story.")
                 return ["continue_story"]
             if not actions:
                 return ["continue_story"]
             return actions
         except json.JSONDecodeError:
-            cl_logger.warning("Failed to parse orchestrator JSON, defaulting to continue_story")
+            cl_logger.warning("Failed to parse director JSON, defaulting to continue_story")
             return ["continue_story"]
 
     except Exception as e:
-        cl_logger.error(f"Orchestrator failed: {e}")
+        cl_logger.error(f"Director failed: {e}")
         return ["continue_story"]
 
 
 @task
-async def orchestrate(state, **kwargs) -> list[str]:
-    return await _decide_actions(state)
+async def direct(state, **kwargs) -> list[str]:
+    return await _direct_actions(state)
 
 
-orchestrator_agent = orchestrate
+director_agent = direct
