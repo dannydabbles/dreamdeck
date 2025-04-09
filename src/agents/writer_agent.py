@@ -33,7 +33,7 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
 
         # Determine the prompt key based on persona
         # Access nested config structure carefully
-        persona_config = config.agents.writer_agent.model_dump(deep=True).get("personas", {}).get(persona, {})
+        persona_config = config.agents.writer_agent.dict().get("personas", {}).get(persona, {})
         prompt_key = persona_config.get("prompt_key", "default_writer_prompt") # Fallback key
 
         # Get the actual prompt template string using the key

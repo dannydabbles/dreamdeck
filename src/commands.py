@@ -150,7 +150,7 @@ async def command_todo(query: str = ""):
     await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player", "persona": state.current_persona})
 
     cl_logger.info(f"Executing /todo command with query: {query}")
-    response_messages = await call_todo_agent(state, query=query)
+    response_messages = await call_todo_agent(state)
 
     # Update state and vector store for AI response
     if response_messages:
@@ -244,9 +244,8 @@ async def command_storyboard(query: str = ""):
     if last_gm_message_id:
         cl_logger.info(f"Executing /storyboard command for message ID: {last_gm_message_id}")
         await cl.Message(content="Generating storyboard for the last scene...").send()
-        import asyncio
-        asyncio.create_task(storyboard_editor_agent(state=state, gm_message_id=last_gm_message_id))
-        cl_logger.info(f"/storyboard command scheduled as background task.")
+        await storyboard_editor_agent(state=state, gm_message_id=last_gm_message_id)
+        cl_logger.info(f"/storyboard command completed.")
     else:
         await cl.Message(content="Could not find a previous Game Master message with a valid ID to generate a storyboard for.").send()
         cl_logger.warning("Could not execute /storyboard: No suitable GM message found in state.")
