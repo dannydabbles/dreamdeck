@@ -22,6 +22,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 - Classifies persona after each user message.
 - Stores suggestion in `cl.user_session["suggested_persona"]`.
 - Falls back to "default" on error.
+- Persona classifier prompt moved to `src/prompts/persona_classifier_prompt.j2` and loaded via config.
 - Next: integrate user confirmation flow.
 
 ---

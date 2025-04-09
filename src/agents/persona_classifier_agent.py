@@ -21,37 +21,11 @@ PERSONA_LIST = [
     "default",
 ]
 
-# Create a simple prompt template string
-CLASSIFIER_PROMPT = """
-You are an AI persona classifier.
-
-Given the recent chat history, memories, and tool results, suggest the most appropriate persona to handle the next user input.
-
-Choose ONLY from this list:
-{{ persona_list }}
-
-Output a JSON object with two keys:
-- "persona": the suggested persona string (must be one of the above)
-- "reason": a brief explanation (max 1 sentence)
-
-If unsure, default to "default".
-
-Recent chat:
-{{ recent_chat_history }}
-
-Memories:
-{{ memories }}
-
-Tool results:
-{{ tool_results }}
-
-Respond ONLY with the JSON object, no extra text.
-"""
 
 @cl.step(name="Persona Classifier Agent", type="tool")
 async def _classify_persona(state: ChatState) -> dict:
     try:
-        template = Template(CLASSIFIER_PROMPT)
+        template = Template(config.loaded_prompts["persona_classifier_prompt"])
         prompt = template.render(
             persona_list=", ".join(PERSONA_LIST),
             recent_chat_history=state.get_recent_history_str(),
