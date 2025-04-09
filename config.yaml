@@ -31,6 +31,8 @@ prompts:
   secretary_writer_prompt: "secretary_writer_prompt.j2"
   secretary_todo_prompt: "secretary_todo_prompt.j2"
   lore_knowledge_prompt: "lore_knowledge_prompt.j2"
+  friend_writer_prompt: "friend_writer_prompt.j2"
+  dungeon_master_writer_prompt: "dungeon_master_writer_prompt.j2"
 
 image_generation_payload:
   url: "http://192.168.1.4:7860"
@@ -116,6 +118,10 @@ agents:
         prompt_key: "coder_writer_prompt"
       "Secretary":
         prompt_key: "secretary_writer_prompt"
+      "Friend":
+        prompt_key: "friend_writer_prompt"
+      "Dungeon Master":
+        prompt_key: "dungeon_master_writer_prompt"
       "Default":
         prompt_key: "default_writer_prompt"
   todo_agent:

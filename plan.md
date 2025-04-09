@@ -67,15 +67,12 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 
 ---
 
-### **6. New Personas & Capabilities**
+### **6. New Personas & Capabilities** ✅ **Completed**
 
-- **Therapist**: empathetic, supportive, no dice.
-- **Secretary**: manages TODOs, daily reports.
-- **Coder**: code help, debugging.
-- **Friend**: casual chat.
-- **Lorekeeper**: deep lore dumps.
-- **Dungeon Master**: classic TTRPG, dice-heavy.
-- **Add prompts** and **config entries** for each.
+- Added **Therapist**, **Secretary**, **Coder**, **Friend**, **Lorekeeper**, **Dungeon Master** personas.
+- Created prompt templates for each persona.
+- Updated config with persona-specific prompt keys.
+- Persona-aware prompts, director, and workflows now fully support these personas.
 
 ---
 
