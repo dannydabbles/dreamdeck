@@ -44,6 +44,124 @@ You can add, remove, or modify tasks to best reflect the current state.
 {{ tool_results }}
 </tool_results>
 
+<examples>
+Example 1:
+User input: "Add buy milk and call Alice"
+Existing TODO:
+
+**Finished**
+- Submit tax return
+
+**In Progress**
+- Prepare presentation
+
+**Remaining**
+- Clean the garage
+
+Updated TODO:
+
+**Finished**
+- Submit tax return
+
+**In Progress**
+- Prepare presentation
+
+**Remaining**
+- Clean the garage
+- buy milk
+- call Alice
+
+---
+
+Example 2:
+User input: "I finished the presentation"
+Existing TODO:
+
+**Finished**
+- Submit tax return
+
+**In Progress**
+- Prepare presentation
+
+**Remaining**
+- Clean the garage
+- buy milk
+- call Alice
+
+Updated TODO:
+
+**Finished**
+- Submit tax return
+- Prepare presentation
+
+**In Progress**
+
+**Remaining**
+- Clean the garage
+- buy milk
+- call Alice
+
+---
+
+Example 3:
+User input: "Start working on cleaning the garage"
+Existing TODO:
+
+**Finished**
+- Submit tax return
+- Prepare presentation
+
+**In Progress**
+
+**Remaining**
+- Clean the garage
+- buy milk
+- call Alice
+
+Updated TODO:
+
+**Finished**
+- Submit tax return
+- Prepare presentation
+
+**In Progress**
+- Clean the garage
+
+**Remaining**
+- buy milk
+- call Alice
+
+---
+
+Example 4:
+User input: "Remove buy milk"
+Existing TODO:
+
+**Finished**
+- Submit tax return
+- Prepare presentation
+
+**In Progress**
+- Clean the garage
+
+**Remaining**
+- buy milk
+- call Alice
+
+Updated TODO:
+
+**Finished**
+- Submit tax return
+- Prepare presentation
+
+**In Progress**
+- Clean the garage
+
+**Remaining**
+- call Alice
+
+</examples>
+
 <output>
 ONLY output the full updated markdown TODO list, nothing else.
 No explanations, no commentary, no greetings.
