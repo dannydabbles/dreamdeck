@@ -16,6 +16,8 @@ This document outlines the planned phases for enhancing Dreamdeck, focusing on i
 
 ## Phase 1: Foundation - Chat Profiles & Persona State
 
+**Status: Completed**
+
 **Goal:** Introduce distinct application modes (personas) using Chainlit Profiles and manage the active persona within the application state.
 
 **Tasks:**
@@ -23,18 +25,31 @@ This document outlines the planned phases for enhancing Dreamdeck, focusing on i
 1.  **Define Chat Profiles:**
     *   In `src/app.py`, define at least two `@cl.profile` functions (e.g., "Storyteller GM", "Note-Taking PA").
     *   These profiles should set an initial value in `cl.user_session` indicating the selected persona (e.g., `cl.user_session.set("current_persona", "Storyteller GM")`).
+    *   **DONE**
 2.  **Update Configuration:**
     *   In `config.yaml`, add sections for persona-specific configurations (e.g., different system prompts for the writer agent under `agents.writer_agent.personas.Storyteller GM.prompt_key`).
     *   Update `src/config.py` to load and potentially structure these persona-specific settings.
+    *   **DONE** (Added `personas` section in `config.yaml`, `src/config.py` loads it automatically. Accessing via `.dict()` in agent for now.)
 3.  **Update Chat State:**
     *   In `src/models.py`, add `current_persona: str = "default"` (or similar) to the `ChatState` model.
+    *   **DONE**
 4.  **Integrate Persona into Lifecycle:**
     *   In `src/event_handlers.py` (`on_chat_start`): If a profile is active, retrieve the persona name set by the profile function and store it in the initial `ChatState.current_persona`. If no profile is active, use a default value.
     *   In `src/event_handlers.py` (`on_chat_resume`): Attempt to load the `current_persona` from thread tags (if `auto_tag_thread` is enabled in `.chainlit/config.toml`) or from stored metadata. Fallback to a default if not found.
+    *   **DONE** (Implemented retrieval from session in `on_chat_start` and from tags in `on_chat_resume`.)
 5.  **Update Writer Agent:**
     *   Modify `src/agents/writer_agent.py` (`_generate_story`) to load the appropriate system prompt based on `state.current_persona`.
+    *   **DONE** (Loads prompt key from config based on persona, then retrieves prompt text.)
 
 **Rationale:** Establishes the core mechanism for different application modes, essential for subsequent agent and workflow modifications.
+
+---
+
+**Notes for Next Phase (Phase 2):**
+*   Phase 1 successfully introduced personas and linked them to writer prompts.
+*   The `knowledge_agent` in Phase 2 should also be made persona-aware, potentially loading different base prompts or using different LLM settings (temp, tokens) based on `state.current_persona`. This will require adding persona configurations for the knowledge agent in `config.yaml` similar to how it was done for the writer agent.
+*   The orchestrator prompt (`orchestrator_prompt.j2`) and logic (`orchestrator_agent.py`) will need modification to output the new `{"action": "knowledge", "type": "..."}` format.
+*   The workflow (`workflows.py`) will need to be updated to correctly call the `knowledge_agent` with the `knowledge_type` parameter when the orchestrator requests it.
 
 ---
 

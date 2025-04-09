@@ -27,8 +27,20 @@ cl_logger = logging.getLogger("chainlit")
 async def _generate_story(state: ChatState) -> list[BaseMessage]:
     """Generate the Game Master's narrative response based on recent chat, memories, and tool results."""
     try:
-        # Format AI_WRITER_PROMPT as jinja2
-        template = Template(AI_WRITER_PROMPT)
+        persona = state.current_persona
+        cl_logger.info(f"Writer agent using persona: {persona}")
+
+        # Determine the prompt key based on persona
+        # Access nested config structure carefully
+        persona_config = config.agents.writer_agent.dict().get("personas", {}).get(persona, {})
+        prompt_key = persona_config.get("prompt_key", "default_writer_prompt") # Fallback key
+
+        # Get the actual prompt template string using the key
+        # Fallback to the AI_WRITER_PROMPT constant if key not found in loaded_prompts
+        prompt_template_str = config.loaded_prompts.get(prompt_key, AI_WRITER_PROMPT)
+
+        # Format prompt as jinja2
+        template = Template(prompt_template_str)
         formatted_prompt = template.render(
             recent_chat_history=state.get_recent_history_str(),
             memories=state.get_memories_str(),

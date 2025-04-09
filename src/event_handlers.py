@@ -144,6 +144,9 @@ async def on_chat_start():
     and sends initial messages. Agents and vector store are stored in the Chainlit user session.
     """
 
+    # Determine active persona from profile selection, default if none
+    persona = cl.user_session.get("current_persona", "Default")
+
     try:
         # Fetch current user identifier
         user_info = cl.user_session.get("user")
@@ -242,6 +245,7 @@ async def on_chat_start():
             user_preferences=cl.user_session.get("user_session", {}).get(
                 "preferences", {}
             ),
+            current_persona=persona, # Set persona in initial state
         )
 
         # Store state
@@ -264,6 +268,15 @@ async def on_chat_resume(thread: ThreadDict):
     Initializes agents and vector store, reconstructs chat state from thread history,
     and stores them in the Chainlit user session.
     """
+    # Determine persona from thread tags, default if none found
+    resumed_persona = "Default"
+    tags = thread.get("tags", [])
+    for tag in tags:
+        if tag.startswith("chainlit-profile:"):
+            resumed_persona = tag.split(":", 1)[1]
+            cl_logger.info(f"Resumed persona '{resumed_persona}' from thread tags.")
+            break
+    cl.user_session.set("current_persona", resumed_persona) # Also set in session for consistency
     # Set the user in the session
     user_dict = thread.get("user")
     if user_dict:
@@ -339,6 +352,7 @@ async def on_chat_resume(thread: ThreadDict):
         thread_id=thread["id"],
         user_preferences=cl.user_session.get("user_session", {}).get("preferences", {}),
         thread_data=cl.user_session.get("thread_data", {}),
+        current_persona=resumed_persona, # Set persona in resumed state
     )
 
     # Store state and memories

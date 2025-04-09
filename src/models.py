@@ -24,6 +24,7 @@ class ChatState(BaseModel):
         memories (List[str]): Extracted contextual info from prior messages
         user_preferences (dict): User-specific settings like tone preference
         thread_data (dict): Metadata about the conversation thread
+        current_persona (str): The active persona/profile name.
 
     State Transitions:
         - Messages are immutable - new states are created with .copy_with_updates()
@@ -39,6 +40,7 @@ class ChatState(BaseModel):
     memories: List[str] = Field(default_factory=list)
     user_preferences: dict = Field(default_factory=dict)
     thread_data: dict = Field(default_factory=dict)
+    current_persona: str = "Default" # Default persona if none selected/resumed
 
     def increment_error_count(self) -> None:
         self.error_count += 1

@@ -20,6 +20,8 @@ prompts:
   storyboard_generation_prompt: "storyboard_generation_prompt.j2"
   decision_prompt: "decision_prompt.j2"
   orchestrator_prompt: "orchestrator_prompt.j2"
+  storyteller_gm_prompt: "ai_writer_prompt_storyteller.j2" # New prompt for Storyteller GM
+  default_writer_prompt: "ai_writer_prompt.j2" # Explicit key for default writer
 
 image_generation_payload:
   url: "http://192.168.1.4:7860"
@@ -96,6 +98,11 @@ agents:
     max_tokens: 8000
     streaming: true
     verbose: true
+    personas: # Add persona-specific settings
+      "Storyteller GM":
+        prompt_key: "storyteller_gm_prompt"
+      "Default":
+        prompt_key: "default_writer_prompt"
   storyboard_editor_agent:
     base_url: "http://192.168.1.111:5000/v1"
     temperature: 0.7
