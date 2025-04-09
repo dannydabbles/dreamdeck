@@ -150,7 +150,7 @@ async def command_todo(query: str = ""):
     await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player", "persona": state.current_persona})
 
     cl_logger.info(f"Executing /todo command with query: {query}")
-    response_messages = await call_todo_agent(state)
+    response_messages = await call_todo_agent(state, query=query)
 
     # Update state and vector store for AI response
     if response_messages:
