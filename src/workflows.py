@@ -128,7 +128,11 @@ async def _chat_workflow(
                     if not agent_func:
                         cl_logger.warning(f"Unknown action string from director: {action}")
                         continue
-                    agent_response = await agent_func(state)
+                    maybe_coro = agent_func(state)
+                    if asyncio.iscoroutine(maybe_coro):
+                        agent_response = await maybe_coro
+                    else:
+                        agent_response = maybe_coro
                 elif isinstance(action, dict):
                     action_name = action.get("action")
                     if action_name == "knowledge":
