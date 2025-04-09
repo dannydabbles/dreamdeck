@@ -7,6 +7,15 @@ import src.workflows as workflows_module
 
 @pytest.mark.asyncio
 async def test_persona_workflow_filters_and_reorders(monkeypatch):
+    # Explicitly override PERSONA_TOOL_PREFERENCES inside the test
+    workflows_module.PERSONA_TOOL_PREFERENCES = {
+        "therapist": {
+            "avoid": ["roll"],
+            "prefer": ["knowledge"]
+        },
+        "default": {}
+    }
+
     # Prepare dummy previous state
     state = ChatState(
         messages=[
