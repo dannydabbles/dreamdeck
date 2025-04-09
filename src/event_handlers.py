@@ -534,3 +534,4 @@ async def load_knowledge_documents():
 async def on_settings_update(settings):
     cl.user_session.set("chat_settings", settings)
     cl.user_session.set("current_persona", settings.get("persona", "Storyteller GM"))
+    await cl.Message(content=f"🔄 Persona changed to **{settings.get('persona', 'Storyteller GM')}**.").send()
