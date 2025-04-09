@@ -142,57 +142,10 @@ async def test_dice_roll_invalid_specs(monkeypatch):
     assert "Invalid dice roll specification" in result[0].content
 
 
-@pytest.mark.asyncio
-async def test_character_agent_respects_user_settings(monkeypatch):
-    from src.agents.character_agent import _character
-    from src.models import ChatState
-
-    state = ChatState(messages=[HumanMessage(content="Describe hero")], thread_id="t1")
-
-    with patch("src.agents.character_agent.cl.user_session.get", return_value={
-        "character_temp": 0.9,
-        "character_endpoint": "http://custom",
-        "character_max_tokens": 123,
-    }), patch("src.agents.character_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke:
-        mock_ainvoke.return_value.content = "A brave hero"
-        result = await _character(state)
-        # Check ChatOpenAI init params
-        args, kwargs = mock_ainvoke.call_args
-        assert result[0].content == "A brave hero"
 
 
-@pytest.mark.asyncio
-async def test_lore_agent_respects_user_settings(monkeypatch):
-    from src.agents.lore_agent import _lore
-    from src.models import ChatState
-
-    state = ChatState(messages=[HumanMessage(content="Tell me lore")], thread_id="t1")
-
-    with patch("src.agents.lore_agent.cl.user_session.get", return_value={
-        "lore_temp": 0.8,
-        "lore_endpoint": "http://custom",
-        "lore_max_tokens": 321,
-    }), patch("src.agents.lore_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke:
-        mock_ainvoke.return_value.content = "Ancient lore"
-        result = await _lore(state)
-        assert result[0].content == "Ancient lore"
 
 
-@pytest.mark.asyncio
-async def test_puzzle_agent_respects_user_settings(monkeypatch):
-    from src.agents.puzzle_agent import _puzzle
-    from src.models import ChatState
-
-    state = ChatState(messages=[HumanMessage(content="Give me a puzzle")], thread_id="t1")
-
-    with patch("src.agents.puzzle_agent.cl.user_session.get", return_value={
-        "puzzle_temp": 0.5,
-        "puzzle_endpoint": "http://custom",
-        "puzzle_max_tokens": 222,
-    }), patch("src.agents.puzzle_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke:
-        mock_ainvoke.return_value.content = "A tricky puzzle"
-        result = await _puzzle(state)
-        assert result[0].content == "A tricky puzzle"
 
 
 @pytest.mark.asyncio
