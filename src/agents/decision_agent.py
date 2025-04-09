@@ -25,12 +25,13 @@ from langchain_core.messages import (
 from src.models import ChatState
 
 import chainlit as cl
+from typing import Optional
 
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
 
-async def _decide_action(state: ChatState) -> list[BaseMessage]:
+async def _decide_action(state: ChatState, callbacks: Optional[list] = None) -> list[BaseMessage]:
     """Determine the next action based on user input.
 
     Returns an AIMessage with `.name` set to `'dice_roll'`, `'web_search'`, or `'continue_story'`.
@@ -66,7 +67,7 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
         )
 
         # Generate the decision
-        response = await llm.ainvoke([("system", formatted_prompt)])
+        response = await llm.ainvoke([("system", formatted_prompt)], config={"callbacks": callbacks})
         cl_logger.info(f"Decision response: {response.content}")
         decision = response.content.strip()
 
@@ -84,8 +85,8 @@ async def _decide_action(state: ChatState) -> list[BaseMessage]:
 
 
 @task
-async def decide_action(state: ChatState, **kwargs) -> list[BaseMessage]:
-    return await _decide_action(state)
+async def decide_action(state: ChatState, callbacks: Optional[list] = None, **kwargs) -> list[BaseMessage]:
+    return await _decide_action(state, callbacks=callbacks)
 
 
 # Expose the function as decision_agent

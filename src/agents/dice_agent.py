@@ -26,7 +26,7 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
-async def _dice_roll(state: ChatState) -> List[BaseMessage]:
+async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List[BaseMessage]:
     """Parse dice expressions, perform random rolls, and return results."""
     input_msg = state.get_last_human_message()
     recent_chat = state.get_recent_history_str()
@@ -57,7 +57,7 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
                 )
             ]
 
-        response = await llm.ainvoke([("system", formatted_prompt)])
+        response = await llm.ainvoke([("system", formatted_prompt)], config={"callbacks": callbacks})
         cl_logger.debug(f"Raw LLM response: {response.content}")  # Log raw output
 
         # Parse JSON response with explicit error handling
@@ -146,8 +146,8 @@ async def _dice_roll(state: ChatState) -> List[BaseMessage]:
 
 
 @task
-async def dice_roll(state: ChatState) -> list[BaseMessage]:
-    return await _dice_roll(state)
+async def dice_roll(state: ChatState, callbacks: Optional[list] = None) -> list[BaseMessage]:
+    return await _dice_roll(state, callbacks=callbacks)
 
 
 # Export the function as dice_roll_agent
