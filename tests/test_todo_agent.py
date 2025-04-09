@@ -35,6 +35,7 @@ async def test_manage_todo_creates_file(tmp_path):
             thread_id="test",
             messages=[HumanMessage(content="/todo buy milk", name="Player")]
         )
+        state.current_persona = "Default"
 
         result = await _manage_todo(state)
         # Check AIMessage returned
@@ -45,7 +46,7 @@ async def test_manage_todo_creates_file(tmp_path):
         # Check file created inside date-based subfolder
         import datetime
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-        todo_file = tmp_path / current_date / "todo.md"
+        todo_file = tmp_path / "Default" / current_date / "todo.md"
         assert todo_file.exists()
         content = todo_file.read_text()
         assert "buy milk" in content
