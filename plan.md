@@ -173,14 +173,6 @@ This document outlines the planned phases for enhancing Dreamdeck, focusing on i
         *   `src/agents/todo_agent.py` (`_manage_todo`)
         *   `src/agents/storyboard_editor_agent.py` (`_generate_storyboard`)
     *   Ensure the step names are informative. Adjust placement if the function is already decorated with `@task`.
-2.  **Implement Custom Avatars (Optional):**
-    *   Create `src/customisation/avatars.py`.
-    *   Define `cl.Avatar` instances for different personas (e.g., "Storyteller GM", "Note-Taking PA") and potentially tools ("Dice Roller", "Web Search"). Use image URLs or local files (placed in `public/`).
-    *   In `src/app.py` or `src/event_handlers.py`, ensure these avatars are registered or configured.
-    *   Modify `cl.Message` creation calls in agent files (`_dice_roll`, `_web_search`, `_manage_todo`, `_generate_story`) and potentially `commands.py` to use the registered avatar names in the `author` field (e.g., `cl.Message(..., author="Storyteller GM")`).
-    *   Update tests if they assert on author names.
-
-**Rationale:** Provides better visibility into agent execution for users and developers, and makes the chat interface more engaging. Best done after agent structure is stable (Post Phase 3).
 
 ---
 
