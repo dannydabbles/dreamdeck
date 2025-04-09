@@ -409,6 +409,16 @@ async def on_message(message: cl.Message):
                 await cl.Message(content=f"Error processing command '{message.command}': {e}").send()
             return  # Skip normal message processing
 
+        # Check if message starts with slash and is unknown command
+        if message.content.strip().startswith("/"):
+            command_line = message.content.strip()
+            parts = command_line.split(maxsplit=1)
+            command_name = parts[0][1:]  # remove leading slash
+            known_commands = {cmd["id"] for cmd in commands}
+            if command_name not in known_commands:
+                await cl.Message(content=f"Unknown command: {command_line}").send()
+                return
+
         # Add user message to state immediately
         user_msg = HumanMessage(content=message.content, name="Player", metadata={"message_id": message.id})
         state.messages.append(user_msg)
