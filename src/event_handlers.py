@@ -385,6 +385,28 @@ async def on_message(message: cl.Message):
         cl.user_session.set("state", state)
         return  # Skip normal message processing
 
+    # Check if user is replying to a pending persona switch prompt
+    pending_persona = cl.user_session.get("pending_persona_switch")
+    if pending_persona:
+        user_reply = message.content.strip().lower()
+        if user_reply in ["yes", "y"]:
+            cl_logger.info(f"User accepted persona switch to: {pending_persona}")
+            cl.user_session.set("current_persona", pending_persona)
+            if hasattr(state, "current_persona"):
+                state.current_persona = pending_persona
+            await cl.Message(content=f"✅ Persona switched to **{pending_persona}**.").send()
+        elif user_reply in ["no", "n"]:
+            cl_logger.info(f"User declined persona switch to: {pending_persona}")
+            await cl.Message(content=f"❌ Keeping current persona.").send()
+        else:
+            cl_logger.info(f"User response '{user_reply}' not recognized for persona switch confirmation.")
+            await cl.Message(content="Please reply 'Yes' to switch persona or 'No' to keep current.").send()
+            return  # Wait for valid reply next time
+        # Clear pending switch flag
+        cl.user_session.set("pending_persona_switch", None)
+        cl.user_session.set("state", state)
+        return  # Skip normal message processing
+
     # Retrieve current user identifier from session
     current_user_identifier = None
     user_info = cl.user_session.get("user")
