@@ -350,6 +350,11 @@ async def on_message(message: cl.Message):
     """
     state: ChatState = cl.user_session.get("state")
     vector_memory: VectorStore = cl.user_session.get("vector_memory")
+    if vector_memory is None:
+        cl_logger.warning("VectorStore missing in session during on_message. Initializing new VectorStore.")
+        from src.stores import VectorStore
+        vector_memory = VectorStore()
+        cl.user_session.set("vector_memory", vector_memory)
 
     if state is None:
         cl_logger.warning("ChatState missing in session during on_message. Initializing new ChatState.")
