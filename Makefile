@@ -49,7 +49,7 @@ log:
 
 aider-sonnet:
 	@echo "Running aider with sonnet..."
-	@aider --multiline --architect --sonnet
+	@aider --multiline --architect --sonnet --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
 
 aider-quasar:
 	@echo "Running aider with quasar..."
