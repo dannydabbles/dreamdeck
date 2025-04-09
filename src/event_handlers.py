@@ -66,7 +66,6 @@ from src.workflows import chat_workflow
 from src.initialization import DatabasePool  # Import DatabasePool
 
 from src.stores import VectorStore  # Import VectorStore
-from src.agents.decision_agent import decision_agent
 from src.agents.writer_agent import writer_agent
 from src.agents.storyboard_editor_agent import storyboard_editor_agent
 from src.agents.dice_agent import dice_roll_agent, dice_agent
@@ -162,7 +161,6 @@ async def on_chat_start():
         cl.user_session.set("vector_memory", vector_memory)
 
         # Initialize agents
-        cl_user_session.set("decision_agent", decision_agent)
         cl_user_session.set("writer_agent", writer_agent)
         cl_user_session.set("storyboard_editor_agent", storyboard_editor_agent)
         cl_user_session.set("dice_roll_agent", dice_roll_agent)

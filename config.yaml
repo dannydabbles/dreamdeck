@@ -18,9 +18,8 @@ prompts:
   dice_processing_prompt: "dice_processing_prompt.j2"
   ai_writer_prompt: "ai_writer_prompt.j2"
   storyboard_generation_prompt: "storyboard_generation_prompt.j2"
-  decision_prompt: "decision_prompt.j2"
-  orchestrator_prompt: "orchestrator_prompt.j2"
   storyteller_gm_prompt: "ai_writer_prompt_storyteller.j2" # New prompt for Storyteller GM
+  director_prompt: "director_prompt.j2"
   character_prompt: "character_prompt.j2"
   lore_prompt: "lore_prompt.j2"
   puzzle_prompt: "puzzle_prompt.j2"

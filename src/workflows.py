@@ -14,7 +14,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from .models import ChatState
-from .agents.orchestrator_agent import orchestrator_agent
+from .agents.director_agent import director_agent
 from .agents.writer_agent import writer_agent
 from .agents.storyboard_editor_agent import storyboard_editor_agent
 from src.agents.knowledge_agent import knowledge_agent
@@ -70,8 +70,8 @@ async def _chat_workflow(
         vector_memory = cl.user_session.get("vector_memory")
 
         chain_count = 0
-        actions = await orchestrator_agent(state)
-        cl_logger.info(f"Initial orchestrator actions: {actions}")
+        actions = await director_agent(state)
+        cl_logger.info(f"Initial director actions: {actions}")
 
         while actions and chain_count < MAX_CHAIN_LENGTH:
             # Remove trailing GM call if present
@@ -87,7 +87,7 @@ async def _chat_workflow(
                 if isinstance(action, str):
                     agent_func = agents_map.get(action)
                     if not agent_func:
-                        cl_logger.warning(f"Unknown action string from orchestrator: {action}")
+                        cl_logger.warning(f"Unknown action string from director: {action}")
                         continue
                     agent_response = await agent_func(state)
                 elif isinstance(action, dict):
@@ -126,8 +126,8 @@ async def _chat_workflow(
                 break  # Always stop after GM
             else:
                 # Re-orchestrate based on updated state
-                actions = await orchestrator_agent(state)
-                cl_logger.info(f"Next orchestrator actions: {actions}")
+                actions = await director_agent(state)
+                cl_logger.info(f"Next director actions: {actions}")
 
         # Trigger storyboard generation after GM response
         if IMAGE_GENERATION_ENABLED:

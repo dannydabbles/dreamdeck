@@ -231,16 +231,13 @@ AGENTS = config.agents
 CHAINLIT_SETTINGS = config.chainlit
 START_MESSAGE = config.chat.get("start_message", "Hello! How can I help you today?")
 
-DECISION_PROMPT = config.loaded_prompts.get(
-    "decision_prompt", "What would you like to do next?"
-)
 AI_WRITER_PROMPT = config.loaded_prompts.get("ai_writer_prompt", "Write a story.")
 STORYBOARD_GENERATION_PROMPT = config.loaded_prompts.get(
     "storyboard_generation_prompt", "Generate a storyboard."
 )
 
-ORCHESTRATOR_PROMPT = config.loaded_prompts.get(
-    "orchestrator_prompt", "You are an AI orchestrator."
+DIRECTOR_PROMPT = config.loaded_prompts.get(
+    "director_prompt", "You are an AI director."
 )
 
 SERPAPI_KEY = os.getenv("SERPAPI_KEY", config.search.get("serpapi_key", ""))

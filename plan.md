@@ -103,6 +103,8 @@ This document outlines the planned phases for enhancing Dreamdeck, focusing on i
 
 ## Phase 3: Orchestration Refinement & Director Renaming
 
+**Status: Completed**
+
 **Goal:** Remove the legacy `decision_agent` and solidify the `orchestrator_agent` as the sole routing mechanism. Optionally rename for clarity.
 
 **Tasks:**
@@ -111,10 +113,12 @@ This document outlines the planned phases for enhancing Dreamdeck, focusing on i
     *   Delete `src/agents/decision_agent.py`.
     *   Delete `src/prompts/decision_prompt.j2`.
     *   Delete `tests/test_decision_agent.py`.
+    *   **DONE**
 2.  **Refactor Workflow:**
     *   Ensure `src/workflows.py` (`_chat_workflow`) relies *only* on the output of `orchestrator_agent` for routing decisions. Remove any fallback logic that might have implicitly relied on the old decision agent structure.
+    *   **DONE** (Workflow already relied solely on orchestrator output)
 3.  **Rename Orchestrator (Optional but Recommended):**
-    *   Rename `src/agents/orchestrator_agent.py` to `src/agents/director_agent.py`.
+    *   Rename `src/agents/orchestrator_agent.py` to `src/agents/director_agent.py`. **DONE**
     *   Rename the functions (`_decide_actions` -> `_direct_actions`, `orchestrate` -> `direct`, `orchestrator_agent` -> `director_agent`).
     *   Update imports and calls in `src/workflows.py`, `src/agents/__init__.py`.
     *   Rename `src/prompts/orchestrator_prompt.j2` to `src/prompts/director_prompt.j2` and update `config.yaml`.
@@ -122,6 +126,11 @@ This document outlines the planned phases for enhancing Dreamdeck, focusing on i
 
 **Rationale:** Streamlines the control flow, removes ambiguity between decision/orchestration, and prepares for potentially different orchestrators per persona. Depends on Phase 2.
 
+**Notes for Next Phase (Phase 4):**
+*   Phase 3 successfully removed the legacy `decision_agent` and renamed the `orchestrator_agent` to `director_agent` for clarity.
+*   All relevant files, prompts, tests, and configuration have been updated to reflect this change.
+*   The workflow now clearly uses the `director_agent` as the single point of routing.
+*   Phase 4 involves updating vector store persistence to include the current persona in message metadata.
 ---
 
 ## Phase 4: Memory & Persistence Updates (Tagging with Persona)
