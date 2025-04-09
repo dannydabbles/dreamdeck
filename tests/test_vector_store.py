@@ -1,39 +1,34 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch, AsyncMock
 import chainlit as cl
-from src.stores import VectorStore  # Import VectorStore
-from langchain_core.documents import Document  # Import Document
-import asyncio  # Import asyncio
+from src.stores import VectorStore
+from langchain_core.documents import Document
+import asyncio
+from chainlit.context import context_var, ChainlitContext
 
 @pytest.fixture
 def mock_chainlit_context():
-    original_context = cl.Context.get_current()
-    mock_session = MagicMock(spec=cl.context.session)
-    mock_session.thread_id = "test-thread-id"
-    mock_context = MagicMock(spec=cl.context)
-    mock_context.session = mock_session
-    cl.context = mock_context
-    yield
-
-import unittest.mock as mock  # Import mock
-
-@pytest.fixture
-def mock_chainlit_context():
+    # Standardize context mocking using context_var
     mock_session = MagicMock()
-    mock_session.thread_id = "test-thread-id"  # Set a valid thread ID
-    mock_context = MagicMock()
+    mock_session.thread_id = "test-thread-id"
+    mock_context = MagicMock(spec=ChainlitContext)
     mock_context.session = mock_session
+    mock_context.emitter = AsyncMock()
 
-    # Use patch to replace the global context
-    with mock.patch("chainlit.context", mock_context):
+    token = context_var.set(mock_context)
+    try:
         yield
+    finally:
+        context_var.reset(token)
 
-def test_vector_store_operations(mock_chainlit_context):  # Use the fixed fixture
+
+@pytest.mark.asyncio
+async def test_vector_store_operations(mock_chainlit_context):
     store = VectorStore()
     test_doc = Document(page_content="Test document content")
 
-    # Explicitly run async methods with asyncio.run (or ensure event loop)
-    asyncio.run(store.add_documents([test_doc]))
+    await store.add_documents([test_doc])
+    await asyncio.sleep(0.2)
     results = store.get("Test document")
     assert len(results) >= 1
 
@@ -41,9 +36,11 @@ def test_vector_store_operations(mock_chainlit_context):  # Use the fixed fixtur
     query_results = store.get("document content")
     assert any("Test document" in doc.page_content for doc in query_results)
 
-def test_vector_store_put_and_get(mock_chainlit_context):
+
+@pytest.mark.asyncio
+async def test_vector_store_put_and_get(mock_chainlit_context):
     store = VectorStore()
-    import asyncio
-    asyncio.run(store.put("Hello world", "msg1", {"type": "human"}))
+    await store.put("Hello world", "msg1", {"type": "human"})
+    await asyncio.sleep(0.2)
     results = store.get("Hello")
     assert any("Hello" in doc.page_content for doc in results)
