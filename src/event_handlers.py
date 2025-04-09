@@ -416,7 +416,8 @@ async def on_message(message: cl.Message):
             command_name = parts[0][1:]  # remove leading slash
             known_commands = {cmd["id"] for cmd in commands}
             if command_name not in known_commands:
-                await cl.Message(content=f"Unknown command: {command_line}").send()
+                # Only echo the slash and command, ignore any trailing args
+                await cl.Message(content=f"Unknown command: /{command_name}").send()
                 return
 
         # Add user message to state immediately
