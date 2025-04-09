@@ -351,6 +351,13 @@ async def on_message(message: cl.Message):
     state: ChatState = cl.user_session.get("state")
     vector_memory: VectorStore = cl.user_session.get("vector_memory")
 
+    if state is None:
+        cl_logger.warning("ChatState missing in session during on_message. Initializing new ChatState.")
+        # Defensive: get thread_id from context if possible
+        thread_id = getattr(cl.context.session, "thread_id", "default_thread")
+        state = ChatState(messages=[], thread_id=thread_id)
+        cl.user_session.set("state", state)
+
     # Retrieve current user identifier from session
     current_user_identifier = None
     user_info = cl.user_session.get("user")
