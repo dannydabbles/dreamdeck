@@ -33,7 +33,7 @@ from langchain_core.messages import (
 
 import logging
 
-from src.config import MAX_CHAIN_LENGTH, config
+from src.config import MAX_CHAIN_LENGTH, config, PERSONA_TOOL_PREFERENCES
 
 cl_logger = logging.getLogger("chainlit")
 
@@ -75,8 +75,7 @@ async def _chat_workflow(
 
         # Persona-aware filtering and reordering of actions (Phase 5)
         persona = getattr(state, "current_persona", "default").lower()
-        prefs = getattr(config, "PERSONA_TOOL_PREFERENCES", {}) or {}
-        prefs = prefs.get(persona, {})
+        prefs = PERSONA_TOOL_PREFERENCES.get(persona, {})
 
         avoid = set(prefs.get("avoid", []))
         prefer = prefs.get("prefer", [])
@@ -171,8 +170,7 @@ async def _chat_workflow(
 
                 # Persona-aware filtering and reordering of actions (Phase 5)
                 persona = getattr(state, "current_persona", "default").lower()
-                prefs = getattr(config, "PERSONA_TOOL_PREFERENCES", {}) or {}
-                prefs = prefs.get(persona, {})
+                prefs = PERSONA_TOOL_PREFERENCES.get(persona, {})
 
                 avoid = set(prefs.get("avoid", []))
                 prefer = prefs.get("prefer", [])
