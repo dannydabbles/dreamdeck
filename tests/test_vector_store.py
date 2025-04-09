@@ -40,21 +40,24 @@ async def test_vector_store_operations(mock_chainlit_context):
 @pytest.mark.asyncio
 async def test_vector_store_put_and_get(mock_chainlit_context):
     store = VectorStore()
-    await store.put("Hello world", "msg1", {"type": "human"})
-    await asyncio.sleep(0.2)
-    results = store.get("Hello")
 
-    # Debug output to help diagnose failures
-    print("VectorStore get('Hello') returned:")
+    # Add a unique test document to avoid interference from other docs
+    unique_text = "UniqueHelloTestString"
+    await store.put(unique_text, "unique-msg-id", {"type": "human"})
+    await asyncio.sleep(0.2)
+
+    results = store.get("UniqueHelloTestString")
+
+    print("VectorStore get('UniqueHelloTestString') returned:")
     for doc in results:
         print(f"- {doc.page_content!r}")
 
     # If no match, print all docs in the collection for debugging
-    if not any("Hello" in doc.page_content for doc in results):
+    if not any("UniqueHelloTestString" in doc.page_content for doc in results):
         all_results = store.get("")  # empty query returns top docs
         print("Full collection contents:")
         for doc in all_results:
             print(f"- {doc.page_content!r}")
 
-    # Relax the assertion: pass if *any* doc contains 'Hello' or 'hello' (case insensitive)
-    assert any("hello" in doc.page_content.lower() for doc in results)
+    # Assert the unique string is found
+    assert any("uniquehelloteststring" in doc.page_content.lower() for doc in results)
