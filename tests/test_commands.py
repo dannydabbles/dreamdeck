@@ -125,8 +125,8 @@ async def test_command_todo(mock_session_data):
         mock_cl_message_instance = mock_cl_message_cls.return_value
         assert mock_cl_message_instance.content == f"/todo {query}"
         assert mock_cl_message_instance.author == "Player"
-        # The /todo command triggers TWO sends: one for user message, one for AI reply
-        assert mock_cl_message_instance.send.await_count == 2
+        # Only the user message is sent here; the AI reply is sent inside the todo agent separately
+        assert mock_cl_message_instance.send.await_count == 1
         mock_call_todo_agent.assert_awaited_once_with(state)
 
         assert len(state.messages) == 2
