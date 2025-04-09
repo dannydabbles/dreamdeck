@@ -17,6 +17,7 @@ if (
 
         cl.command = _noop_decorator
         cl.profile = _noop_decorator  # Add this line to patch cl.profile during tests
+        cl.step = _noop_decorator  # Add this line to patch cl.step during tests
     except ImportError:
         pass
 
