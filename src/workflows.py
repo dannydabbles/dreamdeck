@@ -75,7 +75,8 @@ async def _chat_workflow(
 
         # Persona-aware filtering and reordering of actions (Phase 5)
         persona = getattr(state, "current_persona", "default").lower()
-        prefs = config.PERSONA_TOOL_PREFERENCES.get(persona, {})
+        prefs = getattr(config, "PERSONA_TOOL_PREFERENCES", {}) or {}
+        prefs = prefs.get(persona, {})
 
         avoid = set(prefs.get("avoid", []))
         prefer = prefs.get("prefer", [])
@@ -170,7 +171,8 @@ async def _chat_workflow(
 
                 # Persona-aware filtering and reordering of actions (Phase 5)
                 persona = getattr(state, "current_persona", "default").lower()
-                prefs = config.PERSONA_TOOL_PREFERENCES.get(persona, {})
+                prefs = getattr(config, "PERSONA_TOOL_PREFERENCES", {}) or {}
+                prefs = prefs.get(persona, {})
 
                 avoid = set(prefs.get("avoid", []))
                 prefer = prefs.get("prefer", [])
