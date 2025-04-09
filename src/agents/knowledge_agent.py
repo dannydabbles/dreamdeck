@@ -11,6 +11,7 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
+@cl.step(name="Knowledge Agent", type="tool")
 async def _knowledge(state: ChatState, knowledge_type: str) -> list[BaseMessage]:
     """Generates knowledge content (character, lore, puzzle) based on type."""
     try:

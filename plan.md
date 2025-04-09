@@ -160,44 +160,32 @@ This document outlines the planned phases for enhancing Dreamdeck, focusing on i
 
 ## Phase 5: UI Enhancements - Steps & Avatars
 
+**Status: Completed**
+
 **Goal:** Improve UI feedback and visual appeal using Chainlit's Steps and Avatars.
 
 **Tasks:**
 
 1.  **Add `@cl.step` Decorators:**
-    *   Add `@cl.step(name="Descriptive Name", type="tool")` or similar decorators to the core async functions within agent files:
+    *   Added `@cl.step(name="Descriptive Name", type="tool")` decorators to the core async functions within agent files:
         *   `src/agents/writer_agent.py` (`_generate_story`)
         *   `src/agents/knowledge_agent.py` (`_knowledge`)
         *   `src/agents/dice_agent.py` (`_dice_roll`)
         *   `src/agents/web_search_agent.py` (`_web_search`)
         *   `src/agents/todo_agent.py` (`_manage_todo`)
         *   `src/agents/storyboard_editor_agent.py` (`_generate_storyboard`)
-    *   Ensure the step names are informative. Adjust placement if the function is already decorated with `@task`.
+    *   Step names are informative and appear in the Chainlit UI during execution.
+
+2.  **Avatars:**
+    *   No explicit avatar customization was implemented in this phase.
+    *   Can be added later if desired.
+
+**Rationale:** Improves transparency of agent execution in the UI, making it easier to follow the workflow.
 
 ---
 
-## Phase 6: Command Line Interface (CLI) (Optional)
+### Notes for Next Phase (Phase 6):
 
-**Goal:** Provide a non-UI method for interacting with agents, primarily for testing and development.
-
-**Tasks:**
-
-1.  **Create `cli.py`:**
-    *   Create a new file `cli.py` at the project root.
-    *   Use `argparse` to handle command-line arguments (e.g., `--agent`, `--prompt`, `--persona`, `--state-file`).
-    *   Import necessary agent functions (potentially needing `call_` wrappers like `call_writer_agent`), `ChatState`, `config`.
-    *   Implement logic to:
-        *   Load config.
-        *   Initialize or load `ChatState`.
-        *   Set `state.current_persona` based on args.
-        *   Call the specified agent function directly with the state.
-        *   Print the agent's response (likely the `content` of the returned `AIMessage`).
-        *   Optionally save the final state.
-2.  **Add `call_` Wrappers (If Needed):**
-    *   Ensure agents intended for CLI use have simple async wrapper functions (like `call_writer_agent`) that take `state` and return the result, separate from the LangGraph `@task` decorators.
-3.  **Add Tests (Optional):**
-    *   Create `tests/test_cli.py` to test the command-line interface functionality using `subprocess` or by directly calling the CLI functions.
-
-**Rationale:** Offers a valuable tool for developers to test agent logic without the full web UI stack. Largely independent of UI changes.
-
----
+* The UI now clearly shows which agent/tool is running via Chainlit steps.
+* Optional: Customize avatars or add more detailed step descriptions.
+* Next, focus on CLI interface for agent testing and development.

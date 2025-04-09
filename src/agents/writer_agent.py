@@ -24,6 +24,7 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
+@cl.step(name="Writer Agent: Generate Story", type="tool")
 async def _generate_story(state: ChatState) -> list[BaseMessage]:
     """Generate the Game Master's narrative response based on recent chat, memories, and tool results."""
     try:

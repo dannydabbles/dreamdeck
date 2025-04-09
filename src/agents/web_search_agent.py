@@ -22,6 +22,7 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
+@cl.step(name="Web Search Agent", type="tool")
 async def _web_search(state: ChatState) -> list[BaseMessage]:
     """Generate a search query, call SerpAPI, and summarize results."""
     if not WEB_SEARCH_ENABLED:

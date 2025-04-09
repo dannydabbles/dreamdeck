@@ -14,6 +14,7 @@ TODO_DIR_PATH = config.todo_dir_path
 TODO_FILE_NAME = config.todo_file_name
 
 
+@cl.step(name="Todo Agent", type="tool")
 async def _manage_todo(state: ChatState) -> list[AIMessage]:
     try:
         last_human = state.get_last_human_message()

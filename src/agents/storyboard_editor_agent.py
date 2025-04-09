@@ -28,6 +28,7 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
+@cl.step(name="Storyboard Editor Agent", type="tool")
 async def _generate_storyboard(
     state: ChatState, gm_message_id: str
 ) -> list[BaseMessage]:

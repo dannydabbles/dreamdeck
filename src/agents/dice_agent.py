@@ -26,6 +26,7 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
+@cl.step(name="Dice Agent: Roll Dice", type="tool")
 async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List[BaseMessage]:
     """Parse dice expressions, perform random rolls, and return results."""
     input_msg = state.get_last_human_message()
