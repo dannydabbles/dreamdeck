@@ -1,4 +1,4 @@
-from src.config import config
+from src.config import config, PERSONA_TOOL_PREFERENCES
 import json
 import logging
 from jinja2 import Template
