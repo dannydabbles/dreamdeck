@@ -32,12 +32,20 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
         cl_logger.info(f"Writer agent using persona: {persona}")
 
         # Determine the prompt key based on persona
-        # Access nested config structure carefully
-        persona_config = config.agents.writer_agent.dict().get("personas", {}).get(persona, {})
-        prompt_key = persona_config.get("prompt_key", "default_writer_prompt") # Fallback key
+        prompt_key = "default_writer_prompt"
+        try:
+            # Access nested config structure safely
+            persona_configs = getattr(config.agents.writer_agent, "personas", {})
+            if isinstance(persona_configs, dict):
+                persona_entry = persona_configs.get(persona)
+                if persona_entry and isinstance(persona_entry, dict):
+                    prompt_key = persona_entry.get("prompt_key", prompt_key)
+        except Exception:
+            pass  # Defensive: fallback to default_writer_prompt
+
+        cl_logger.info(f"Writer agent resolved prompt key: {prompt_key}")
 
         # Get the actual prompt template string using the key
-        # Fallback to the AI_WRITER_PROMPT constant if key not found in loaded_prompts
         prompt_template_str = config.loaded_prompts.get(prompt_key, AI_WRITER_PROMPT)
 
         # Format prompt as jinja2
