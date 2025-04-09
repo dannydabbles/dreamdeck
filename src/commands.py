@@ -24,7 +24,8 @@ from src.config import IMAGE_GENERATION_ENABLED, START_MESSAGE
 cl_logger = logging.getLogger("chainlit")
 
 
-async def command_roll(query: str):
+@cl.command(name="roll", description="Roll dice via natural language or dice notation")
+async def command_roll(query: str = ""):
     """Handles the /roll command.
 
     Creates a user message, appends it to state, calls the dice agent, and stores the AI response.
@@ -73,7 +74,8 @@ async def command_roll(query: str):
     cl_logger.info(f"/roll command processed.")
 
 
-async def command_search(query: str):
+@cl.command(name="search", description="Perform a web search")
+async def command_search(query: str = ""):
     """Handles the /search command.
 
     Creates a user message, appends it to state, calls the web search agent, and stores the AI response.
@@ -122,7 +124,8 @@ async def command_search(query: str):
     cl_logger.info(f"/search command processed.")
 
 
-async def command_todo(query: str):
+@cl.command(name="todo", description="Add a TODO item")
+async def command_todo(query: str = ""):
     """Handles the /todo command.
 
     Creates a user message, appends it to state, calls the todo agent, and stores the AI response.
@@ -172,7 +175,8 @@ async def command_todo(query: str):
     cl_logger.info(f"/todo command processed.")
 
 
-async def command_write(query: str):
+@cl.command(name="write", description="Directly prompt the writer agent")
+async def command_write(query: str = ""):
     """Handles the /write command.
 
     Creates a user message, appends it to state, calls the writer agent, and stores the AI response.
@@ -213,6 +217,7 @@ async def command_write(query: str):
     cl_logger.info(f"/write command processed.")
 
 
+@cl.command(name="storyboard", description="Generate storyboard images for the last Game Master message")
 async def command_storyboard(query: str = ""):
     """Handles the /storyboard command.
 
@@ -244,6 +249,7 @@ async def command_storyboard(query: str = ""):
     else:
         await cl.Message(content="Could not find a previous Game Master message with a valid ID to generate a storyboard for.").send()
         cl_logger.warning("Could not execute /storyboard: No suitable GM message found in state.")
+@cl.command(name="help", description="Show help message")
 async def command_help():
     help_text = """
 **Available Commands:**
@@ -260,6 +266,7 @@ async def command_help():
     await cl.Message(content=help_text.strip()).send()
 
 
+@cl.command(name="reset", description="Reset the current story")
 async def command_reset():
     cl_logger.info("Resetting chat state and vector store")
     # Clear state
@@ -283,6 +290,7 @@ async def command_reset():
     cl.user_session.set("state", state)
 
 
+@cl.command(name="save", description="Export the current story as markdown")
 async def command_save():
     state: ChatState = cl.user_session.get("state")
     if not state:
