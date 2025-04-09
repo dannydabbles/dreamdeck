@@ -137,6 +137,7 @@ class ConfigSchema(BaseModel):
     todo_dir_path: str = "./helper"
     todo_file_name: str = "todo.md"
     max_chain_length: int = 3
+    persona_tool_preferences: dict = Field(default_factory=dict)
     _env_prefix: ClassVar[str] = "APP_"
     model_config = ConfigDict(extra="forbid")
     chat: dict
@@ -174,6 +175,8 @@ def load_config():
 
 
 config = load_config()
+
+PERSONA_TOOL_PREFERENCES = config.persona_tool_preferences
 
 MAX_CHAIN_LENGTH = config.max_chain_length
 

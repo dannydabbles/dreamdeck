@@ -40,9 +40,15 @@ async def _direct_actions(state) -> list[str]:
 
     try:
         template = Template(DIRECTOR_PROMPT)
+
+        persona = getattr(state, "current_persona", "default")
+        persona_prefs = PERSONA_TOOL_PREFERENCES.get(persona.lower(), {})
+
         formatted_prompt = template.render(
             user_input=user_input.content,
             chat_history=state.get_recent_history_str(),
+            persona=persona,
+            persona_preferences=persona_prefs,
         )
 
         user_settings = cl.user_session.get("chat_settings", {})

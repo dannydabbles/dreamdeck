@@ -46,21 +46,15 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 
 ---
 
-### **4. Persona-Aware Director & Tool Preferences**
+### **4. Persona-Aware Director & Tool Preferences** ✅ **Completed**
 
-- **Update director prompt** to include:  
-  `"Current persona: {{ persona }}"`
-- **Instruct** LLM to **prioritize or avoid tools** based on persona, e.g.:
-  - Therapist: avoid dice, favor conversation.
-  - Secretary: favor todo, report.
-  - Coder: favor code tools.
-- **Config**:  
-  ```yaml
-  persona_tool_preferences:
-    therapist: { avoid: ["roll"], prefer: ["knowledge"] }
-    secretary: { prefer: ["todo", "report"] }
-    coder: { prefer: ["code_search"] }
-  ```
+- **Director prompt updated** to include:  
+  `"Current persona: {{ persona }}"`  
+  and  
+  `"Persona tool preferences: {{ persona_preferences }}"`
+- **Config** now supports `persona_tool_preferences` dict with `prefer` and `avoid` lists per persona.
+- **Director agent** passes persona and preferences into the prompt, enabling persona-aware tool selection.
+- Next: **Phase 5** will filter or reorder director actions based on these preferences programmatically.
 
 ---
 

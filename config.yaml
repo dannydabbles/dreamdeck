@@ -133,6 +133,21 @@ agents:
     streaming: false
     verbose: true
 
+persona_tool_preferences:
+  therapist:
+    avoid: ["roll"]
+    prefer: ["knowledge"]
+  secretary:
+    prefer: ["todo", "report"]
+  coder:
+    prefer: ["code_search"]
+  friend: {}
+  lorekeeper:
+    prefer: ["knowledge"]
+  dungeon_master:
+    prefer: ["roll", "knowledge"]
+  default: {}
+
 storyboard_generation_prompt_prefix: "masterpiece, best quality, amazing quality"  # Add this line
 storyboard_generation_prompt_postfix: ""  # Add this line
 
