@@ -2,9 +2,8 @@ import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from langchain_core.messages import AIMessage, HumanMessage
 from src.workflows import _chat_workflow
-from src.agents.decision_agent import decide_action
-from langgraph.func import task  # Ensure proper imports
-from src.models import ChatState  # <-- Add this import
+from langgraph.func import task
+from src.models import ChatState
 
 @pytest.fixture
 def mock_chat_state():
@@ -17,7 +16,7 @@ async def test_chat_workflow_memory_updates(mock_chat_state):
     dummy_knowledge_msg = AIMessage(content="Character info", name="character", metadata={"message_id": "k1"})
     dummy_gm_msg = AIMessage(content="Story continues", name="Game Master", metadata={"message_id": "gm1"})
 
-    with patch("src.workflows.orchestrator_agent", new_callable=AsyncMock) as mock_orchestrator, \
+    with patch("src.workflows.director_agent", new_callable=AsyncMock) as mock_director, \
          patch("src.workflows.agents_map", {"tool1": AsyncMock(return_value=[dummy_ai_msg1])}), \
          patch("src.workflows.knowledge_agent", new_callable=AsyncMock, return_value=[dummy_knowledge_msg]) as mock_knowledge_agent, \
          patch("src.workflows.writer_agent", new_callable=AsyncMock, return_value=[dummy_gm_msg]), \
@@ -29,16 +28,14 @@ async def test_chat_workflow_memory_updates(mock_chat_state):
         initial_state = mock_chat_state
         initial_state.messages.append(HumanMessage(content="Hi"))
 
-        mock_orchestrator.return_value = ["tool1", {"action": "knowledge", "type": "character"}]
+        mock_director.return_value = ["tool1", {"action": "knowledge", "type": "character"}, "write"]
 
         updated_state = await _chat_workflow([], previous=initial_state)
 
-        # All AI messages appended
         assert dummy_ai_msg1 in updated_state.messages
         assert dummy_knowledge_msg in updated_state.messages
         assert dummy_gm_msg in updated_state.messages
 
-        # Vector store put called for each AI message
         calls = [call.kwargs for call in vector_store.put.await_args_list]
         msg_ids = [c["message_id"] for c in calls]
         assert "m1" in msg_ids
@@ -53,19 +50,15 @@ async def test_storyboard_triggered_after_gm(monkeypatch):
     dummy_gm_msg = AIMessage(content="Story continues", name="Game Master", metadata={"message_id": "gm123"})
     dummy_state = ChatState(messages=[HumanMessage(content="Hi")], thread_id="t1")
 
-    # Patch orchestrator to return no tools, so GM is called immediately
-    with patch("src.workflows.orchestrator_agent", new_callable=AsyncMock) as mock_orch, \
+    with patch("src.workflows.director_agent", new_callable=AsyncMock) as mock_director, \
          patch("src.workflows.writer_agent", new_callable=AsyncMock, return_value=[dummy_gm_msg]) as mock_writer, \
          patch("src.workflows.cl.user_session.get", return_value=None), \
          patch("src.workflows.storyboard_editor_agent", new_callable=AsyncMock) as mock_storyboard:
 
-        mock_orch.return_value = ["write"]
+        mock_director.return_value = ["write"]
 
         updated_state = await _chat_workflow([], previous=dummy_state)
 
-        # Because storyboard_editor_agent is called but *not awaited* in _chat_workflow,
-        # it is a coroutine that is never awaited, so AsyncMock.await_count remains 0.
-        # Instead, check it was *called* (sync), not awaited.
         mock_storyboard.assert_called_once()
         args, kwargs = mock_storyboard.call_args
         assert kwargs["state"] == updated_state
@@ -82,7 +75,7 @@ async def test_multi_hop_orchestration(monkeypatch):
 
     state = ChatState(messages=[HumanMessage(content="Hi")], thread_id="t1")
 
-    with patch("src.workflows.orchestrator_agent", new_callable=AsyncMock) as mock_orch, \
+    with patch("src.workflows.director_agent", new_callable=AsyncMock) as mock_director, \
          patch("src.workflows.knowledge_agent", new_callable=AsyncMock, return_value=[dummy_knowledge]) as mock_knowledge, \
          patch("src.workflows.agents_map", {
              "search": AsyncMock(return_value=[dummy_search]),
@@ -90,10 +83,7 @@ async def test_multi_hop_orchestration(monkeypatch):
          patch("src.workflows.writer_agent", new_callable=AsyncMock, return_value=[dummy_gm]), \
          patch("src.workflows.cl.user_session.get", return_value=None):
 
-        # First orchestrator call returns search
-        # Second returns knowledge
-        # Third returns write (GM)
-        mock_orch.side_effect = [
+        mock_director.side_effect = [
             ["search"],
             [{"action": "knowledge", "type": "lore"}],
             ["write"]
@@ -101,7 +91,6 @@ async def test_multi_hop_orchestration(monkeypatch):
 
         updated_state = await _chat_workflow([], previous=state)
 
-        # All tool and GM messages appended
         contents = [m.content for m in updated_state.messages]
         assert "Search results" in contents
         assert "Lore details" in contents
@@ -114,10 +103,9 @@ async def test_workflow_error_fallback(monkeypatch):
 
     state = ChatState(messages=[HumanMessage(content="Hi")], thread_id="t1")
 
-    with patch("src.workflows.orchestrator_agent", new_callable=AsyncMock, side_effect=Exception("fail")), \
+    with patch("src.workflows.director_agent", new_callable=AsyncMock, side_effect=Exception("fail")), \
          patch("src.workflows.cl.user_session.get", return_value=None):
 
         updated_state = await _chat_workflow([], previous=state)
 
-        # Last message should be fallback
         assert updated_state.messages[-1].content == "The adventure continues..."
