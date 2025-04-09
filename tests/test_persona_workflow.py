@@ -58,6 +58,14 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
         return {}
     monkeypatch.setattr("chainlit.user_session.get", fake_user_session_get)
 
+    # Patch the entire agents_map to avoid calling real dice agent etc.
+    monkeypatch.setattr(workflows_module, "agents_map", {
+        "roll": lambda *_args, **_kwargs: [],
+        "todo": lambda *_args, **_kwargs: [],
+        "write": fake_writer,
+        "continue_story": fake_writer,
+    })
+
     # Run the workflow
     new_state = await workflows_module._chat_workflow(
         messages=[],
