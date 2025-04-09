@@ -24,6 +24,7 @@ prompts:
   lore_prompt: "lore_prompt.j2"
   puzzle_prompt: "puzzle_prompt.j2"
   default_writer_prompt: "ai_writer_prompt.j2" # Explicit key for default writer
+  todo_prompt: "todo_prompt.j2"
 
 image_generation_payload:
   url: "http://192.168.1.4:7860"
