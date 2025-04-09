@@ -47,10 +47,18 @@ async def _knowledge(state: ChatState, knowledge_type: str) -> list[BaseMessage]
         )
 
         response = await llm.ainvoke([("system", formatted_prompt)])
-        return [AIMessage(content=response.content.strip(), name=knowledge_type)]
+        cl_msg = cl.Message(content=response.content.strip())
+        await cl_msg.send()
+        return [
+            AIMessage(
+                content=response.content.strip(),
+                name=knowledge_type,
+                metadata={"message_id": cl_msg.id},
+            )
+        ]
     except Exception as e:
         cl_logger.error(f"Knowledge agent ({knowledge_type}) failed: {e}")
-        return [AIMessage(content=f"{knowledge_type.capitalize()} generation failed.", name="error")]
+        return [AIMessage(content=f"{knowledge_type.capitalize()} generation failed.", name="error", metadata={"message_id": None})]
 
 
 @task

@@ -249,6 +249,7 @@ async def command_storyboard(query: str = ""):
     else:
         await cl.Message(content="Could not find a previous Game Master message with a valid ID to generate a storyboard for.").send()
         cl_logger.warning("Could not execute /storyboard: No suitable GM message found in state.")
+
 @cl.command(name="help", description="Show help message")
 async def command_help():
     help_text = """
@@ -277,7 +278,7 @@ async def command_reset():
     vector_store: VectorStore = cl.user_session.get("vector_memory")
     if vector_store:
         try:
-            await vector_store.collection.delete(where={})
+            await vector_store.collection.delete(where={"type": {"$ne": "knowledge"}})
         except Exception:
             pass
 
@@ -297,12 +298,15 @@ async def command_save():
         await cl.Message(content="No story to save.").send()
         return
 
+    def escape_md(text):
+        return text.replace("```", "\\`\\`\\`")
+
     md_lines = []
     for msg in state.messages:
         if isinstance(msg, HumanMessage):
-            md_lines.append(f"**Player:** {msg.content}")
+            md_lines.append(f"**Player:** {escape_md(msg.content)}")
         elif isinstance(msg, AIMessage):
-            md_lines.append(f"**{msg.name or 'AI'}:** {msg.content}")
+            md_lines.append(f"**{msg.name or 'AI'}:** {escape_md(msg.content)}")
 
     md_content = "\n\n".join(md_lines)
     # Send as downloadable file element

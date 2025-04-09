@@ -1,6 +1,7 @@
 from src.config import config, cl_logger
 import os
 import datetime
+import re
 from chainlit import Message as CLMessage
 import chainlit as cl
 from langgraph.func import task
@@ -19,23 +20,24 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
     try:
         last_human = state.get_last_human_message()
         if not last_human:
-            return [AIMessage(content="No user input found.", name="error")]
+            return [AIMessage(content="No user input found.", name="error", metadata={"message_id": None})]
         original_user_input = last_human.content.strip()
 
         # Special case: if original_user_input is empty or just "/todo", treat as empty task
         if original_user_input.startswith("/todo"):
             task_text = original_user_input[5:].strip()
             if not task_text:
-                return [AIMessage(content="Task cannot be empty", name="error")]
+                return [AIMessage(content="Task cannot be empty", name="error", metadata={"message_id": None})]
         else:
             task_text = original_user_input  # fallback, e.g., if user didn't use slash command
 
         # Pass the *full* original user input (including slash command) to the prompt for clarity
 
         # Load current todo list from file (if exists)
-        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        current_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
         persona = getattr(state, "current_persona", "Default")
-        dir_path = os.path.join(TODO_DIR_PATH, persona, current_date)
+        persona_safe = re.sub(r'[^\w\-_. ]', '_', persona)
+        dir_path = os.path.join(TODO_DIR_PATH, persona_safe, current_date)
         file_path = os.path.join(dir_path, TODO_FILE_NAME)
 
         existing_content = ""
@@ -98,7 +100,7 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
 
     except Exception as e:
         cl_logger.error(f"Todo agent failed: {e}")
-        return [AIMessage(content="Todo update failed.", name="error")]
+        return [AIMessage(content="Todo update failed.", name="error", metadata={"message_id": None})]
 
 
 @task

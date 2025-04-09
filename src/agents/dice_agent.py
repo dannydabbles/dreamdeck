@@ -63,7 +63,12 @@ async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List
 
         # Parse JSON response with explicit error handling
         try:
-            json_output = json.loads(response.content.strip())
+            content = response.content.strip()
+            if content.startswith("```") and content.endswith("```"):
+                lines = content.splitlines()
+                if len(lines) >= 3:
+                    content = "\n".join(lines[1:-1]).strip()
+            json_output = json.loads(content)
         except json.JSONDecodeError as e:
             cl_logger.error(
                 f"Invalid JSON response: {response.content}. Error: {str(e)}"
@@ -72,6 +77,7 @@ async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List
                 AIMessage(
                     content=f"🎲 Error parsing dice roll response: {str(e)}",
                     name="error",
+                    metadata={"message_id": None},
                 )
             ]
 
@@ -85,6 +91,7 @@ async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List
                 AIMessage(
                     content="🎲 Error: Invalid dice roll specification received.",
                     name="error",
+                    metadata={"message_id": None},
                 )
             ]
 
@@ -142,6 +149,7 @@ async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List
             AIMessage(
                 content=f"🎲 Error rolling dice: {str(e)}",
                 name="error",
+                metadata={"message_id": None},
             )
         ]
 

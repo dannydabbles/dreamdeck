@@ -138,7 +138,7 @@ async def _chat_workflow(
             if last_ai_message and last_ai_message.metadata and "message_id" in last_ai_message.metadata:
                 gm_message_id = last_ai_message.metadata["message_id"]
                 cl_logger.info(f"Triggering storyboard generation for message ID: {gm_message_id}")
-                storyboard_editor_agent(state=state, gm_message_id=gm_message_id)
+                asyncio.create_task(storyboard_editor_agent(state=state, gm_message_id=gm_message_id))
             else:
                 cl_logger.warning("Could not trigger storyboard generation: Last AI message or its message_id not found in state.")
 
