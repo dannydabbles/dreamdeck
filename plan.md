@@ -135,17 +135,26 @@ This document outlines the planned phases for enhancing Dreamdeck, focusing on i
 
 ## Phase 4: Memory & Persistence Updates (Tagging with Persona)
 
+**Status: Completed**
+
 **Goal:** Ensure the active persona is stored alongside messages in the vector store and update TODO file paths if necessary.
 
 **Tasks:**
 
 1.  **Update Vector Store `put` Calls:**
-    *   In all places where `vector_store.put` is called (`src/event_handlers.py:on_message`, `src/workflows.py:_chat_workflow`, `src/commands.py`), modify the `metadata` dictionary to include the current persona: `metadata={"type": "...", "author": "...", "persona": state.current_persona}`.
-2.  **Update TODO Agent File Paths (Optional):**
-    *   If desired, modify `src/agents/todo_agent.py` (`_manage_todo`) to save TODO files into persona-specific subdirectories (e.g., `os.path.join(TODO_DIR_PATH, state.current_persona, current_date)`). Ensure directory creation handles this.
-    *   Update `tests/test_todo_agent.py` accordingly.
+    *   All vector store `.put()` calls in `src/event_handlers.py`, `src/workflows.py`, and `src/commands.py` now include the current persona in metadata: `metadata={"type": "...", "author": "...", "persona": state.current_persona}`.
+2.  **Update TODO Agent File Paths:**
+    *   The TODO agent now saves files under persona-specific subdirectories: `helper/<persona>/<date>/todo.md`.
 
-**Rationale:** Enriches persisted data with persona context, enabling potential future persona-specific memory retrieval or analysis. Depends on Phase 1.
+**Rationale:** Enriches persisted data with persona context, enabling future persona-specific memory retrieval or analysis.
+
+---
+
+**Notes for Next Phase (Phase 5):**
+
+* Persona metadata is now consistently stored with all vector store messages.
+* TODO files are saved per persona, improving organization.
+* Next, focus on UI improvements with Chainlit Steps and Avatars.
 
 ---
 

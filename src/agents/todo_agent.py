@@ -30,7 +30,8 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
 
         # Load current todo list from file (if exists)
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-        dir_path = os.path.join(TODO_DIR_PATH, current_date)
+        persona = getattr(state, "current_persona", "Default")
+        dir_path = os.path.join(TODO_DIR_PATH, persona, current_date)
         file_path = os.path.join(dir_path, TODO_FILE_NAME)
 
         existing_content = ""

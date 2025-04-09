@@ -436,7 +436,7 @@ async def on_message(message: cl.Message):
         user_msg = HumanMessage(content=message.content, name="Player", metadata={"message_id": message.id})
         state.messages.append(user_msg)
         # Add user message to vector memory
-        await vector_memory.put(content=message.content, message_id=message.id, metadata={"type": "human", "author": "Player"})
+        await vector_memory.put(content=message.content, message_id=message.id, metadata={"type": "human", "author": "Player", "persona": state.current_persona})
 
         try:
             state.memories = [

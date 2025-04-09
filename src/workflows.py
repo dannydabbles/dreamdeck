@@ -106,7 +106,7 @@ async def _chat_workflow(
                         await vector_memory.put(
                             content=msg.content,
                             message_id=msg.metadata["message_id"],
-                            metadata={"type": "ai", "author": msg.name},
+                            metadata={"type": "ai", "author": msg.name, "persona": state.current_persona},
                         )
 
             # After tools, decide next actions
@@ -121,7 +121,7 @@ async def _chat_workflow(
                             await vector_memory.put(
                                 content=msg.content,
                                 message_id=msg.metadata["message_id"],
-                                metadata={"type": "ai", "author": msg.name},
+                                metadata={"type": "ai", "author": msg.name, "persona": state.current_persona},
                             )
                 break  # Always stop after GM
             else:
