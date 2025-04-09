@@ -44,13 +44,20 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
                 existing_content = f.read()
 
         # Prepare prompt
-        template = Template(config.loaded_prompts.get("todo_prompt", ""))
-        prompt = template.render(
-            existing_todo_file=existing_content,
-            user_input=original_user_input,
-            recent_chat_history=state.get_recent_history_str(),
-            tool_results=state.get_tool_results_str(),
-        )
+        prompt_template_str = config.loaded_prompts.get("todo_prompt", "").strip()
+        if not prompt_template_str:
+            cl_logger.error("Todo prompt template is empty!")
+            prompt = f"User input: {original_user_input}\nExisting TODO:\n{existing_content}"
+        else:
+            template = Template(prompt_template_str)
+            prompt = template.render(
+                existing_todo_file=existing_content,
+                user_input=original_user_input,
+                recent_chat_history=state.get_recent_history_str(),
+                tool_results=state.get_tool_results_str(),
+            )
+
+        cl_logger.info(f"Todo prompt:\n{prompt}")
 
         # Call LLM
         user_settings = cl.user_session.get("chat_settings", {})
