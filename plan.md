@@ -27,13 +27,13 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 
 ---
 
-### **2. User Confirmation Flow**
+### **2. User Confirmation Flow** ✅ **Completed**
 
 - When a **new persona is suggested**:
   - **Notify user**: _"Switch to Therapist mode? Yes/No"_
   - On **Yes**: update `cl.user_session["current_persona"]` and `ChatState.current_persona`.
   - On **No**: keep current persona.
-- Always allow **manual override** via UI or `/persona` command.
+- Always allow **manual override** via UI or `/persona` command. (Planned for later phase)
 
 ---
 
@@ -136,7 +136,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 | Phase | Description                          | Key Deliverables                          |
 |--------|--------------------------------------|-------------------------------------------|
 | 1      | Persona classifier agent             | **✅ Completed**                          |
-| 2      | User confirmation flow               | UI prompt, update persona on confirm      |
+| 2      | User confirmation flow               | **✅ Completed**                          |
 | 3      | Persona-aware prompts                | Config, prompt templates, agent updates   |
 | 4      | Persona-aware director               | Director prompt update, tool prefs config |
 | 5      | Persona-aware workflows              | Workflow filtering, persona triggers      |
