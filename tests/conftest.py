@@ -1,6 +1,9 @@
 import sys
 import os
 
+# Always set DREAMDECK_TEST_MODE=1 during tests to isolate ChromaDB
+os.environ["DREAMDECK_TEST_MODE"] = "1"
+
 # Patch chainlit.command to a dummy decorator during pytest collection and run
 if (
     "pytest" in sys.modules

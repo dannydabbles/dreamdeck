@@ -1,6 +1,6 @@
 from langchain_core.documents import Document
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
-from chromadb import PersistentClient
+from chromadb import PersistentClient, Client  # Import both clients
 from typing import (
     Dict,
     Any,
@@ -13,6 +13,7 @@ from typing import (
 import uuid
 import chainlit as cl
 import asyncio
+import os  # Add os for env var check
 from src.config import (
     parse_size,
     CACHING_SETTINGS,
@@ -24,7 +25,7 @@ class VectorStore:
 
     Attributes:
         embeddings (HuggingFaceEmbeddings): The embeddings model.
-        client (PersistentClient): The ChromaDB client.
+        client (PersistentClient or Client): The ChromaDB client.
         collection: The ChromaDB collection.
     """
 
@@ -32,7 +33,11 @@ class VectorStore:
         self.embeddings = SentenceTransformerEmbeddingFunction(
             model_name="all-MiniLM-L6-v2"
         )
-        self.client = PersistentClient(path="chroma_db")
+        # Use in-memory ChromaDB during tests
+        if os.environ.get("DREAMDECK_TEST_MODE") == "1":
+            self.client = Client()  # In-memory, ephemeral
+        else:
+            self.client = PersistentClient(path="chroma_db")
         self.collection = self.client.get_or_create_collection(
             name=cl.context.session.thread_id, embedding_function=self.embeddings
         )
