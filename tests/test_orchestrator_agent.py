@@ -12,10 +12,10 @@ async def test_orchestrator_returns_actions():
         patch("src.agents.orchestrator_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke,
         patch("src.agents.orchestrator_agent.cl.user_session.get", new_callable=MagicMock) as mock_user_session_get,
     ):
-        mock_ainvoke.return_value.content = '{"actions": ["roll", "write"]}'
+        mock_ainvoke.return_value.content = '{"actions": ["roll", {"action": "knowledge", "type": "character"}, "write"]}'
         mock_user_session_get.return_value = {}
         actions = await _decide_actions(state)
-        assert actions == ["roll", "write"]
+        assert actions == ["roll", {"action": "knowledge", "type": "character"}, "write"]
 
 @pytest.mark.asyncio
 async def test_orchestrator_handles_invalid_json():

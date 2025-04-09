@@ -71,7 +71,11 @@ async def _decide_actions(state) -> list[str]:
                     content = "\n".join(lines[1:-1]).strip()
             parsed = json.loads(content)
             actions = parsed.get("actions", [])
-            if not isinstance(actions, list) or not actions:
+            # Validate actions is a list and contains strings or dicts
+            if not isinstance(actions, list) or not all(isinstance(a, (str, dict)) for a in actions):
+                cl_logger.warning(f"Orchestrator returned invalid actions format: {actions}. Defaulting to continue_story.")
+                return ["continue_story"]
+            if not actions:
                 return ["continue_story"]
             return actions
         except json.JSONDecodeError:
