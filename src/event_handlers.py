@@ -197,7 +197,10 @@ async def on_chat_start():
             ]
         ).send()
 
-        # Persist initial chat settings in user session
+        # Defensive: if settings is None (e.g., in tests), replace with empty dict
+        if settings is None:
+            settings = {}
+
         cl.user_session.set("chat_settings", settings)
         cl.user_session.set("current_persona", settings.get("persona", "Storyteller GM"))
 
