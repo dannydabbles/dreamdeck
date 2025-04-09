@@ -170,7 +170,6 @@ async def generate_image_generation_prompts(storyboard: str) -> List[str]:
     return image_gen_prompts
 
 
-@task
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
     """Process storyboard into images and send to chat.
 

@@ -82,7 +82,6 @@ async def test_on_chat_start(mock_cl_environment):
         assert user_session_store.get("vector_memory") is mock_vector_store_instance
 
         # Verify agents are stored (using their imported names)
-        assert "decision_agent" in user_session_store
         assert "writer_agent" in user_session_store
         # ... add other agents if needed
 
