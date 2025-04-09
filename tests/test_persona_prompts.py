@@ -7,14 +7,15 @@ from src.config import config
 @pytest.fixture(autouse=True, scope="module")
 def patch_persona_configs():
     # Patch writer_agent personas
-    if not hasattr(config.agents.writer_agent, "personas") or not config.agents.writer_agent.personas:
-        config.agents.writer_agent.personas = {
+    if not hasattr(config.agents.writer_agent.__class__, "personas"):
+        # Add personas as a dynamic attribute on the class, so it's accessible via getattr
+        setattr(config.agents.writer_agent.__class__, "personas", {
             "Storyteller GM": {"prompt_key": "storyteller_gm_prompt"},
             "Therapist": {"prompt_key": "therapist_writer_prompt"},
             "Coder": {"prompt_key": "coder_writer_prompt"},
             "Secretary": {"prompt_key": "secretary_writer_prompt"},
             "Default": {"prompt_key": "default_writer_prompt"},
-        }
+        })
     # Patch todo_agent personas
     if not hasattr(config.agents, "todo_agent") or not getattr(config.agents, "todo_agent", None):
         config.agents.todo_agent = {}
