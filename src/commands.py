@@ -244,8 +244,9 @@ async def command_storyboard(query: str = ""):
     if last_gm_message_id:
         cl_logger.info(f"Executing /storyboard command for message ID: {last_gm_message_id}")
         await cl.Message(content="Generating storyboard for the last scene...").send()
-        await storyboard_editor_agent(state=state, gm_message_id=last_gm_message_id)
-        cl_logger.info(f"/storyboard command processed.")
+        import asyncio
+        asyncio.create_task(storyboard_editor_agent(state=state, gm_message_id=last_gm_message_id))
+        cl_logger.info(f"/storyboard command scheduled as background task.")
     else:
         await cl.Message(content="Could not find a previous Game Master message with a valid ID to generate a storyboard for.").send()
         cl_logger.warning("Could not execute /storyboard: No suitable GM message found in state.")

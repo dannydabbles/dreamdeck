@@ -111,5 +111,8 @@ async def manage_todo(state: ChatState) -> list[AIMessage]:
 todo_agent = manage_todo
 
 
-async def call_todo_agent(state: ChatState) -> list[AIMessage]:
+async def call_todo_agent(state: ChatState, query: str = "") -> list[AIMessage]:
+    if query:
+        synthetic_msg = HumanMessage(content=f"/todo {query}", name="Player", metadata={"message_id": None})
+        state.messages.append(synthetic_msg)
     return await _manage_todo(state)

@@ -242,17 +242,20 @@ DIRECTOR_PROMPT = config.loaded_prompts.get(
 
 SERPAPI_KEY = os.getenv("SERPAPI_KEY", config.search.get("serpapi_key", ""))
 
+handlers = [
+    RotatingFileHandler(
+        LOGGING["file"],
+        maxBytes=parse_size(LOGGING["max_size"]),
+        backupCount=LOGGING["backup_count"],
+    ),
+]
+if LOGGING["console"]:
+    handlers.append(logging.StreamHandler())
+
 logging.basicConfig(
     level=LOGGING["level"],
     format=LOGGING["format"],
-    handlers=[
-        RotatingFileHandler(
-            LOGGING["file"],
-            maxBytes=parse_size(LOGGING["max_size"]),
-            backupCount=LOGGING["backup_count"],
-        ),
-        logging.StreamHandler() if LOGGING["console"] else None,
-    ],
+    handlers=handlers,
 )
 
 DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)

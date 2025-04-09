@@ -68,7 +68,7 @@ async def _generate_storyboard(
         return []
     except Exception as e:
         cl_logger.error(f"Storyboard generation failed: {e}")
-        return [AIMessage(content="Error generating storyboard.", name="error")]
+        return [AIMessage(content="Error generating storyboard.", name="error", metadata={"message_id": None})]
 
 
 @task

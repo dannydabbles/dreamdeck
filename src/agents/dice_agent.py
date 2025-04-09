@@ -55,6 +55,7 @@ async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List
                 AIMessage(
                     content="🎲 Error: No user input found for dice roll.",
                     name="error",
+                    metadata={"message_id": None},
                 )
             ]
 

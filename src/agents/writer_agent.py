@@ -92,7 +92,7 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
         return [story_segment]
     except Exception as e:
         cl_logger.error(f"Story generation failed: {e}")
-        return []
+        return [AIMessage(content="Story generation failed.", name="error", metadata={"message_id": None})]
 
 
 @task
