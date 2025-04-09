@@ -58,12 +58,12 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 
 ---
 
-### **5. Persona-Aware Workflows**
+### **5. Persona-Aware Workflows** ✅ **Completed**
 
 - In `src/workflows.py`,  
-  - **Filter or reorder** director actions based on persona preferences.
-  - E.g., skip dice rolls if persona is therapist.
-- **Trigger persona-specific agents** (e.g., secretary triggers report agent).
+  - Director actions are now **filtered and reordered** dynamically based on persona preferences.
+  - E.g., dice rolls are skipped if persona is therapist; preferred tools are prioritized.
+- **Note:** Persona-specific agents like report agent will be added in Phase 7.
 
 ---
 

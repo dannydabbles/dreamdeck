@@ -73,6 +73,45 @@ async def _chat_workflow(
         actions = await director_agent(state)
         cl_logger.info(f"Initial director actions: {actions}")
 
+        # Persona-aware filtering and reordering of actions (Phase 5)
+        persona = getattr(state, "current_persona", "default").lower()
+        prefs = config.PERSONA_TOOL_PREFERENCES.get(persona, {})
+
+        avoid = set(prefs.get("avoid", []))
+        prefer = prefs.get("prefer", [])
+
+        # Filter out avoided actions
+        filtered_actions = []
+        for act in actions:
+            # act can be string or dict
+            if isinstance(act, str):
+                if act in avoid:
+                    cl_logger.info(f"Skipping action '{act}' due to persona '{persona}' avoid list")
+                    continue
+            elif isinstance(act, dict):
+                # For dict actions, check 'action' key
+                act_name = act.get("action")
+                if act_name in avoid:
+                    cl_logger.info(f"Skipping action '{act_name}' due to persona '{persona}' avoid list")
+                    continue
+            filtered_actions.append(act)
+
+        # Reorder preferred actions to the front, preserving relative order
+        preferred_actions = []
+        other_actions = []
+        for act in filtered_actions:
+            act_name = act
+            if isinstance(act, dict):
+                act_name = act.get("action")
+            if act_name in prefer:
+                preferred_actions.append(act)
+            else:
+                other_actions.append(act)
+
+        actions = preferred_actions + other_actions
+
+        cl_logger.info(f"Persona-aware filtered and reordered actions: {actions}")
+
         while actions and chain_count < MAX_CHAIN_LENGTH:
             # Remove trailing GM call if present
             if actions[-1] in ("write", "continue_story"):
@@ -128,6 +167,45 @@ async def _chat_workflow(
                 # Re-orchestrate based on updated state
                 actions = await director_agent(state)
                 cl_logger.info(f"Next director actions: {actions}")
+
+                # Persona-aware filtering and reordering of actions (Phase 5)
+                persona = getattr(state, "current_persona", "default").lower()
+                prefs = config.PERSONA_TOOL_PREFERENCES.get(persona, {})
+
+                avoid = set(prefs.get("avoid", []))
+                prefer = prefs.get("prefer", [])
+
+                # Filter out avoided actions
+                filtered_actions = []
+                for act in actions:
+                    # act can be string or dict
+                    if isinstance(act, str):
+                        if act in avoid:
+                            cl_logger.info(f"Skipping action '{act}' due to persona '{persona}' avoid list")
+                            continue
+                    elif isinstance(act, dict):
+                        # For dict actions, check 'action' key
+                        act_name = act.get("action")
+                        if act_name in avoid:
+                            cl_logger.info(f"Skipping action '{act_name}' due to persona '{persona}' avoid list")
+                            continue
+                    filtered_actions.append(act)
+
+                # Reorder preferred actions to the front, preserving relative order
+                preferred_actions = []
+                other_actions = []
+                for act in filtered_actions:
+                    act_name = act
+                    if isinstance(act, dict):
+                        act_name = act.get("action")
+                    if act_name in prefer:
+                        preferred_actions.append(act)
+                    else:
+                        other_actions.append(act)
+
+                actions = preferred_actions + other_actions
+
+                cl_logger.info(f"Persona-aware filtered and reordered actions: {actions}")
 
         # Trigger storyboard generation after GM response
         if IMAGE_GENERATION_ENABLED:
