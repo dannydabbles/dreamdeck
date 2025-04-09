@@ -43,7 +43,11 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
     monkeypatch.setattr(workflows_module, "storyboard_editor_agent", fake_storyboard)
 
     # Patch cl.user_session.get to avoid errors
-    monkeypatch.setattr("chainlit.user_session.get", lambda key, default=None: {})
+    def fake_user_session_get(key, default=None):
+        if key == "config":
+            return {"configurable": {}}
+        return {}
+    monkeypatch.setattr("chainlit.user_session.get", fake_user_session_get)
 
     # Run the workflow
     new_state = await workflows_module._chat_workflow(
