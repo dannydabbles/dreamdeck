@@ -55,6 +55,8 @@ This document outlines the planned phases for enhancing Dreamdeck, focusing on i
 
 ## Phase 2: Agent Consolidation - Knowledge Agent
 
+**Status: Completed**
+
 **Goal:** Reduce code duplication by consolidating `character_agent`, `lore_agent`, and `puzzle_agent` into a single `knowledge_agent`.
 
 **Tasks:**
@@ -64,22 +66,38 @@ This document outlines the planned phases for enhancing Dreamdeck, focusing on i
     *   Define `async def _knowledge(state: ChatState, knowledge_type: str)` and a `@task` wrapper `knowledge_agent`.
     *   The agent should load the correct prompt file (e.g., `character_prompt.j2`, `lore_prompt.j2`) from `src/prompts/` based on the `knowledge_type` argument.
     *   It should use persona-specific settings (temp, endpoint, max_tokens) from `config.yaml` if defined, falling back to defaults.
+    *   **DONE** (`src/agents/knowledge_agent.py` created)
 2.  **Update Orchestrator:**
     *   Modify `src/agents/orchestrator_agent.py` (`_decide_actions`) and its prompt (`src/prompts/orchestrator_prompt.j2`).
-    *   The orchestrator should now output actions like `{"action": "knowledge", "type": "character"}` instead of separate `"character"`, `"lore"`, `"puzzle"` actions. Adjust the prompt examples accordingly.
+    *   The orchestrator now outputs actions as a list which can contain strings (like `"search"`) or dictionaries (like `{"action": "knowledge", "type": "character"}`).
+    *   **DONE**
 3.  **Update Workflow:**
     *   Modify `src/workflows.py` (`_chat_workflow`) to handle the new orchestrator output format. When `"action": "knowledge"` is received, call `knowledge_agent` passing `state` and the `knowledge_type`.
+    *   **DONE**
 4.  **Update Agent Map:**
     *   Modify `src/agents/__init__.py` to update `agents_map`. The key might be "knowledge", mapping to `knowledge_agent`. The workflow will need to handle passing the `knowledge_type`.
+    *   **DONE** (Removed old agents, added `knowledge_agent` import. The map itself doesn't need a "knowledge" key as the workflow handles the dictionary action format directly.)
 5.  **Cleanup:**
     *   Delete `src/agents/character_agent.py`, `src/agents/lore_agent.py`, `src/agents/puzzle_agent.py`.
     *   Delete corresponding prompts if they are fully superseded (or keep if the new agent loads them by name).
     *   Delete `tests/test_agents_misc.py`.
+    *   **DONE**
 6.  **Update Tests:**
     *   Create `tests/test_knowledge_agent.py` to test the consolidated agent with different `knowledge_type` inputs.
     *   Update `tests/test_orchestrator_agent.py` and `tests/test_workflows.py` to reflect the new action format and agent calls.
+    *   **DONE**
+7.  **Update UI Settings:**
+    *   Remove specific Chat Settings sliders/inputs for character, lore, and puzzle agents from `src/event_handlers.py` (`on_chat_start`) as the new agent reads these dynamically.
+    *   **DONE**
 
 **Rationale:** Simplifies the agent architecture, reduces redundancy, and makes adding new "knowledge" types easier in the future. Depends on Phase 1 for persona-specific settings.
+
+**Notes for Next Phase (Phase 3):**
+*   Phase 2 successfully consolidated the knowledge-based agents.
+*   The orchestrator now correctly outputs a list of actions, including the dictionary format for the knowledge agent.
+*   The workflow handles this new format.
+*   Persona-specific settings (temp, tokens, endpoint) are read dynamically by the `knowledge_agent` based on keys like `character_temp`, `lore_temp` etc. found in the `cl.user_session.get("chat_settings", {})`. The UI controls for these were removed in `on_chat_start` to avoid clutter; consolidated controls could be added later if needed.
+*   Phase 3 involves removing the legacy `decision_agent` entirely and potentially renaming the `orchestrator_agent` to `director_agent`.
 
 ---
 

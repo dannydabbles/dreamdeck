@@ -14,11 +14,12 @@ def mock_chat_state():
 @pytest.mark.asyncio
 async def test_chat_workflow_memory_updates(mock_chat_state):
     dummy_ai_msg1 = AIMessage(content="Tool1 done", name="tool1", metadata={"message_id": "m1"})
-    dummy_ai_msg2 = AIMessage(content="Tool2 done", name="tool2", metadata={"message_id": "m2"})
+    dummy_knowledge_msg = AIMessage(content="Character info", name="character", metadata={"message_id": "k1"})
     dummy_gm_msg = AIMessage(content="Story continues", name="Game Master", metadata={"message_id": "gm1"})
 
     with patch("src.workflows.orchestrator_agent", new_callable=AsyncMock) as mock_orchestrator, \
-         patch("src.workflows.agents_map", {"tool1": AsyncMock(return_value=[dummy_ai_msg1]), "tool2": AsyncMock(return_value=[dummy_ai_msg2])}), \
+         patch("src.workflows.agents_map", {"tool1": AsyncMock(return_value=[dummy_ai_msg1])}), \
+         patch("src.workflows.knowledge_agent", new_callable=AsyncMock, return_value=[dummy_knowledge_msg]) as mock_knowledge_agent, \
          patch("src.workflows.writer_agent", new_callable=AsyncMock, return_value=[dummy_gm_msg]), \
          patch("src.workflows.cl.user_session.get", new_callable=MagicMock) as mock_user_session_get:
 
@@ -28,20 +29,20 @@ async def test_chat_workflow_memory_updates(mock_chat_state):
         initial_state = mock_chat_state
         initial_state.messages.append(HumanMessage(content="Hi"))
 
-        mock_orchestrator.return_value = ["tool1", "tool2"]
+        mock_orchestrator.return_value = ["tool1", {"action": "knowledge", "type": "character"}]
 
         updated_state = await _chat_workflow([], previous=initial_state)
 
         # All AI messages appended
         assert dummy_ai_msg1 in updated_state.messages
-        assert dummy_ai_msg2 in updated_state.messages
+        assert dummy_knowledge_msg in updated_state.messages
         assert dummy_gm_msg in updated_state.messages
 
         # Vector store put called for each AI message
         calls = [call.kwargs for call in vector_store.put.await_args_list]
         msg_ids = [c["message_id"] for c in calls]
         assert "m1" in msg_ids
-        assert "m2" in msg_ids
+        assert "k1" in msg_ids
         assert "gm1" in msg_ids
 
 
@@ -75,26 +76,26 @@ async def test_storyboard_triggered_after_gm(monkeypatch):
 async def test_multi_hop_orchestration(monkeypatch):
     from src.workflows import _chat_workflow
 
-    dummy_tool1 = AIMessage(content="Tool1 done", name="tool1", metadata={"message_id": "m1"})
-    dummy_tool2 = AIMessage(content="Tool2 done", name="tool2", metadata={"message_id": "m2"})
+    dummy_search = AIMessage(content="Search results", name="search", metadata={"message_id": "s1"})
+    dummy_knowledge = AIMessage(content="Lore details", name="lore", metadata={"message_id": "k1"})
     dummy_gm = AIMessage(content="Story", name="Game Master", metadata={"message_id": "gm1"})
 
     state = ChatState(messages=[HumanMessage(content="Hi")], thread_id="t1")
 
     with patch("src.workflows.orchestrator_agent", new_callable=AsyncMock) as mock_orch, \
+         patch("src.workflows.knowledge_agent", new_callable=AsyncMock, return_value=[dummy_knowledge]) as mock_knowledge, \
          patch("src.workflows.agents_map", {
-             "tool1": AsyncMock(return_value=[dummy_tool1]),
-             "tool2": AsyncMock(return_value=[dummy_tool2]),
+             "search": AsyncMock(return_value=[dummy_search]),
          }), \
          patch("src.workflows.writer_agent", new_callable=AsyncMock, return_value=[dummy_gm]), \
          patch("src.workflows.cl.user_session.get", return_value=None):
 
-        # First orchestrator call returns tool1
-        # Second returns tool2
+        # First orchestrator call returns search
+        # Second returns knowledge
         # Third returns write (GM)
         mock_orch.side_effect = [
-            ["tool1"],
-            ["tool2"],
+            ["search"],
+            [{"action": "knowledge", "type": "lore"}],
             ["write"]
         ]
 
@@ -102,8 +103,8 @@ async def test_multi_hop_orchestration(monkeypatch):
 
         # All tool and GM messages appended
         contents = [m.content for m in updated_state.messages]
-        assert "Tool1 done" in contents
-        assert "Tool2 done" in contents
+        assert "Search results" in contents
+        assert "Lore details" in contents
         assert "Story" in contents
 
 

@@ -21,6 +21,9 @@ prompts:
   decision_prompt: "decision_prompt.j2"
   orchestrator_prompt: "orchestrator_prompt.j2"
   storyteller_gm_prompt: "ai_writer_prompt_storyteller.j2" # New prompt for Storyteller GM
+  character_prompt: "character_prompt.j2"
+  lore_prompt: "lore_prompt.j2"
+  puzzle_prompt: "puzzle_prompt.j2"
   default_writer_prompt: "ai_writer_prompt.j2" # Explicit key for default writer
 
 image_generation_payload:

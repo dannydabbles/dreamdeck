@@ -41,3 +41,16 @@ async def test_orchestrator_handles_exception():
         mock_user_session_get.return_value = {}
         actions = await _decide_actions(state)
         assert actions == ["continue_story"]
+
+@pytest.mark.asyncio
+async def test_orchestrator_handles_invalid_action_format():
+    state = ChatState(messages=[HumanMessage(content="tell me a story")], thread_id="test-thread-id")
+
+    with (
+        patch("src.agents.orchestrator_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke,
+        patch("src.agents.orchestrator_agent.cl.user_session.get", new_callable=MagicMock) as mock_user_session_get,
+    ):
+        mock_ainvoke.return_value.content = '{"actions": ["roll", 123]}'
+        mock_user_session_get.return_value = {}
+        actions = await _decide_actions(state)
+        assert actions == ["continue_story"]

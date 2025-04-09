@@ -17,6 +17,7 @@ from .models import ChatState
 from .agents.orchestrator_agent import orchestrator_agent
 from .agents.writer_agent import writer_agent
 from .agents.storyboard_editor_agent import storyboard_editor_agent
+from src.agents.knowledge_agent import knowledge_agent
 from src.config import IMAGE_GENERATION_ENABLED
 from .models import ChatState
 from langchain_core.stores import BaseStore
@@ -82,12 +83,22 @@ async def _chat_workflow(
 
             # Process tool actions
             for action in actions:
-                agent_func = agents_map.get(action)
-                if not agent_func:
-                    cl_logger.warning(f"Unknown action from orchestrator: {action}")
-                    continue
-
-                agent_response = await agent_func(state)
+                agent_response = []
+                if isinstance(action, str):
+                    agent_func = agents_map.get(action)
+                    if not agent_func:
+                        cl_logger.warning(f"Unknown action string from orchestrator: {action}")
+                        continue
+                    agent_response = await agent_func(state)
+                elif isinstance(action, dict):
+                    action_name = action.get("action")
+                    if action_name == "knowledge":
+                        knowledge_type = action.get("type")
+                        if knowledge_type:
+                            agent_response = await knowledge_agent(state, knowledge_type=knowledge_type)
+                        else:
+                            cl_logger.warning(f"Knowledge action missing 'type': {action}")
+                            continue
 
                 for msg in agent_response:
                     state.messages.append(msg)

@@ -190,38 +190,6 @@ async def on_chat_start():
                     initial=config.WRITER_AGENT_BASE_URL or "",
                     placeholder="e.g., http://localhost:5000/v1"
                 ),
-                Slider(
-                    id="storyboard_temp",
-                    label="Storyboard Agent - Temperature",
-                    min=0.0, max=2.0, step=0.1, initial=config.STORYBOARD_EDITOR_AGENT_TEMPERATURE
-                ),
-                Slider(
-                    id="storyboard_max_tokens",
-                    label="Storyboard Agent - Max Tokens",
-                    min=100, max=16000, step=100, initial=config.STORYBOARD_EDITOR_AGENT_MAX_TOKENS
-                ),
-                TextInput(
-                    id="storyboard_endpoint",
-                    label="Storyboard Agent - OpenAI Endpoint URL",
-                    initial=config.STORYBOARD_EDITOR_AGENT_BASE_URL or "",
-                    placeholder="e.g., http://localhost:5000/v1"
-                ),
-                Slider(
-                    id="decision_temp",
-                    label="Decision Agent - Temperature",
-                    min=0.0, max=2.0, step=0.1, initial=config.DECISION_AGENT_TEMPERATURE
-                ),
-                Slider(
-                    id="decision_max_tokens",
-                    label="Decision Agent - Max Tokens",
-                    min=10, max=1000, step=10, initial=config.DECISION_AGENT_MAX_TOKENS
-                ),
-                TextInput(
-                    id="decision_endpoint",
-                    label="Decision Agent - OpenAI Endpoint URL",
-                    initial=config.DECISION_AGENT_BASE_URL or "",
-                    placeholder="e.g., http://localhost:5000/v1"
-                ),
             ]
         ).send()
 
