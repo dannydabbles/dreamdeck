@@ -77,7 +77,7 @@ from langchain_core.callbacks.manager import CallbackManagerForChainRun  # Impor
 from langchain_core.stores import BaseStore
 
 import chainlit as cl
-from chainlit.input_widget import Slider, TextInput  # Import widgets
+from chainlit.input_widget import Slider, TextInput, Select  # Import widgets
 from src import config  # Import your config
 from chainlit import Action  # Import Action for buttons
 
@@ -169,9 +169,15 @@ async def on_chat_start():
         # Register Chainlit commands for UI buttons
         await cl.context.emitter.set_commands(commands)
 
-        # Define Chat Settings
+        # Define Chat Settings with persona selector
         settings = await cl.ChatSettings(
             [
+                Select(
+                    id="persona",
+                    label="Persona",
+                    values=["Storyteller GM", "Default"],
+                    initial="Storyteller GM",
+                ),
                 Slider(
                     id="writer_temp",
                     label="Writer Agent - Temperature",
@@ -193,6 +199,7 @@ async def on_chat_start():
 
         # Persist initial chat settings in user session
         cl.user_session.set("chat_settings", settings)
+        cl.user_session.set("current_persona", settings.get("persona", "Storyteller GM"))
 
         # Launch knowledge loading in the background
         asyncio.create_task(load_knowledge_documents())
@@ -535,3 +542,4 @@ async def load_knowledge_documents():
 @cl.on_settings_update
 async def on_settings_update(settings):
     cl.user_session.set("chat_settings", settings)
+    cl.user_session.set("current_persona", settings.get("persona", "Storyteller GM"))
