@@ -20,14 +20,17 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         last_human = state.get_last_human_message()
         if not last_human:
             return [AIMessage(content="No user input found.", name="error")]
-        user_input = last_human.content.strip()
+        original_user_input = last_human.content.strip()
 
-        # Special case: if user_input is empty or just "/todo", treat as empty task
-        if user_input.startswith("/todo"):
-            task_text = user_input[5:].strip()
+        # Special case: if original_user_input is empty or just "/todo", treat as empty task
+        if original_user_input.startswith("/todo"):
+            task_text = original_user_input[5:].strip()
             if not task_text:
                 return [AIMessage(content="Task cannot be empty", name="error")]
-            user_input = task_text
+        else:
+            task_text = original_user_input  # fallback, e.g., if user didn't use slash command
+
+        # Pass the *full* original user input (including slash command) to the prompt for clarity
 
         # Load current todo list from file (if exists)
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -44,7 +47,7 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         template = Template(config.loaded_prompts.get("todo_prompt", ""))
         prompt = template.render(
             existing_todo_file=existing_content,
-            user_input=user_input,
+            user_input=original_user_input,
             recent_chat_history=state.get_recent_history_str(),
             tool_results=state.get_tool_results_str(),
         )
