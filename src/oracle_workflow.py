@@ -58,17 +58,27 @@ async def oracle_workflow(inputs: dict, state: ChatState) -> list[BaseMessage]:
             workflow_func = persona_workflows.get("default")
 
         response = await workflow_func(inputs, state)
-        return response
+
+        # Wrap list of messages into ChatState for compatibility
+        if isinstance(response, list):
+            state.messages.extend(response)
+            return state
+        elif isinstance(response, ChatState):
+            return response
+        else:
+            # Unexpected return type, wrap into state
+            return state
 
     except Exception as e:
         cl_logger.error(f"Oracle workflow failed: {e}")
-        return [
-            AIMessage(
-                content="An error occurred in the oracle workflow.",
-                name="error",
-                metadata={"message_id": None},
-            )
-        ]
+        # Wrap error message into ChatState
+        error_msg = AIMessage(
+            content="An error occurred in the oracle workflow.",
+            name="error",
+            metadata={"message_id": None},
+        )
+        state.messages.append(error_msg)
+        return state
 
 
 # Add dummy .ainvoke method so tests patching it don't fail
