@@ -2,6 +2,7 @@ from src.models import ChatState
 from langchain_core.messages import BaseMessage, AIMessage
 from src.persona_workflows import persona_workflows
 from src.agents.persona_classifier_agent import persona_classifier_agent
+from langchain_core.runnables import RunnableLambda
 import logging
 
 import chainlit as cl
@@ -104,3 +105,5 @@ class OracleWorkflowWrapper:
         return await self.ainvoke(*args, **kwargs)
 
 chat_workflow = OracleWorkflowWrapper()
+
+oracle_workflow_runnable = RunnableLambda(oracle_workflow)
