@@ -4,6 +4,7 @@ from src.agents.persona_classifier_agent import _classify_persona, PERSONA_LIST
 from src.models import ChatState
 from langchain_core.messages import HumanMessage, AIMessage
 import chainlit as cl
+import uuid  # Add uuid import
 
 from tests.test_event_handlers import mock_cl_environment  # Ensure this line exists and is correct
 
@@ -120,12 +121,12 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     async def fake_writer(state, **kwargs):
         return [AIMessage(content="Therapy response", name="Therapist", metadata={"message_id": "w1"})]
 
-    # Patch the underlying functions, not the @task decorated ones
+    # Patch the underlying functions
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    # Patch the __call__ method on the _DiceAgentWrapper class
-    monkeypatch.setattr("src.agents.dice_agent._DiceAgentWrapper.__call__", fake_dice)
-    # Patch the __call__ method on the _WriterAgentWrapper class
-    monkeypatch.setattr("src.agents.writer_agent._WriterAgentWrapper.__call__", fake_writer)
+    # Patch the @task decorated dice_roll function
+    monkeypatch.setattr("src.agents.dice_agent.dice_roll", fake_dice)
+    # Patch the @task decorated generate_story function
+    monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
 
     # Mock vector store get method if needed
     mock_vector_store = MagicMock()
@@ -133,11 +134,11 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     mock_vector_store.put = AsyncMock()
     cl.user_session.set("vector_memory", mock_vector_store)
 
-    # Provide necessary config for LangGraph execution context
-    workflow_config = {"configurable": {"thread_id": dummy_state.thread_id}}
+    # Provide unique thread_id for this test
+    test_thread_id = f"test_thread_{uuid.uuid4()}"
+    workflow_config = {"configurable": {"thread_id": test_thread_id}}
     input_data = {
         "messages": dummy_state.messages,
-        "thread_id": dummy_state.thread_id,
         "current_persona": dummy_state.current_persona,  # Ensure persona is passed explicitly
     }
     final_state_dict = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
@@ -172,8 +173,8 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
     # Patch the function referenced in agents_map['todo'] (which is manage_todo from todo_agent)
     monkeypatch.setattr("src.agents.todo_agent.manage_todo", fake_todo)
-    # Patch the __call__ method on the _WriterAgentWrapper class
-    monkeypatch.setattr("src.agents.writer_agent._WriterAgentWrapper.__call__", fake_writer)
+    # Patch the @task decorated generate_story function
+    monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
 
     # Mock vector store get method
     mock_vector_store = MagicMock()
@@ -193,11 +194,11 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     # Do NOT modify dummy_state.current_persona directly; instead, pass persona explicitly in input_data
 
     # Call the workflow with the updated state
-    # Provide necessary config for LangGraph execution context
-    workflow_config = {"configurable": {"thread_id": dummy_state.thread_id}}
+    # Provide unique thread_id for this test
+    test_thread_id = f"test_thread_{uuid.uuid4()}"
+    workflow_config = {"configurable": {"thread_id": test_thread_id}}
     input_data = {
         "messages": dummy_state.messages,
-        "thread_id": dummy_state.thread_id,
         "current_persona": "secretary",  # Explicitly set persona for this invocation
     }
     final_state_dict = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
