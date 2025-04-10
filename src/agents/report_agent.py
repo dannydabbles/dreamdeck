@@ -13,24 +13,51 @@ from jinja2 import Template
 @cl.step(name="Report Agent", type="tool")
 async def _generate_report(state: ChatState) -> list[AIMessage]:
     try:
-        persona = getattr(state, "current_persona", "Default")
         current_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-        persona_safe = re.sub(r'[^\w\-_. ]', '_', persona)
-        dir_path = os.path.join(config.todo_dir_path, persona_safe, current_date)
-        file_path = os.path.join(dir_path, config.todo_file_name)
+        base_dir = config.todo_dir_path
 
-        todo_content = ""
-        if os.path.exists(file_path):
-            with open(file_path, "r", encoding="utf-8") as f:
-                todo_content = f.read()
+        all_todos = []
+        all_images = []
+
+        if os.path.exists(base_dir):
+            for persona_name in os.listdir(base_dir):
+                persona_dir = os.path.join(base_dir, persona_name, current_date)
+                todo_file = os.path.join(persona_dir, config.todo_file_name)
+                if os.path.exists(todo_file):
+                    try:
+                        with open(todo_file, "r", encoding="utf-8") as f:
+                            content = f.read().strip()
+                            if content:
+                                all_todos.append(f"### Persona: {persona_name}\n{content}")
+                    except Exception as e:
+                        cl_logger.warning(f"Failed to read {todo_file}: {e}")
+
+                # Collect image files in the same directory
+                if os.path.exists(persona_dir):
+                    for fname in os.listdir(persona_dir):
+                        if fname.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                            image_path = os.path.join(persona_dir, fname)
+                            all_images.append((persona_name, image_path))
+
+        todo_content = "\n\n".join(all_todos) if all_todos else "No TODOs found for any persona."
 
         prompt_template_str = config.loaded_prompts.get("daily_report_prompt", "").strip()
+
+        image_list_str = ""
+        if all_images:
+            image_list_str = "\n".join(
+                f"- {persona}: {os.path.basename(path)}"
+                for persona, path in all_images
+            )
+        else:
+            image_list_str = "No images found for today."
+
         if not prompt_template_str:
             cl_logger.error("Daily report prompt template is empty!")
-            prompt = f"TODO list:\n{todo_content}"
+            prompt = f"TODO list:\n{todo_content}\n\nImages:\n{image_list_str}"
         else:
             template = Template(prompt_template_str)
-            prompt = template.render(todo_list=todo_content)
+            prompt = template.render(todo_list=todo_content, image_list=image_list_str)
 
         cl_logger.info(f"Daily report prompt:\n{prompt}")
 
