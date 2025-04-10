@@ -12,7 +12,7 @@ from jinja2 import Template
 
 
 @cl.step(name="Report Agent", type="tool")
-async def _generate_report(state: ChatState) -> list[AIMessage]:
+async def _generate_report(state: ChatState, **kwargs) -> list[AIMessage]:
     """
     Generates a daily report summarizing TODOs and listing image filenames.
 
@@ -122,5 +122,5 @@ async def _generate_report(state: ChatState) -> list[AIMessage]:
 
 
 @task
-async def report_agent(state: ChatState) -> list[AIMessage]:
-    return await _generate_report(state)
+async def report_agent(state: ChatState, **kwargs) -> list[AIMessage]:
+    return await _generate_report(state, **kwargs)

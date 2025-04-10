@@ -23,7 +23,7 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
-async def _direct_actions(state) -> list[str]:
+async def _direct_actions(state, **kwargs) -> list[str]:
     """
     Determine the ordered list of actions to perform based on user input.
 
@@ -105,7 +105,7 @@ async def _direct_actions(state) -> list[str]:
 
 @task
 async def direct(state, **kwargs) -> list[str]:
-    return await _direct_actions(state)
+    return await _direct_actions(state, **kwargs)
 
 
 director_agent = direct

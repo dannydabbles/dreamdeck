@@ -38,7 +38,7 @@ dice_agent = _DiceAgentWrapper()
 
 @cl.step(name="Dice Agent: Roll Dice", type="tool")
 async def _dice_roll(
-    state: ChatState, callbacks: Optional[list] = None
+    state: ChatState, callbacks: Optional[list] = None, **kwargs
 ) -> List[BaseMessage]:
     """Parse dice expressions, perform random rolls, and return results."""
     input_msg = state.get_last_human_message()
@@ -171,9 +171,9 @@ async def _dice_roll(
 
 @task
 async def dice_roll(
-    state: ChatState, callbacks: Optional[list] = None
+    state: ChatState, callbacks: Optional[list] = None, **kwargs
 ) -> list[BaseMessage]:
-    result = await _dice_roll(state, callbacks=callbacks)
+    result = await _dice_roll(state, callbacks=callbacks, **kwargs)
     return result
 
 

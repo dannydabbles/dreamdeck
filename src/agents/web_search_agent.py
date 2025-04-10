@@ -24,7 +24,7 @@ cl_logger = logging.getLogger("chainlit")
 
 
 @cl.step(name="Web Search Agent", type="tool")
-async def _web_search(state: ChatState) -> list[BaseMessage]:
+async def _web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
     """Generate a search query, call SerpAPI, and summarize results."""
     if not WEB_SEARCH_ENABLED:
         return [
@@ -113,8 +113,8 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
 
 
 @task
-async def web_search(state: ChatState) -> list[BaseMessage]:
-    return await _web_search(state)
+async def web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
+    return await _web_search(state, **kwargs)
 
 
 web_search_agent = web_search

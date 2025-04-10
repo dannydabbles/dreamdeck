@@ -36,7 +36,7 @@ writer_agent = _WriterAgentWrapper()
 
 
 @cl.step(name="Writer Agent: Generate Story", type="tool")
-async def _generate_story(state: ChatState) -> list[BaseMessage]:
+async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
     """Generate the Game Master's narrative response based on recent chat, memories, and tool results."""
     try:
         persona = state.current_persona
@@ -135,7 +135,7 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
 
 @task
 async def generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
-    result = await _generate_story(state)
+    result = await _generate_story(state, **kwargs)
     return result
 
 

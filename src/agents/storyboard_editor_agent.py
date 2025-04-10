@@ -30,7 +30,7 @@ cl_logger = logging.getLogger("chainlit")
 
 @cl.step(name="Storyboard Editor Agent", type="tool")
 async def _generate_storyboard(
-    state: ChatState, gm_message_id: str
+    state: ChatState, gm_message_id: str, **kwargs
 ) -> list[BaseMessage]:
     """Generate a storyboard prompt from recent chat, then asynchronously generate images."""
     messages = state.messages
@@ -85,9 +85,9 @@ async def _generate_storyboard(
 
 @task
 async def generate_storyboard(
-    state: ChatState, gm_message_id: str
+    state: ChatState, gm_message_id: str, **kwargs
 ) -> list[BaseMessage]:
-    return await _generate_storyboard(state, gm_message_id)
+    return await _generate_storyboard(state, gm_message_id, **kwargs)
 
 
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:

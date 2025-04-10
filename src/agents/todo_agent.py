@@ -24,7 +24,7 @@ todo_agent = _TodoAgentWrapper()
 
 
 @cl.step(name="Todo Agent", type="tool")
-async def _manage_todo(state: ChatState) -> list[AIMessage]:
+async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
     try:
         last_human = state.get_last_human_message()
         if not last_human:
@@ -174,8 +174,8 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
 
 
 @task
-async def manage_todo(state: ChatState) -> list[AIMessage]:
-    return await _manage_todo(state)
+async def manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
+    return await _manage_todo(state, **kwargs)
 
 
 # Expose internal function for monkeypatching in tests

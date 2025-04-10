@@ -12,7 +12,7 @@ cl_logger = logging.getLogger("chainlit")
 
 
 @cl.step(name="Knowledge Agent", type="tool")
-async def _knowledge(state: ChatState, knowledge_type: str) -> list[BaseMessage]:
+async def _knowledge(state: ChatState, knowledge_type: str, **kwargs) -> list[BaseMessage]:
     """Generates knowledge content (character, lore, puzzle) based on type."""
     try:
         persona = getattr(state, "current_persona", "Default")
@@ -86,4 +86,4 @@ async def _knowledge(state: ChatState, knowledge_type: str) -> list[BaseMessage]
 async def knowledge_agent(
     state: ChatState, knowledge_type: str, **kwargs
 ) -> list[BaseMessage]:
-    return await _knowledge(state, knowledge_type)
+    return await _knowledge(state, knowledge_type, **kwargs)
