@@ -26,16 +26,20 @@ import chainlit as cl
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
+
 class _DiceAgentWrapper:
     async def __call__(self, state: ChatState, **kwargs) -> List[BaseMessage]:
         """Makes the wrapper instance callable by LangGraph, delegating to the task."""
         return await dice_roll(state, **kwargs)
 
+
 dice_agent = _DiceAgentWrapper()
 
 
 @cl.step(name="Dice Agent: Roll Dice", type="tool")
-async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List[BaseMessage]:
+async def _dice_roll(
+    state: ChatState, callbacks: Optional[list] = None
+) -> List[BaseMessage]:
     """Parse dice expressions, perform random rolls, and return results."""
     input_msg = state.get_last_human_message()
     recent_chat = state.get_recent_history_str()
@@ -67,7 +71,9 @@ async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List
                 )
             ]
 
-        response = await llm.ainvoke([("system", formatted_prompt)], config={"callbacks": callbacks})
+        response = await llm.ainvoke(
+            [("system", formatted_prompt)], config={"callbacks": callbacks}
+        )
         cl_logger.debug(f"Raw LLM response: {response.content}")  # Log raw output
 
         # Parse JSON response with explicit error handling
@@ -164,7 +170,9 @@ async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List
 
 
 @task
-async def dice_roll(state: ChatState, callbacks: Optional[list] = None) -> list[BaseMessage]:
+async def dice_roll(
+    state: ChatState, callbacks: Optional[list] = None
+) -> list[BaseMessage]:
     result = await _dice_roll(state, callbacks=callbacks)
     return result
 

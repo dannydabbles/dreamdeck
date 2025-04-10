@@ -8,16 +8,20 @@ from src.models import ChatState
 from langchain_core.messages import HumanMessage
 import datetime as dt_module
 
+
 @pytest.mark.asyncio
 async def test_manage_todo_creates_file(tmp_path):
     fixed_now = dt_module.datetime.now()
 
-    with patch("src.agents.todo_agent.datetime") as mock_datetime, \
-         patch("src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)), \
-         patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), \
-         patch("src.agents.todo_agent.CLMessage", new_callable=MagicMock) as mock_cl_msg_cls, \
-         patch("src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke, \
-         patch("src.agents.todo_agent.cl", new_callable=MagicMock) as mock_cl_module:
+    with patch("src.agents.todo_agent.datetime") as mock_datetime, patch(
+        "src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)
+    ), patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), patch(
+        "src.agents.todo_agent.CLMessage", new_callable=MagicMock
+    ) as mock_cl_msg_cls, patch(
+        "src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock
+    ) as mock_ainvoke, patch(
+        "src.agents.todo_agent.cl", new_callable=MagicMock
+    ) as mock_cl_module:
 
         # Patch datetime.utcnow() to fixed_now
         mock_datetime.datetime.utcnow.return_value = fixed_now
@@ -40,7 +44,7 @@ async def test_manage_todo_creates_file(tmp_path):
 
         state = ChatState(
             thread_id="test",
-            messages=[HumanMessage(content="/todo buy milk", name="Player")]
+            messages=[HumanMessage(content="/todo buy milk", name="Player")],
         )
         state.current_persona = "Default"
 
@@ -54,14 +58,15 @@ async def test_manage_todo_creates_file(tmp_path):
         content = todo_file.read_text()
         assert "buy milk" in content
 
+
 @pytest.mark.asyncio
 async def test_manage_todo_empty_task():
     state = ChatState(
-        thread_id="test",
-        messages=[HumanMessage(content="/todo ", name="Player")]
+        thread_id="test", messages=[HumanMessage(content="/todo ", name="Player")]
     )
     result = await _manage_todo(state)
     assert "Task cannot be empty" in result[0].content
+
 
 @pytest.mark.asyncio
 async def test_manage_todo_no_human():

@@ -37,17 +37,24 @@ async def command_roll(query: str = ""):
         return
 
     # Create and send user message
-    user_cl_msg = cl.Message(
-        content=f"/roll {query}",
-        author="Player"
-    )
+    user_cl_msg = cl.Message(content=f"/roll {query}", author="Player")
     await user_cl_msg.send()
     user_cl_msg_id = user_cl_msg.id
 
     # Update state and vector store for user message
-    user_msg = HumanMessage(content=f"/roll {query}", name="Player", metadata={"message_id": user_cl_msg_id})
+    user_msg = HumanMessage(
+        content=f"/roll {query}", name="Player", metadata={"message_id": user_cl_msg_id}
+    )
     state.messages.append(user_msg)
-    await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player", "persona": state.current_persona})
+    await vector_store.put(
+        content=user_msg.content,
+        message_id=user_cl_msg_id,
+        metadata={
+            "type": "human",
+            "author": "Player",
+            "persona": state.current_persona,
+        },
+    )
 
     cl_logger.info(f"Executing /roll command with query: {query}")
     response_messages = await dice_agent(state)
@@ -57,12 +64,23 @@ async def command_roll(query: str = ""):
         ai_msg = response_messages[0]
         state.messages.append(ai_msg)
         if ai_msg.metadata and "message_id" in ai_msg.metadata:
-            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name, "persona": state.current_persona})
+            await vector_store.put(
+                content=ai_msg.content,
+                message_id=ai_msg.metadata["message_id"],
+                metadata={
+                    "type": "ai",
+                    "author": ai_msg.name,
+                    "persona": state.current_persona,
+                },
+            )
         else:
-            cl_logger.warning(f"AIMessage from dice_agent missing message_id: {ai_msg.content}")
+            cl_logger.warning(
+                f"AIMessage from dice_agent missing message_id: {ai_msg.content}"
+            )
 
     # Immediately call writer agent to continue story
     from src.agents.writer_agent import call_writer_agent
+
     gm_responses = await call_writer_agent(state)
     if gm_responses:
         gm_msg = gm_responses[0]
@@ -70,7 +88,11 @@ async def command_roll(query: str = ""):
         if gm_msg.name != "error":
             state.messages.append(gm_msg)
             if gm_msg.metadata and "message_id" in gm_msg.metadata:
-                await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
+                await vector_store.put(
+                    content=gm_msg.content,
+                    message_id=gm_msg.metadata["message_id"],
+                    metadata={"type": "ai", "author": gm_msg.name},
+                )
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/roll command processed.")
@@ -88,17 +110,26 @@ async def command_search(query: str = ""):
         return
 
     # Create and send user message
-    user_cl_msg = cl.Message(
-        content=f"/search {query}",
-        author="Player"
-    )
+    user_cl_msg = cl.Message(content=f"/search {query}", author="Player")
     await user_cl_msg.send()
     user_cl_msg_id = user_cl_msg.id
 
     # Update state and vector store for user message
-    user_msg = HumanMessage(content=f"/search {query}", name="Player", metadata={"message_id": user_cl_msg_id})
+    user_msg = HumanMessage(
+        content=f"/search {query}",
+        name="Player",
+        metadata={"message_id": user_cl_msg_id},
+    )
     state.messages.append(user_msg)
-    await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player", "persona": state.current_persona})
+    await vector_store.put(
+        content=user_msg.content,
+        message_id=user_cl_msg_id,
+        metadata={
+            "type": "human",
+            "author": "Player",
+            "persona": state.current_persona,
+        },
+    )
 
     cl_logger.info(f"Executing /search command with query: {query}")
     response_messages = await web_search_agent(state)
@@ -108,12 +139,23 @@ async def command_search(query: str = ""):
         ai_msg = response_messages[0]
         state.messages.append(ai_msg)
         if ai_msg.metadata and "message_id" in ai_msg.metadata:
-            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name, "persona": state.current_persona})
+            await vector_store.put(
+                content=ai_msg.content,
+                message_id=ai_msg.metadata["message_id"],
+                metadata={
+                    "type": "ai",
+                    "author": ai_msg.name,
+                    "persona": state.current_persona,
+                },
+            )
         else:
-            cl_logger.warning(f"AIMessage from web_search_agent missing message_id: {ai_msg.content}")
+            cl_logger.warning(
+                f"AIMessage from web_search_agent missing message_id: {ai_msg.content}"
+            )
 
     # Immediately call writer agent to continue story
     from src.agents.writer_agent import call_writer_agent
+
     gm_responses = await call_writer_agent(state)
     if gm_responses:
         gm_msg = gm_responses[0]
@@ -121,7 +163,11 @@ async def command_search(query: str = ""):
         if gm_msg.name != "error":
             state.messages.append(gm_msg)
             if gm_msg.metadata and "message_id" in gm_msg.metadata:
-                await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
+                await vector_store.put(
+                    content=gm_msg.content,
+                    message_id=gm_msg.metadata["message_id"],
+                    metadata={"type": "ai", "author": gm_msg.name},
+                )
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/search command processed.")
@@ -139,17 +185,24 @@ async def command_todo(query: str = ""):
         return
 
     # Create and send user message
-    user_cl_msg = cl.Message(
-        content=f"/todo {query}",
-        author="Player"
-    )
+    user_cl_msg = cl.Message(content=f"/todo {query}", author="Player")
     await user_cl_msg.send()
     user_cl_msg_id = user_cl_msg.id
 
     # Update state and vector store for user message
-    user_msg = HumanMessage(content=f"/todo {query}", name="Player", metadata={"message_id": user_cl_msg_id})
+    user_msg = HumanMessage(
+        content=f"/todo {query}", name="Player", metadata={"message_id": user_cl_msg_id}
+    )
     state.messages.append(user_msg)
-    await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player", "persona": state.current_persona})
+    await vector_store.put(
+        content=user_msg.content,
+        message_id=user_cl_msg_id,
+        metadata={
+            "type": "human",
+            "author": "Player",
+            "persona": state.current_persona,
+        },
+    )
 
     cl_logger.info(f"Executing /todo command with query: {query}")
     response_messages = await call_todo_agent(state)
@@ -159,13 +212,28 @@ async def command_todo(query: str = ""):
         ai_msg = response_messages[0]
         state.messages.append(ai_msg)
         # Defensive: skip metadata check if error message (which lacks metadata)
-        if hasattr(ai_msg, "metadata") and ai_msg.metadata and "message_id" in ai_msg.metadata:
-            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name, "persona": state.current_persona})
+        if (
+            hasattr(ai_msg, "metadata")
+            and ai_msg.metadata
+            and "message_id" in ai_msg.metadata
+        ):
+            await vector_store.put(
+                content=ai_msg.content,
+                message_id=ai_msg.metadata["message_id"],
+                metadata={
+                    "type": "ai",
+                    "author": ai_msg.name,
+                    "persona": state.current_persona,
+                },
+            )
         else:
-            cl_logger.warning(f"AIMessage from todo_agent missing message_id: {ai_msg.content}")
+            cl_logger.warning(
+                f"AIMessage from todo_agent missing message_id: {ai_msg.content}"
+            )
 
     # Immediately call writer agent to continue story
     from src.agents.writer_agent import call_writer_agent
+
     gm_responses = await call_writer_agent(state)
     if gm_responses:
         gm_msg = gm_responses[0]
@@ -173,7 +241,11 @@ async def command_todo(query: str = ""):
         if gm_msg.name != "error":
             state.messages.append(gm_msg)
             if gm_msg.metadata and "message_id" in gm_msg.metadata:
-                await vector_store.put(content=gm_msg.content, message_id=gm_msg.metadata["message_id"], metadata={"type": "ai", "author": gm_msg.name})
+                await vector_store.put(
+                    content=gm_msg.content,
+                    message_id=gm_msg.metadata["message_id"],
+                    metadata={"type": "ai", "author": gm_msg.name},
+                )
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/todo command processed.")
@@ -191,20 +263,30 @@ async def command_write(query: str = ""):
         return
 
     # Create and send user message
-    user_cl_msg = cl.Message(
-        content=f"/write {query}",
-        author="Player"
-    )
+    user_cl_msg = cl.Message(content=f"/write {query}", author="Player")
     await user_cl_msg.send()
     user_cl_msg_id = user_cl_msg.id
 
     # Update state and vector store for user message
-    user_msg = HumanMessage(content=f"/write {query}", name="Player", metadata={"message_id": user_cl_msg_id})
+    user_msg = HumanMessage(
+        content=f"/write {query}",
+        name="Player",
+        metadata={"message_id": user_cl_msg_id},
+    )
     state.messages.append(user_msg)
-    await vector_store.put(content=user_msg.content, message_id=user_cl_msg_id, metadata={"type": "human", "author": "Player", "persona": state.current_persona})
+    await vector_store.put(
+        content=user_msg.content,
+        message_id=user_cl_msg_id,
+        metadata={
+            "type": "human",
+            "author": "Player",
+            "persona": state.current_persona,
+        },
+    )
 
     cl_logger.info(f"Executing /write command with query: {query}")
     from src.agents.writer_agent import call_writer_agent
+
     response_messages = await call_writer_agent(state)
 
     # Update state and vector store for AI response
@@ -212,9 +294,19 @@ async def command_write(query: str = ""):
         ai_msg = response_messages[0]
         state.messages.append(ai_msg)
         if ai_msg.metadata and "message_id" in ai_msg.metadata:
-            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name, "persona": state.current_persona})
+            await vector_store.put(
+                content=ai_msg.content,
+                message_id=ai_msg.metadata["message_id"],
+                metadata={
+                    "type": "ai",
+                    "author": ai_msg.name,
+                    "persona": state.current_persona,
+                },
+            )
         else:
-            cl_logger.warning(f"AIMessage from writer_agent missing message_id: {ai_msg.content}")
+            cl_logger.warning(
+                f"AIMessage from writer_agent missing message_id: {ai_msg.content}"
+            )
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/write command processed.")
@@ -241,16 +333,25 @@ async def command_storyboard(query: str = ""):
                 last_gm_message_id = msg.metadata["message_id"]
                 break
             else:
-                cl_logger.warning(f"Found last GM message, but it's missing message_id in metadata: {msg.content[:50]}...")
+                cl_logger.warning(
+                    f"Found last GM message, but it's missing message_id in metadata: {msg.content[:50]}..."
+                )
 
     if last_gm_message_id:
-        cl_logger.info(f"Executing /storyboard command for message ID: {last_gm_message_id}")
+        cl_logger.info(
+            f"Executing /storyboard command for message ID: {last_gm_message_id}"
+        )
         await cl.Message(content="Generating storyboard for the last scene...").send()
         await storyboard_editor_agent(state=state, gm_message_id=last_gm_message_id)
         cl_logger.info(f"/storyboard command completed.")
     else:
-        await cl.Message(content="Could not find a previous Game Master message with a valid ID to generate a storyboard for.").send()
-        cl_logger.warning("Could not execute /storyboard: No suitable GM message found in state.")
+        await cl.Message(
+            content="Could not find a previous Game Master message with a valid ID to generate a storyboard for."
+        ).send()
+        cl_logger.warning(
+            "Could not execute /storyboard: No suitable GM message found in state."
+        )
+
 
 async def command_help():
     """Slash command: /help - Show help message"""
@@ -290,7 +391,11 @@ async def command_reset():
     start_msg = cl.Message(content=START_MESSAGE, author="Game Master")
     await start_msg.send()
     state.messages.append(
-        AIMessage(content=START_MESSAGE, name="Game Master", metadata={"message_id": start_msg.id})
+        AIMessage(
+            content=START_MESSAGE,
+            name="Game Master",
+            metadata={"message_id": start_msg.id},
+        )
     )
     cl.user_session.set("state", state)
 
@@ -340,7 +445,11 @@ async def command_report():
         ai_msg = responses[0]
         state.messages.append(ai_msg)
         if ai_msg.metadata and "message_id" in ai_msg.metadata:
-            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+            await vector_store.put(
+                content=ai_msg.content,
+                message_id=ai_msg.metadata["message_id"],
+                metadata={"type": "ai", "author": ai_msg.name},
+            )
     cl.user_session.set("state", state)
     cl_logger.info("/report command processed.")
 
@@ -360,4 +469,6 @@ async def command_persona(query: str = ""):
         cl.user_session.set("state", state)
 
     cl_logger.info(f"Persona forcibly switched to: {persona_name} via slash command")
-    await cl.Message(content=f"✅ Persona forcibly switched to **{persona_name}**.").send()
+    await cl.Message(
+        content=f"✅ Persona forcibly switched to **{persona_name}**."
+    ).send()

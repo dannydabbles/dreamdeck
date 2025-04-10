@@ -46,9 +46,15 @@ async def _generate_storyboard(
 
         # Get user settings and defaults
         user_settings = cl.user_session.get("chat_settings", {})
-        final_temp = user_settings.get("storyboard_temp", STORYBOARD_EDITOR_AGENT_TEMPERATURE)
-        final_endpoint = user_settings.get("storyboard_endpoint") or STORYBOARD_EDITOR_AGENT_BASE_URL
-        final_max_tokens = user_settings.get("storyboard_max_tokens", STORYBOARD_EDITOR_AGENT_MAX_TOKENS)
+        final_temp = user_settings.get(
+            "storyboard_temp", STORYBOARD_EDITOR_AGENT_TEMPERATURE
+        )
+        final_endpoint = (
+            user_settings.get("storyboard_endpoint") or STORYBOARD_EDITOR_AGENT_BASE_URL
+        )
+        final_max_tokens = user_settings.get(
+            "storyboard_max_tokens", STORYBOARD_EDITOR_AGENT_MAX_TOKENS
+        )
 
         # Initialize the LLM with potentially overridden settings
         llm = ChatOpenAI(
@@ -68,7 +74,13 @@ async def _generate_storyboard(
         return []
     except Exception as e:
         cl_logger.error(f"Storyboard generation failed: {e}")
-        return [AIMessage(content="Error generating storyboard.", name="error", metadata={"message_id": None})]
+        return [
+            AIMessage(
+                content="Error generating storyboard.",
+                name="error",
+                metadata={"message_id": None},
+            )
+        ]
 
 
 @task

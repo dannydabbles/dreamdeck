@@ -45,7 +45,7 @@ class ChatState(BaseModel):
     memories: List[str] = Field(default_factory=list)
     user_preferences: dict = Field(default_factory=dict)
     thread_data: dict = Field(default_factory=dict)
-    current_persona: str = "Default" # Default persona if none selected/resumed
+    current_persona: str = "Default"  # Default persona if none selected/resumed
     last_agent_called: Optional[str] = None  # Track last agent that added a message
 
     def increment_error_count(self) -> None:

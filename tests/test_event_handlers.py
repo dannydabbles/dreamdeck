@@ -5,9 +5,9 @@ from src.event_handlers import (
     on_chat_resume,
     on_message,
     load_knowledge_documents,
-    _load_document, # Keep if testing directly, otherwise mock
+    _load_document,  # Keep if testing directly, otherwise mock
 )
-from src.initialization import DatabasePool # Import DatabasePool
+from src.initialization import DatabasePool  # Import DatabasePool
 from src.models import ChatState
 from src.stores import VectorStore
 from src.config import START_MESSAGE, KNOWLEDGE_DIRECTORY
@@ -17,11 +17,14 @@ import asyncio
 import os
 from pathlib import Path  # Add missing import
 
+
 async def mock_send(*args, **kwargs):
     """Mock async send method that returns None."""
     return None
 
+
 from chainlit.context import context_var, ChainlitContext
+
 
 # Mock Chainlit context and user session globally for this module
 @pytest.fixture(autouse=True)
@@ -42,27 +45,35 @@ def mock_cl_environment(monkeypatch):
         user_session_store[key] = value
 
     def mock_get(key, default=None):
-        if key == 'context':
+        if key == "context":
             return mock_context_obj
         return user_session_store.get(key, default)
 
-    with patch("chainlit.context", mock_context_obj), \
-         patch("src.event_handlers.cl_user_session.set", mock_set), \
-         patch("src.event_handlers.cl_user_session.get", side_effect=mock_get):
+    with patch("chainlit.context", mock_context_obj), patch(
+        "src.event_handlers.cl_user_session.set", mock_set
+    ), patch("src.event_handlers.cl_user_session.get", side_effect=mock_get):
         try:
             yield user_session_store
         finally:
             context_var.reset(token)
 
+
 @pytest.mark.asyncio
 async def test_on_chat_start(mock_cl_environment):
     user_session_store = mock_cl_environment
-    with patch("src.event_handlers.VectorStore", new_callable=MagicMock) as mock_vector_store_cls, \
-         patch("src.event_handlers.cl.ChatSettings", new_callable=MagicMock) as mock_chat_settings, \
-         patch("src.event_handlers.asyncio.create_task") as mock_create_task, \
-         patch("src.event_handlers.load_knowledge_documents", new_callable=AsyncMock) as mock_load_knowledge, \
-         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls, \
-         patch("src.event_handlers.DatabasePool.close", new_callable=AsyncMock) as mock_db_close:
+    with patch(
+        "src.event_handlers.VectorStore", new_callable=MagicMock
+    ) as mock_vector_store_cls, patch(
+        "src.event_handlers.cl.ChatSettings", new_callable=MagicMock
+    ) as mock_chat_settings, patch(
+        "src.event_handlers.asyncio.create_task"
+    ) as mock_create_task, patch(
+        "src.event_handlers.load_knowledge_documents", new_callable=AsyncMock
+    ) as mock_load_knowledge, patch(
+        "src.event_handlers.cl.Message", new_callable=MagicMock
+    ) as mock_cl_message_cls, patch(
+        "src.event_handlers.DatabasePool.close", new_callable=AsyncMock
+    ) as mock_db_close:
 
         mock_vector_store_instance = MagicMock()
         mock_vector_store_cls.return_value = mock_vector_store_instance
@@ -101,7 +112,6 @@ async def test_on_chat_start(mock_cl_environment):
         # So we check that the mock was awaited (which it will be when the task runs)
         # or just skip this strict check
         # Simplest fix: remove the fragile __name__ assertion
-
 
         # Verify start message sent
         args, kwargs = mock_cl_message_cls.call_args
@@ -181,16 +191,22 @@ async def test_on_chat_resume(mock_cl_environment):
                 "createdAt": "2023-01-01T10:00:20Z",
             },
         ],
-        "user": {"identifier": "test_user", "metadata": {}}
+        "user": {"identifier": "test_user", "metadata": {}},
     }
 
-    with patch("src.event_handlers.VectorStore", new_callable=MagicMock) as mock_vector_store_cls, \
-         patch("src.event_handlers.load_knowledge_documents", new_callable=AsyncMock) as mock_load_knowledge, \
-         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
+    with patch(
+        "src.event_handlers.VectorStore", new_callable=MagicMock
+    ) as mock_vector_store_cls, patch(
+        "src.event_handlers.load_knowledge_documents", new_callable=AsyncMock
+    ) as mock_load_knowledge, patch(
+        "src.event_handlers.cl.Message", new_callable=MagicMock
+    ) as mock_cl_message_cls:
 
         mock_vector_store_instance = MagicMock()
         mock_vector_store_instance.put = AsyncMock()
-        mock_vector_store_instance.collection.get = MagicMock(return_value={"ids": ["step1", "step2"]})  # Simulate existing IDs
+        mock_vector_store_instance.collection.get = MagicMock(
+            return_value={"ids": ["step1", "step2"]}
+        )  # Simulate existing IDs
         mock_vector_store_cls.return_value = mock_vector_store_instance
 
         mock_cl_message_instance = AsyncMock()
@@ -223,15 +239,23 @@ async def test_on_chat_resume(mock_cl_environment):
         assert user_session_store.get("ai_message_id") is None
         assert "gm_message" in user_session_store
 
+
 @pytest.mark.asyncio
 async def test_thread_resume_consistency(mock_cl_environment):
     # Start a new chat
-    with patch("src.event_handlers.VectorStore", new_callable=MagicMock) as mock_vector_store_cls, \
-         patch("src.event_handlers.cl.ChatSettings", new_callable=MagicMock) as mock_chat_settings_cls, \
-         patch("src.event_handlers.asyncio.create_task"), \
-         patch("src.event_handlers.load_knowledge_documents", new_callable=AsyncMock), \
-         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls, \
-         patch("src.event_handlers.DatabasePool.close", new_callable=AsyncMock):
+    with patch(
+        "src.event_handlers.VectorStore", new_callable=MagicMock
+    ) as mock_vector_store_cls, patch(
+        "src.event_handlers.cl.ChatSettings", new_callable=MagicMock
+    ) as mock_chat_settings_cls, patch(
+        "src.event_handlers.asyncio.create_task"
+    ), patch(
+        "src.event_handlers.load_knowledge_documents", new_callable=AsyncMock
+    ), patch(
+        "src.event_handlers.cl.Message", new_callable=MagicMock
+    ) as mock_cl_message_cls, patch(
+        "src.event_handlers.DatabasePool.close", new_callable=AsyncMock
+    ):
 
         mock_vector_store = MagicMock()
         mock_vector_store.put = AsyncMock()
@@ -248,20 +272,35 @@ async def test_thread_resume_consistency(mock_cl_environment):
         mock_cl_message_cls.return_value = mock_cl_msg
 
         from src.event_handlers import on_chat_start
+
         await on_chat_start()
 
         state = mock_cl_environment.get("state")
         vector_store = mock_cl_environment.get("vector_memory")
 
         # Simulate user and AI messages
-        user_msg = HumanMessage(content="Hello", name="Player", metadata={"message_id": "u1"})
-        ai_msg = AIMessage(content="Hi there", name="Game Master", metadata={"message_id": "a1", "parent_id": "u1"})
+        user_msg = HumanMessage(
+            content="Hello", name="Player", metadata={"message_id": "u1"}
+        )
+        ai_msg = AIMessage(
+            content="Hi there",
+            name="Game Master",
+            metadata={"message_id": "a1", "parent_id": "u1"},
+        )
         state.messages.append(user_msg)
         state.messages.append(ai_msg)
 
         # Add to vector store
-        await vector_store.put(content=user_msg.content, message_id="u1", metadata={"type": "human", "author": "Player"})
-        await vector_store.put(content=ai_msg.content, message_id="a1", metadata={"type": "ai", "author": "Game Master", "parent_id": "u1"})
+        await vector_store.put(
+            content=user_msg.content,
+            message_id="u1",
+            metadata={"type": "human", "author": "Player"},
+        )
+        await vector_store.put(
+            content=ai_msg.content,
+            message_id="a1",
+            metadata={"type": "ai", "author": "Game Master", "parent_id": "u1"},
+        )
 
         # Simulate saved thread dict
         thread_dict = {
@@ -284,17 +323,20 @@ async def test_thread_resume_consistency(mock_cl_environment):
                     "createdAt": "2023-01-01T10:00:01Z",
                 },
             ],
-            "user": {"identifier": "test_user", "metadata": {}}
+            "user": {"identifier": "test_user", "metadata": {}},
         }
 
         # Patch vector_store.collection.get to simulate existing IDs
-        vector_store.collection.get = MagicMock(side_effect=lambda ids=None, **kwargs: {"ids": ids or []})
+        vector_store.collection.get = MagicMock(
+            side_effect=lambda ids=None, **kwargs: {"ids": ids or []}
+        )
 
         # Reset vector_store.put mock
         vector_store.put.reset_mock()
 
         # Call resume
         from src.event_handlers import on_chat_resume
+
         await on_chat_resume(thread_dict)
 
         resumed_state = mock_cl_environment.get("state")
@@ -316,25 +358,43 @@ async def test_on_message_normal_flow(mock_cl_environment):
     # Pre-populate session with state and vector_memory
     initial_state = ChatState(messages=[], thread_id="evt-test-thread")
     mock_vector_memory = AsyncMock(spec=VectorStore)
-    mock_vector_memory.get.return_value = [] # Mock retrieval
+    mock_vector_memory.get.return_value = []  # Mock retrieval
     user_session_store["state"] = initial_state
     user_session_store["vector_memory"] = mock_vector_memory
-    user_session_store["user"] = {"identifier": "test_user"} # Ensure user is set
+    user_session_store["user"] = {"identifier": "test_user"}  # Ensure user is set
 
     incoming_message = MagicMock(spec=cl.Message)
     incoming_message.content = "Tell me a story"
-    incoming_message.author = "test_user" # Match the user identifier
+    incoming_message.author = "test_user"  # Match the user identifier
     incoming_message.id = "user-msg-id-1"
-    incoming_message.command = ""  # Explicitly set to empty string to avoid command dispatch
+    incoming_message.command = (
+        ""  # Explicitly set to empty string to avoid command dispatch
+    )
 
-    final_ai_message = AIMessage(content="Once upon a time...", name="Game Master", metadata={"message_id": "ai-msg-id-1"})
-    final_state = ChatState(messages=[
-        HumanMessage(content="Tell me a story", name="Player", metadata={"message_id": "user-msg-id-1"}),
-        final_ai_message
-    ], thread_id="evt-test-thread")
+    final_ai_message = AIMessage(
+        content="Once upon a time...",
+        name="Game Master",
+        metadata={"message_id": "ai-msg-id-1"},
+    )
+    final_state = ChatState(
+        messages=[
+            HumanMessage(
+                content="Tell me a story",
+                name="Player",
+                metadata={"message_id": "user-msg-id-1"},
+            ),
+            final_ai_message,
+        ],
+        thread_id="evt-test-thread",
+    )
 
-    with patch("src.event_handlers.chat_workflow.ainvoke", new_callable=AsyncMock, return_value=final_state) as mock_workflow_ainvoke, \
-         patch("src.event_handlers.cl.AsyncLangchainCallbackHandler", MagicMock()): # Mock callback handler
+    with patch(
+        "src.event_handlers.chat_workflow.ainvoke",
+        new_callable=AsyncMock,
+        return_value=final_state,
+    ) as mock_workflow_ainvoke, patch(
+        "src.event_handlers.cl.AsyncLangchainCallbackHandler", MagicMock()
+    ):  # Mock callback handler
 
         await on_message(incoming_message)
 
@@ -345,7 +405,11 @@ async def test_on_message_normal_flow(mock_cl_environment):
         assert initial_state.messages[0].metadata["message_id"] == "user-msg-id-1"
 
         # Verify vector store put for user message
-        mock_vector_memory.put.assert_any_await(content="Tell me a story", message_id="user-msg-id-1", metadata={'type': 'human', 'author': 'Player', 'persona': 'Default'})
+        mock_vector_memory.put.assert_any_await(
+            content="Tell me a story",
+            message_id="user-msg-id-1",
+            metadata={"type": "human", "author": "Player", "persona": "Default"},
+        )
 
         # Verify vector store get called for memories
         mock_vector_memory.get.assert_called_once_with("Tell me a story")
@@ -353,14 +417,20 @@ async def test_on_message_normal_flow(mock_cl_environment):
         # Verify workflow invocation
         mock_workflow_ainvoke.assert_awaited_once()
         call_args, call_kwargs = mock_workflow_ainvoke.call_args
-        assert call_args[0]["messages"] == initial_state.messages # Check messages passed to workflow
-        assert call_args[0]["previous"] == initial_state # Check state passed
+        assert (
+            call_args[0]["messages"] == initial_state.messages
+        )  # Check messages passed to workflow
+        assert call_args[0]["previous"] == initial_state  # Check state passed
 
         # Verify final state stored in session
         assert user_session_store.get("state") == final_state
 
         # Verify vector store put for final AI message
-        mock_vector_memory.put.assert_any_await(content="Once upon a time...", message_id="ai-msg-id-1", metadata={'type': 'ai', 'author': 'Game Master'})
+        mock_vector_memory.put.assert_any_await(
+            content="Once upon a time...",
+            message_id="ai-msg-id-1",
+            metadata={"type": "ai", "author": "Game Master"},
+        )
 
 
 @pytest.mark.asyncio
@@ -373,11 +443,13 @@ async def test_on_message_command_skip(mock_cl_environment):
     user_session_store["user"] = {"identifier": "test_user"}
 
     command_message = MagicMock(spec=cl.Message)
-    command_message.content = "/roll 1d20" # Command
+    command_message.content = "/roll 1d20"  # Command
     command_message.author = "test_user"
     command_message.id = "user-cmd-id-1"
 
-    with patch("src.event_handlers.chat_workflow.ainvoke", new_callable=AsyncMock) as mock_workflow_ainvoke:
+    with patch(
+        "src.event_handlers.chat_workflow.ainvoke", new_callable=AsyncMock
+    ) as mock_workflow_ainvoke:
         await on_message(command_message)
 
         # Verify workflow was NOT called
@@ -388,6 +460,7 @@ async def test_on_message_command_skip(mock_cl_environment):
         mock_vector_memory.put.assert_not_awaited()
         mock_vector_memory.get.assert_not_called()
 
+
 @pytest.mark.asyncio
 async def test_on_message_ignore_author(mock_cl_environment):
     user_session_store = mock_cl_environment
@@ -395,14 +468,16 @@ async def test_on_message_ignore_author(mock_cl_environment):
     mock_vector_memory = AsyncMock(spec=VectorStore)
     user_session_store["state"] = initial_state
     user_session_store["vector_memory"] = mock_vector_memory
-    user_session_store["user"] = {"identifier": "test_user"} # Current user
+    user_session_store["user"] = {"identifier": "test_user"}  # Current user
 
     other_author_message = MagicMock(spec=cl.Message)
     other_author_message.content = "A message from someone else"
-    other_author_message.author = "another_user" # Different author
+    other_author_message.author = "another_user"  # Different author
     other_author_message.id = "other-msg-id-1"
 
-    with patch("src.event_handlers.chat_workflow.ainvoke", new_callable=AsyncMock) as mock_workflow_ainvoke:
+    with patch(
+        "src.event_handlers.chat_workflow.ainvoke", new_callable=AsyncMock
+    ) as mock_workflow_ainvoke:
         await on_message(other_author_message)
 
         # Verify workflow was NOT called
@@ -412,6 +487,7 @@ async def test_on_message_ignore_author(mock_cl_environment):
         # Verify vector store was NOT called
         mock_vector_memory.put.assert_not_awaited()
         mock_vector_memory.get.assert_not_called()
+
 
 @pytest.mark.asyncio
 async def test_on_message_workflow_error(mock_cl_environment):
@@ -427,10 +503,17 @@ async def test_on_message_workflow_error(mock_cl_environment):
     incoming_message.content = "Cause an error"
     incoming_message.author = "test_user"
     incoming_message.id = "user-err-id-1"
-    incoming_message.command = ""  # Explicitly set to empty string to avoid command dispatch
+    incoming_message.command = (
+        ""  # Explicitly set to empty string to avoid command dispatch
+    )
 
-    with patch("src.event_handlers.chat_workflow.ainvoke", new_callable=AsyncMock, side_effect=Exception("Workflow boom!")) as mock_workflow_ainvoke, \
-         patch("src.event_handlers.cl.Message", new_callable=MagicMock) as mock_cl_message_cls:
+    with patch(
+        "src.event_handlers.chat_workflow.ainvoke",
+        new_callable=AsyncMock,
+        side_effect=Exception("Workflow boom!"),
+    ) as mock_workflow_ainvoke, patch(
+        "src.event_handlers.cl.Message", new_callable=MagicMock
+    ) as mock_cl_message_cls:
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.send.return_value = None
@@ -442,7 +525,9 @@ async def test_on_message_workflow_error(mock_cl_environment):
         mock_workflow_ainvoke.assert_awaited_once()
 
         # Verify error message was sent
-        mock_cl_message_cls.assert_called_with(content="⚠️ An error occurred while generating the response. Please try again later.")
+        mock_cl_message_cls.assert_called_with(
+            content="⚠️ An error occurred while generating the response. Please try again later."
+        )
         mock_cl_message_instance.send.assert_awaited_once()
 
         # Verify state was updated with user message but not AI message
@@ -451,12 +536,18 @@ async def test_on_message_workflow_error(mock_cl_environment):
         assert initial_state.messages[0].content == "Cause an error"
 
         # Verify vector store put for user message happened
-        mock_vector_memory.put.assert_awaited_once_with(content="Cause an error", message_id="user-err-id-1", metadata={'type': 'human', 'author': 'Player', 'persona': 'Default'})
+        mock_vector_memory.put.assert_awaited_once_with(
+            content="Cause an error",
+            message_id="user-err-id-1",
+            metadata={"type": "human", "author": "Player", "persona": "Default"},
+        )
 
 
 # Test for load_knowledge_documents (can reuse from test_knowledge_loading if desired, or keep separate)
 @pytest.mark.asyncio
-async def test_load_knowledge_documents_handler(tmp_path, monkeypatch, mock_cl_environment):
+async def test_load_knowledge_documents_handler(
+    tmp_path, monkeypatch, mock_cl_environment
+):
     user_session_store = mock_cl_environment
     # Mock the knowledge directory path
     mock_dir = tmp_path / "knowledge_handler_test"
@@ -467,7 +558,7 @@ async def test_load_knowledge_documents_handler(tmp_path, monkeypatch, mock_cl_e
     # Create test files
     (mock_dir / "test.txt").write_text("Sample text content")
     (mock_dir / "subfolder").mkdir()
-    (mock_dir / "subfolder" / "test.pdf").touch() # Empty PDF for coverage
+    (mock_dir / "subfolder" / "test.pdf").touch()  # Empty PDF for coverage
 
     # Mock dependencies
     vector_store_mock = AsyncMock(spec=VectorStore)
@@ -475,71 +566,84 @@ async def test_load_knowledge_documents_handler(tmp_path, monkeypatch, mock_cl_e
     user_session_store["vector_memory"] = vector_store_mock
 
     # Mock document loading and splitting
-    with patch("src.event_handlers._load_document") as load_doc_mock, \
-         patch("src.event_handlers.RecursiveCharacterTextSplitter") as splitter_mock, \
-         patch("src.event_handlers.cl.element.logger") as mock_cl_logger: # Mock chainlit logger
+    with patch("src.event_handlers._load_document") as load_doc_mock, patch(
+        "src.event_handlers.RecursiveCharacterTextSplitter"
+    ) as splitter_mock, patch(
+        "src.event_handlers.cl.element.logger"
+    ) as mock_cl_logger:  # Mock chainlit logger
 
         # Return dummy documents and splits
-        load_doc_mock.side_effect = lambda _: [MagicMock(page_content="Loaded content")] # Use MagicMock for Document
+        load_doc_mock.side_effect = lambda _: [
+            MagicMock(page_content="Loaded content")
+        ]  # Use MagicMock for Document
         splitter_mock.return_value.split_documents.return_value = [
-            MagicMock(page_content="Chunk 1", metadata={}), # Add metadata
-            MagicMock(page_content="Chunk 2", metadata={})
+            MagicMock(page_content="Chunk 1", metadata={}),  # Add metadata
+            MagicMock(page_content="Chunk 2", metadata={}),
         ]
 
         # Run the knowledge loader
         await load_knowledge_documents()
 
         # Verify operations
-        assert load_doc_mock.call_count == 2 # Both txt and pdf
-        assert splitter_mock().split_documents.call_count == 2 # Called once per file load
+        assert load_doc_mock.call_count == 2  # Both txt and pdf
+        assert (
+            splitter_mock().split_documents.call_count == 2
+        )  # Called once per file load
 
         # Verify vector store receives chunks (called once due to batching logic < 500)
         vector_store_mock.add_documents.assert_awaited_once()
         add_call = vector_store_mock.add_documents.call_args_list[0]
         added_docs = add_call.args[0]
-        assert len(added_docs) == 4 # 2 chunks/file × 2 files = 4 chunks
+        assert len(added_docs) == 4  # 2 chunks/file × 2 files = 4 chunks
         assert "Chunk 1" in [doc.page_content for doc in added_docs]
+
 
 @pytest.mark.asyncio
 async def test_load_knowledge_documents_dir_missing(monkeypatch, mock_cl_environment):
-     user_session_store = mock_cl_environment
-     monkeypatch.setattr("src.event_handlers.KNOWLEDGE_DIRECTORY", "/non/existent/path")
-     vector_store_mock = AsyncMock(spec=VectorStore)
-     user_session_store["vector_memory"] = vector_store_mock
+    user_session_store = mock_cl_environment
+    monkeypatch.setattr("src.event_handlers.KNOWLEDGE_DIRECTORY", "/non/existent/path")
+    vector_store_mock = AsyncMock(spec=VectorStore)
+    user_session_store["vector_memory"] = vector_store_mock
 
-     with patch("src.event_handlers.cl.element.logger") as mock_cl_logger:
-         await load_knowledge_documents()
-         mock_cl_logger.warning.assert_called_with("Knowledge directory '/non/existent/path' does not exist. Skipping document loading.")
-         vector_store_mock.add_documents.assert_not_awaited()
+    with patch("src.event_handlers.cl.element.logger") as mock_cl_logger:
+        await load_knowledge_documents()
+        mock_cl_logger.warning.assert_called_with(
+            "Knowledge directory '/non/existent/path' does not exist. Skipping document loading."
+        )
+        vector_store_mock.add_documents.assert_not_awaited()
+
 
 @pytest.mark.asyncio
-async def test_load_knowledge_documents_no_vector_store(monkeypatch, mock_cl_environment):
-     user_session_store = mock_cl_environment
-     # Ensure vector_memory is NOT set in the session
-     if "vector_memory" in user_session_store:
-         del user_session_store["vector_memory"]
+async def test_load_knowledge_documents_no_vector_store(
+    monkeypatch, mock_cl_environment
+):
+    user_session_store = mock_cl_environment
+    # Ensure vector_memory is NOT set in the session
+    if "vector_memory" in user_session_store:
+        del user_session_store["vector_memory"]
 
-     # Make sure directory exists
-     mock_dir = KNOWLEDGE_DIRECTORY # Use actual configured dir if possible, or mock
-     os.makedirs(mock_dir, exist_ok=True)
-     (Path(mock_dir) / "dummy.txt").touch() # Create a file to process
+    # Make sure directory exists
+    mock_dir = KNOWLEDGE_DIRECTORY  # Use actual configured dir if possible, or mock
+    os.makedirs(mock_dir, exist_ok=True)
+    (Path(mock_dir) / "dummy.txt").touch()  # Create a file to process
 
-     with patch("src.event_handlers.cl.element.logger") as mock_cl_logger, \
-          patch("src.event_handlers._load_document") as load_doc_mock:
-         await load_knowledge_documents()
-         mock_cl_logger.error.assert_called_with("Vector memory not initialized.")
-         load_doc_mock.assert_not_called() # Should exit before processing files
+    with patch("src.event_handlers.cl.element.logger") as mock_cl_logger, patch(
+        "src.event_handlers._load_document"
+    ) as load_doc_mock:
+        await load_knowledge_documents()
+        mock_cl_logger.error.assert_called_with("Vector memory not initialized.")
+        load_doc_mock.assert_not_called()  # Should exit before processing files
 
-     # Clean up dummy file/dir if mocked
-     if mock_dir != KNOWLEDGE_DIRECTORY:
-         os.remove(Path(mock_dir) / "dummy.txt")
-         os.rmdir(mock_dir)
+    # Clean up dummy file/dir if mocked
+    if mock_dir != KNOWLEDGE_DIRECTORY:
+        os.remove(Path(mock_dir) / "dummy.txt")
+        os.rmdir(mock_dir)
 
 
 @pytest.mark.asyncio
 async def test_on_settings_update_callback():
     from src.event_handlers import on_settings_update
+
     dummy_settings = {"foo": "bar"}
     # Should not raise
     await on_settings_update(dummy_settings)
-

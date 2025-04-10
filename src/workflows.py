@@ -3,10 +3,13 @@ import logging
 import json
 from typing import List, Optional
 
+
 async def resolve_if_future(obj):
     if isinstance(obj, asyncio.Future):
         return await obj
     return obj
+
+
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint.memory import MemorySaver
@@ -111,12 +114,16 @@ async def _chat_workflow(
         for act in actions:
             if isinstance(act, str):
                 if act in avoid:
-                    cl_logger.info(f"Skipping action '{act}' due to persona '{persona}' avoid list")
+                    cl_logger.info(
+                        f"Skipping action '{act}' due to persona '{persona}' avoid list"
+                    )
                     continue
             elif isinstance(act, dict):
                 act_name = act.get("action")
                 if act_name in avoid:
-                    cl_logger.info(f"Skipping action '{act_name}' due to persona '{persona}' avoid list")
+                    cl_logger.info(
+                        f"Skipping action '{act_name}' due to persona '{persona}' avoid list"
+                    )
                     continue
             filtered_actions.append(act)
 
@@ -137,7 +144,11 @@ async def _chat_workflow(
 
         while actions and chain_count < MAX_CHAIN_LENGTH:
             # Check if the last message was from a human before this iteration
-            human_intervened = isinstance(state.messages[-1], HumanMessage) if state.messages else False
+            human_intervened = (
+                isinstance(state.messages[-1], HumanMessage)
+                if state.messages
+                else False
+            )
 
             # Remove trailing GM call if present
             if actions and actions[-1] in ("write", "continue_story"):
@@ -155,11 +166,18 @@ async def _chat_workflow(
                     agent_name_to_call = action
                     agent_func = agents_map.get(action)
                     if not agent_func:
-                        cl_logger.warning(f"Unknown action string from director: {action}")
+                        cl_logger.warning(
+                            f"Unknown action string from director: {action}"
+                        )
                         continue
                     # Redundancy check
-                    if agent_name_to_call == state.last_agent_called and not human_intervened:
-                        cl_logger.warning(f"Skipping redundant call to agent: {agent_name_to_call}")
+                    if (
+                        agent_name_to_call == state.last_agent_called
+                        and not human_intervened
+                    ):
+                        cl_logger.warning(
+                            f"Skipping redundant call to agent: {agent_name_to_call}"
+                        )
                         continue
                     maybe_coro = agent_func(state)
                     if asyncio.iscoroutine(maybe_coro):
@@ -172,13 +190,22 @@ async def _chat_workflow(
                         knowledge_type = action.get("type")
                         agent_name_to_call = f"knowledge_{knowledge_type}"
                         if not knowledge_type:
-                            cl_logger.warning(f"Knowledge action missing 'type': {action}")
+                            cl_logger.warning(
+                                f"Knowledge action missing 'type': {action}"
+                            )
                             continue
                         # Redundancy check
-                        if agent_name_to_call == state.last_agent_called and not human_intervened:
-                            cl_logger.warning(f"Skipping redundant call to agent: {agent_name_to_call}")
+                        if (
+                            agent_name_to_call == state.last_agent_called
+                            and not human_intervened
+                        ):
+                            cl_logger.warning(
+                                f"Skipping redundant call to agent: {agent_name_to_call}"
+                            )
                             continue
-                        agent_response = await knowledge_agent(state, knowledge_type=knowledge_type)
+                        agent_response = await knowledge_agent(
+                            state, knowledge_type=knowledge_type
+                        )
                     # Add elif for other dict actions if needed
 
                 agent_response = await resolve_if_future(agent_response)
@@ -193,21 +220,32 @@ async def _chat_workflow(
                         await vector_memory.put(
                             content=msg.content,
                             message_id=msg.metadata["message_id"],
-                            metadata={"type": "ai", "author": msg.name, "persona": state.current_persona},
+                            metadata={
+                                "type": "ai",
+                                "author": msg.name,
+                                "persona": state.current_persona,
+                            },
                         )
 
                 # Update last_agent_called if this agent produced output
                 if agent_name_to_call and agent_response:
                     state.last_agent_called = agent_name_to_call
-                    cl_logger.debug(f"Updated last_agent_called to: {agent_name_to_call}")
+                    cl_logger.debug(
+                        f"Updated last_agent_called to: {agent_name_to_call}"
+                    )
 
             # After tools, decide next actions
             chain_count += 1
             if gm_needed or chain_count >= MAX_CHAIN_LENGTH:
                 writer_agent_name = "writer"
                 # Redundancy check for writer
-                if writer_agent_name == state.last_agent_called and not human_intervened:
-                    cl_logger.warning(f"Skipping redundant call to agent: {writer_agent_name}")
+                if (
+                    writer_agent_name == state.last_agent_called
+                    and not human_intervened
+                ):
+                    cl_logger.warning(
+                        f"Skipping redundant call to agent: {writer_agent_name}"
+                    )
                     break
 
                 writer_response = await writer_agent(state)
@@ -220,15 +258,25 @@ async def _chat_workflow(
                 if writer_response:
                     for msg in writer_response:
                         state.messages.append(msg)
-                        if vector_memory and msg.metadata and "message_id" in msg.metadata:
+                        if (
+                            vector_memory
+                            and msg.metadata
+                            and "message_id" in msg.metadata
+                        ):
                             await vector_memory.put(
                                 content=msg.content,
                                 message_id=msg.metadata["message_id"],
-                                metadata={"type": "ai", "author": msg.name, "persona": state.current_persona},
+                                metadata={
+                                    "type": "ai",
+                                    "author": msg.name,
+                                    "persona": state.current_persona,
+                                },
                             )
                     # Update last_agent_called if writer produced output
                     state.last_agent_called = writer_agent_name
-                    cl_logger.debug(f"Updated last_agent_called to: {writer_agent_name}")
+                    cl_logger.debug(
+                        f"Updated last_agent_called to: {writer_agent_name}"
+                    )
 
                 break  # Always stop after GM
             else:
@@ -249,12 +297,16 @@ async def _chat_workflow(
                 for act in actions:
                     if isinstance(act, str):
                         if act in avoid:
-                            cl_logger.info(f"Skipping action '{act}' due to persona '{persona}' avoid list")
+                            cl_logger.info(
+                                f"Skipping action '{act}' due to persona '{persona}' avoid list"
+                            )
                             continue
                     elif isinstance(act, dict):
                         act_name = act.get("action")
                         if act_name in avoid:
-                            cl_logger.info(f"Skipping action '{act_name}' due to persona '{persona}' avoid list")
+                            cl_logger.info(
+                                f"Skipping action '{act_name}' due to persona '{persona}' avoid list"
+                            )
                             continue
                     filtered_actions.append(act)
 
@@ -270,7 +322,9 @@ async def _chat_workflow(
                         other_actions.append(act)
 
                 actions = preferred_actions + other_actions
-                cl_logger.info(f"Persona-aware filtered and reordered actions: {actions}")
+                cl_logger.info(
+                    f"Persona-aware filtered and reordered actions: {actions}"
+                )
 
         # Trigger storyboard generation after GM response
         if IMAGE_GENERATION_ENABLED:
@@ -278,23 +332,29 @@ async def _chat_workflow(
             if state.messages and isinstance(state.messages[-1], AIMessage):
                 last_ai_message = state.messages[-1]
 
-            if last_ai_message and last_ai_message.metadata and "message_id" in last_ai_message.metadata:
+            if (
+                last_ai_message
+                and last_ai_message.metadata
+                and "message_id" in last_ai_message.metadata
+            ):
                 gm_message_id = last_ai_message.metadata["message_id"]
-                cl_logger.info(f"Triggering storyboard generation for message ID: {gm_message_id}")
-                asyncio.create_task(storyboard_editor_agent(state=state, gm_message_id=gm_message_id))
+                cl_logger.info(
+                    f"Triggering storyboard generation for message ID: {gm_message_id}"
+                )
+                asyncio.create_task(
+                    storyboard_editor_agent(state=state, gm_message_id=gm_message_id)
+                )
             else:
-                cl_logger.warning("Could not trigger storyboard generation: Last AI message or its message_id not found in state.")
+                cl_logger.warning(
+                    "Could not trigger storyboard generation: Last AI message or its message_id not found in state."
+                )
 
         return state
 
     except Exception as e:
         cl_logger.error(f"Workflow failed: {e}")
         state.messages.append(
-            AIMessage(
-                content="The adventure continues...",
-                name="system",
-                metadata={}
-            )
+            AIMessage(content="The adventure continues...", name="system", metadata={})
         )
 
     return state

@@ -16,6 +16,7 @@ if (
         def _noop_decorator(*args, **kwargs):
             def wrapper(func):
                 return func
+
             return wrapper
 
         cl.command = _noop_decorator
@@ -27,6 +28,7 @@ if (
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 
+
 @pytest.fixture
 def mock_chainlit_context():
     mock_session = MagicMock()
@@ -37,6 +39,7 @@ def mock_chainlit_context():
 
     with patch("chainlit.context", mock_context):
         yield
+
 
 import pytest
 from src.config import (
@@ -63,6 +66,7 @@ def mock_env_vars(monkeypatch):
 import logging
 import pytest
 
+
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_logging():
     yield
@@ -79,7 +83,12 @@ def cleanup_logging():
         cl_logger.removeHandler(handler)
 
     logging.shutdown()
+
+
 import warnings
 
+
 def pytest_sessionfinish(session, exitstatus):
-    warnings.filterwarnings("ignore", message=".*Task was destroyed but it is pending.*")
+    warnings.filterwarnings(
+        "ignore", message=".*Task was destroyed but it is pending.*"
+    )

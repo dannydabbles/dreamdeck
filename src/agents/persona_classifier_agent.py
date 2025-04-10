@@ -35,7 +35,9 @@ async def _classify_persona(state: ChatState) -> dict:
 
         user_settings = cl.user_session.get("chat_settings", {})
         final_temp = user_settings.get("persona_classifier_temp", 0.2)
-        final_endpoint = user_settings.get("persona_classifier_endpoint") or OPENAI_SETTINGS.get("base_url")
+        final_endpoint = user_settings.get(
+            "persona_classifier_endpoint"
+        ) or OPENAI_SETTINGS.get("base_url")
         final_max_tokens = user_settings.get("persona_classifier_max_tokens", 200)
 
         llm = ChatOpenAI(
@@ -57,12 +59,15 @@ async def _classify_persona(state: ChatState) -> dict:
                 content = "\n".join(lines[1:-1]).strip()
 
         import json
+
         parsed = json.loads(content)
         persona = parsed.get("persona", "default").strip().lower()
         reason = parsed.get("reason", "")
 
         if persona not in PERSONA_LIST:
-            cl_logger.warning(f"Classifier suggested unknown persona '{persona}', defaulting to 'default'")
+            cl_logger.warning(
+                f"Classifier suggested unknown persona '{persona}', defaulting to 'default'"
+            )
             persona = "default"
 
         cl_logger.info(f"Persona classifier suggests: {persona} (reason: {reason})")
@@ -75,8 +80,11 @@ async def _classify_persona(state: ChatState) -> dict:
     except Exception as e:
         cl_logger.error(f"Persona classifier failed: {e}")
         # On failure, fallback to current persona or default
-        cl.user_session.set("suggested_persona", {"persona": "default", "reason": "Classifier error"})
+        cl.user_session.set(
+            "suggested_persona", {"persona": "default", "reason": "Classifier error"}
+        )
         return {"persona": "default", "reason": "Classifier error"}
+
 
 @task
 async def persona_classifier_agent(state: ChatState, **kwargs) -> dict:

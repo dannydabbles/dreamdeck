@@ -25,10 +25,12 @@ import sys
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
+
 class _WriterAgentWrapper:
     async def __call__(self, state: ChatState, **kwargs) -> list[BaseMessage]:
         """Makes the wrapper instance callable by LangGraph, delegating to the task."""
         return await generate_story(state, **kwargs)
+
 
 writer_agent = _WriterAgentWrapper()
 
@@ -70,7 +72,9 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
         user_settings = cl.user_session.get("chat_settings", {})
         final_temp = user_settings.get("writer_temp", WRITER_AGENT_TEMPERATURE)
         final_endpoint = user_settings.get("writer_endpoint") or WRITER_AGENT_BASE_URL
-        final_max_tokens = user_settings.get("writer_max_tokens", WRITER_AGENT_MAX_TOKENS)
+        final_max_tokens = user_settings.get(
+            "writer_max_tokens", WRITER_AGENT_MAX_TOKENS
+        )
 
         # Initialize the LLM with potentially overridden settings
         llm = ChatOpenAI(
@@ -120,7 +124,13 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
         return [story_segment]
     except Exception as e:
         cl_logger.error(f"Story generation failed: {e}")
-        return [AIMessage(content="Story generation failed.", name="error", metadata={"message_id": None})]
+        return [
+            AIMessage(
+                content="Story generation failed.",
+                name="error",
+                metadata={"message_id": None},
+            )
+        ]
 
 
 @task

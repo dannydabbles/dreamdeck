@@ -10,6 +10,7 @@ from src.models import ChatState
 from langchain_openai import ChatOpenAI
 from jinja2 import Template
 
+
 @cl.step(name="Report Agent", type="tool")
 async def _generate_report(state: ChatState) -> list[AIMessage]:
     """
@@ -36,26 +37,33 @@ async def _generate_report(state: ChatState) -> list[AIMessage]:
                         with open(todo_file, "r", encoding="utf-8") as f:
                             content = f.read().strip()
                             if content:
-                                all_todos.append(f"### Persona: {persona_name}\n{content}")
+                                all_todos.append(
+                                    f"### Persona: {persona_name}\n{content}"
+                                )
                     except Exception as e:
                         cl_logger.warning(f"Failed to read {todo_file}: {e}")
 
                 # Collect image files in the same directory
                 if os.path.exists(persona_dir):
                     for fname in os.listdir(persona_dir):
-                        if fname.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                        if fname.lower().endswith(
+                            (".png", ".jpg", ".jpeg", ".gif", ".webp")
+                        ):
                             image_path = os.path.join(persona_dir, fname)
                             all_images.append((persona_name, image_path))
 
-        todo_content = "\n\n".join(all_todos) if all_todos else "No TODOs found for any persona."
+        todo_content = (
+            "\n\n".join(all_todos) if all_todos else "No TODOs found for any persona."
+        )
 
-        prompt_template_str = config.loaded_prompts.get("daily_report_prompt", "").strip()
+        prompt_template_str = config.loaded_prompts.get(
+            "daily_report_prompt", ""
+        ).strip()
 
         # Build plain text list of image filenames (not URLs or data)
         if all_images:
             image_list_str = "\n".join(
-                f"- {persona}: {os.path.basename(path)}"
-                for persona, path in all_images
+                f"- {persona}: {os.path.basename(path)}" for persona, path in all_images
             )
         else:
             image_list_str = "No images found for today."
@@ -71,7 +79,9 @@ async def _generate_report(state: ChatState) -> list[AIMessage]:
 
         user_settings = cl.user_session.get("chat_settings", {})
         final_temp = user_settings.get("report_temp", 0.3)
-        final_endpoint = user_settings.get("report_endpoint") or config.openai.get("base_url")
+        final_endpoint = user_settings.get("report_endpoint") or config.openai.get(
+            "base_url"
+        )
         final_max_tokens = user_settings.get("report_max_tokens", 500)
 
         llm = ChatOpenAI(
@@ -102,7 +112,14 @@ async def _generate_report(state: ChatState) -> list[AIMessage]:
 
     except Exception as e:
         cl_logger.error(f"Report agent failed: {e}")
-        return [AIMessage(content="Report generation failed.", name="error", metadata={"message_id": None})]
+        return [
+            AIMessage(
+                content="Report generation failed.",
+                name="error",
+                metadata={"message_id": None},
+            )
+        ]
+
 
 @task
 async def report_agent(state: ChatState) -> list[AIMessage]:

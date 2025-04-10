@@ -6,6 +6,7 @@ from langchain_core.documents import Document
 import asyncio
 from chainlit.context import context_var, ChainlitContext
 
+
 @pytest.fixture
 def mock_chainlit_context():
     # Standardize context mocking using context_var

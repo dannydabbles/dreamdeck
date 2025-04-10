@@ -75,12 +75,19 @@ from src.agents.dice_agent import dice_roll_agent, dice_agent
 from src.agents.web_search_agent import web_search_agent
 from src.agents.todo_agent import todo_agent
 from chainlit import user_session as cl_user_session  # Import cl_user_session
-from langchain_core.callbacks.manager import CallbackManagerForChainRun  # Import CallbackManagerForChainRun
+from langchain_core.callbacks.manager import (
+    CallbackManagerForChainRun,
+)  # Import CallbackManagerForChainRun
 
 from langchain_core.stores import BaseStore
 
 import chainlit as cl
-from chainlit.input_widget import Slider, TextInput, Select, Switch  # Import widgets including Switch
+from chainlit.input_widget import (
+    Slider,
+    TextInput,
+    Select,
+    Switch,
+)  # Import widgets including Switch
 from src import config  # Import your config
 from chainlit import Action  # Import Action for buttons
 
@@ -154,7 +161,7 @@ async def on_chat_start():
         user_info = cl.user_session.get("user")
         if isinstance(user_info, dict):
             current_user_identifier = user_info.get("identifier", "Player")
-        elif hasattr(user_info, 'identifier'):
+        elif hasattr(user_info, "identifier"):
             current_user_identifier = user_info.identifier
         else:
             current_user_identifier = "Player"
@@ -184,23 +191,29 @@ async def on_chat_start():
                 Slider(
                     id="writer_temp",
                     label="Writer Agent - Temperature",
-                    min=0.0, max=2.0, step=0.1, initial=config.WRITER_AGENT_TEMPERATURE
+                    min=0.0,
+                    max=2.0,
+                    step=0.1,
+                    initial=config.WRITER_AGENT_TEMPERATURE,
                 ),
                 Slider(
                     id="writer_max_tokens",
                     label="Writer Agent - Max Tokens",
-                    min=100, max=16000, step=100, initial=config.WRITER_AGENT_MAX_TOKENS
+                    min=100,
+                    max=16000,
+                    step=100,
+                    initial=config.WRITER_AGENT_MAX_TOKENS,
                 ),
                 TextInput(
                     id="writer_endpoint",
                     label="Writer Agent - OpenAI Endpoint URL",
                     initial=config.WRITER_AGENT_BASE_URL or "",
-                    placeholder="e.g., http://localhost:5000/v1"
+                    placeholder="e.g., http://localhost:5000/v1",
                 ),
                 Switch(
                     id="auto_persona_switch",
                     label="Auto Persona Switching",
-                    initial=True
+                    initial=True,
                 ),
             ]
         ).send()
@@ -210,8 +223,12 @@ async def on_chat_start():
             settings = {}
 
         cl.user_session.set("chat_settings", settings)
-        cl.user_session.set("current_persona", settings.get("persona", "Storyteller GM"))
-        cl.user_session.set("auto_persona_switch", settings.get("auto_persona_switch", True))
+        cl.user_session.set(
+            "current_persona", settings.get("persona", "Storyteller GM")
+        )
+        cl.user_session.set(
+            "auto_persona_switch", settings.get("auto_persona_switch", True)
+        )
 
         # Launch knowledge loading in the background
         asyncio.create_task(load_knowledge_documents())
@@ -225,12 +242,18 @@ async def on_chat_start():
 
         # Create initial state
         state = ChatState(
-            messages=[AIMessage(content=START_MESSAGE, name="Game Master", metadata={"message_id": start_cl_msg.id})],
+            messages=[
+                AIMessage(
+                    content=START_MESSAGE,
+                    name="Game Master",
+                    metadata={"message_id": start_cl_msg.id},
+                )
+            ],
             thread_id=cl.context.session.thread_id,
             user_preferences=cl.user_session.get("user_session", {}).get(
                 "preferences", {}
             ),
-            current_persona=persona, # Set persona in initial state
+            current_persona=persona,  # Set persona in initial state
         )
 
         # Store state
@@ -258,7 +281,9 @@ async def on_chat_resume(thread: ThreadDict):
             resumed_persona = tag.split(":", 1)[1]
             cl_logger.info(f"Resumed persona '{resumed_persona}' from thread tags.")
             break
-    cl.user_session.set("current_persona", resumed_persona) # Also set in session for consistency
+    cl.user_session.set(
+        "current_persona", resumed_persona
+    )  # Also set in session for consistency
     # Set the user in the session
     user_dict = thread.get("user")
     if user_dict:
@@ -268,7 +293,7 @@ async def on_chat_resume(thread: ThreadDict):
     user_info = cl.user_session.get("user")
     if isinstance(user_info, dict):
         current_user_identifier = user_info.get("identifier", "Player")
-    elif hasattr(user_info, 'identifier'):
+    elif hasattr(user_info, "identifier"):
         current_user_identifier = user_info.identifier
     else:
         current_user_identifier = "Player"
@@ -280,7 +305,9 @@ async def on_chat_resume(thread: ThreadDict):
     # Initialize thread in Chainlit with a start message
     messages = []
     image_generation_memory = []
-    cl.user_session.set("gm_message", cl.Message(content="", author=current_user_identifier))
+    cl.user_session.set(
+        "gm_message", cl.Message(content="", author=current_user_identifier)
+    )
 
     # Reconstruct messages from thread history
     for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
@@ -305,28 +332,40 @@ async def on_chat_resume(thread: ThreadDict):
                 author=current_user_identifier,
             )
             # await cl_msg.send()  # Disabled to avoid duplicate UI messages
-            messages.append(HumanMessage(content=step["output"], name="Player", metadata=meta))
+            messages.append(
+                HumanMessage(content=step["output"], name="Player", metadata=meta)
+            )
             if step_id and not existing:
                 meta = {"type": "human", "author": "Player"}
                 if parent_id is not None:
                     meta["parent_id"] = parent_id
-                await vector_memory.put(content=step["output"], message_id=step_id, metadata=meta)
+                await vector_memory.put(
+                    content=step["output"], message_id=step_id, metadata=meta
+                )
             elif not step_id:
-                cl_logger.warning(f"Missing ID for user step in on_chat_resume: {step.get('output', '')[:50]}...")
+                cl_logger.warning(
+                    f"Missing ID for user step in on_chat_resume: {step.get('output', '')[:50]}..."
+                )
         elif step["type"] == "assistant_message":
             cl_msg = cl.Message(
                 content=step["output"],
                 author=current_user_identifier,
             )
             # await cl_msg.send()  # Disabled to avoid duplicate UI messages
-            messages.append(AIMessage(content=step["output"], name=step["name"], metadata=meta))
+            messages.append(
+                AIMessage(content=step["output"], name=step["name"], metadata=meta)
+            )
             if step_id and not existing:
                 meta = {"type": "ai", "author": step.get("name", "Unknown")}
                 if parent_id is not None:
                     meta["parent_id"] = parent_id
-                await vector_memory.put(content=step["output"], message_id=step_id, metadata=meta)
+                await vector_memory.put(
+                    content=step["output"], message_id=step_id, metadata=meta
+                )
             elif not step_id:
-                cl_logger.warning(f"Missing ID for assistant step in on_chat_resume: {step.get('output', '')[:50]}...")
+                cl_logger.warning(
+                    f"Missing ID for assistant step in on_chat_resume: {step.get('output', '')[:50]}..."
+                )
 
     # Create state
     state = ChatState(
@@ -334,7 +373,7 @@ async def on_chat_resume(thread: ThreadDict):
         thread_id=thread["id"],
         user_preferences=cl.user_session.get("user_session", {}).get("preferences", {}),
         thread_data=cl.user_session.get("thread_data", {}),
-        current_persona=resumed_persona, # Set persona in resumed state
+        current_persona=resumed_persona,  # Set persona in resumed state
     )
 
     # Store state and memories
@@ -357,13 +396,18 @@ async def on_message(message: cl.Message):
     state: ChatState = cl.user_session.get("state")
     vector_memory: VectorStore = cl.user_session.get("vector_memory")
     if vector_memory is None:
-        cl_logger.warning("VectorStore missing in session during on_message. Initializing new VectorStore.")
+        cl_logger.warning(
+            "VectorStore missing in session during on_message. Initializing new VectorStore."
+        )
         from src.stores import VectorStore
+
         vector_memory = VectorStore()
         cl.user_session.set("vector_memory", vector_memory)
 
     if state is None:
-        cl_logger.warning("ChatState missing in session during on_message. Initializing new ChatState.")
+        cl_logger.warning(
+            "ChatState missing in session during on_message. Initializing new ChatState."
+        )
         # Defensive: get thread_id from context if possible
         thread_id = getattr(cl.context.session, "thread_id", "default_thread")
         state = ChatState(messages=[], thread_id=thread_id)
@@ -378,13 +422,19 @@ async def on_message(message: cl.Message):
             cl.user_session.set("current_persona", pending_persona)
             if hasattr(state, "current_persona"):
                 state.current_persona = pending_persona
-            await cl.Message(content=f"🔄 Switching persona to **{pending_persona}** to better assist you.").send()
+            await cl.Message(
+                content=f"🔄 Switching persona to **{pending_persona}** to better assist you."
+            ).send()
         elif user_reply in ["no", "n"]:
             cl_logger.info(f"User declined persona switch to: {pending_persona}")
             await cl.Message(content=f"❌ Keeping current persona.").send()
         else:
-            cl_logger.info(f"User response '{user_reply}' not recognized for persona switch confirmation.")
-            await cl.Message(content="Please reply 'Yes' to switch persona or 'No' to keep current.").send()
+            cl_logger.info(
+                f"User response '{user_reply}' not recognized for persona switch confirmation."
+            )
+            await cl.Message(
+                content="Please reply 'Yes' to switch persona or 'No' to keep current."
+            ).send()
             return  # Wait for valid reply next time
         # Clear pending switch flag
         cl.user_session.set("pending_persona_switch", None)
@@ -397,21 +447,26 @@ async def on_message(message: cl.Message):
     if user_info:
         if isinstance(user_info, dict):
             current_user_identifier = user_info.get("identifier")
-        elif hasattr(user_info, 'identifier'):
+        elif hasattr(user_info, "identifier"):
             current_user_identifier = user_info.identifier
 
-    is_current_user = current_user_identifier and message.author == current_user_identifier
+    is_current_user = (
+        current_user_identifier and message.author == current_user_identifier
+    )
     is_generic_player = message.author == "Player"
 
     if is_current_user or is_generic_player:
         if not is_current_user and is_generic_player:
-            cl_logger.warning(f"Processing message from 'Player' author, but couldn't verify against session identifier '{current_user_identifier}'.")
+            cl_logger.warning(
+                f"Processing message from 'Player' author, but couldn't verify against session identifier '{current_user_identifier}'."
+            )
 
         # If the message is a command button click, handle it
         if message.command is not None and message.command != "":
             cl_logger.info(f"Command button selected: {message.command}")
             try:
                 from src import commands as cmd_mod
+
                 cmd_name = message.command.lower()
                 arg = ""  # No argument from button click
                 if cmd_name == "roll":
@@ -435,8 +490,13 @@ async def on_message(message: cl.Message):
                 else:
                     await cl.Message(content=f"Unknown command: {cmd_name}").send()
             except Exception as e:
-                cl_logger.error(f"Error handling command button '{message.command}': {e}", exc_info=True)
-                await cl.Message(content=f"Error processing command '{message.command}': {e}").send()
+                cl_logger.error(
+                    f"Error handling command button '{message.command}': {e}",
+                    exc_info=True,
+                )
+                await cl.Message(
+                    content=f"Error processing command '{message.command}': {e}"
+                ).send()
             return  # Skip normal message processing
 
         # Check if message starts with slash and is unknown command
@@ -451,14 +511,25 @@ async def on_message(message: cl.Message):
                 return
 
         # Add user message to state immediately
-        user_msg = HumanMessage(content=message.content, name="Player", metadata={"message_id": message.id})
+        user_msg = HumanMessage(
+            content=message.content, name="Player", metadata={"message_id": message.id}
+        )
         state.messages.append(user_msg)
         # Add user message to vector memory
-        await vector_memory.put(content=message.content, message_id=message.id, metadata={"type": "human", "author": "Player", "persona": state.current_persona})
+        await vector_memory.put(
+            content=message.content,
+            message_id=message.id,
+            metadata={
+                "type": "human",
+                "author": "Player",
+                "persona": state.current_persona,
+            },
+        )
 
         # Run persona classifier after user message
         try:
             from src.agents.persona_classifier_agent import persona_classifier_agent
+
             suggestion = await persona_classifier_agent(state)
             cl.user_session.set("suggested_persona", suggestion)
 
@@ -469,12 +540,22 @@ async def on_message(message: cl.Message):
 
             if auto_switch_enabled:
                 # If suggestion is different and not default, prompt user
-                if suggested_persona and suggested_persona != current_persona and suggested_persona != "default":
-                    cl_logger.info(f"Persona switch suggested: {current_persona} -> {suggested_persona}")
+                if (
+                    suggested_persona
+                    and suggested_persona != current_persona
+                    and suggested_persona != "default"
+                ):
+                    cl_logger.info(
+                        f"Persona switch suggested: {current_persona} -> {suggested_persona}"
+                    )
                     cl.user_session.set("pending_persona_switch", suggested_persona)
-                    await cl.Message(content=f"🤖 The AI suggests switching persona to **{suggested_persona}**. Reply 'Yes' to switch or 'No' to keep current persona.").send()
+                    await cl.Message(
+                        content=f"🤖 The AI suggests switching persona to **{suggested_persona}**. Reply 'Yes' to switch or 'No' to keep current persona."
+                    ).send()
             else:
-                cl_logger.info("Auto persona switching disabled by user setting. Ignoring suggestion.")
+                cl_logger.info(
+                    "Auto persona switching disabled by user setting. Ignoring suggestion."
+                )
         except Exception as e:
             cl_logger.error(f"Persona classifier error: {e}")
 
@@ -508,9 +589,15 @@ async def on_message(message: cl.Message):
             if state.messages and isinstance(state.messages[-1], AIMessage):
                 ai_msg = state.messages[-1]
                 if ai_msg.metadata and "message_id" in ai_msg.metadata:
-                    await vector_memory.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+                    await vector_memory.put(
+                        content=ai_msg.content,
+                        message_id=ai_msg.metadata["message_id"],
+                        metadata={"type": "ai", "author": ai_msg.name},
+                    )
                 else:
-                    cl_logger.warning(f"Final AIMessage from workflow missing message_id: {ai_msg.content}")
+                    cl_logger.warning(
+                        f"Final AIMessage from workflow missing message_id: {ai_msg.content}"
+                    )
 
             cl.user_session.set("state", state)
 
@@ -522,7 +609,9 @@ async def on_message(message: cl.Message):
             ).send()
             return
     else:
-        cl_logger.debug(f"Ignoring message from author '{message.author}'. Expected identifier: '{current_user_identifier}'.")
+        cl_logger.debug(
+            f"Ignoring message from author '{message.author}'. Expected identifier: '{current_user_identifier}'."
+        )
 
 
 async def load_knowledge_documents():
@@ -581,11 +670,16 @@ async def load_knowledge_documents():
         await vector_memory.add_documents(documents)
 
 
-
 @cl.on_settings_update
 async def on_settings_update(settings):
     cl.user_session.set("chat_settings", settings)
     cl.user_session.set("current_persona", settings.get("persona", "Storyteller GM"))
-    cl.user_session.set("auto_persona_switch", settings.get("auto_persona_switch", True))
-    cl_logger.info(f"Persona changed via settings to: {settings.get('persona', 'Storyteller GM')}")
-    await cl.Message(content=f"🔄 Persona changed to **{settings.get('persona', 'Storyteller GM')}**.").send()
+    cl.user_session.set(
+        "auto_persona_switch", settings.get("auto_persona_switch", True)
+    )
+    cl_logger.info(
+        f"Persona changed via settings to: {settings.get('persona', 'Storyteller GM')}"
+    )
+    await cl.Message(
+        content=f"🔄 Persona changed to **{settings.get('persona', 'Storyteller GM')}**."
+    ).send()

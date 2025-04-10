@@ -14,9 +14,11 @@ from jinja2 import Template
 TODO_DIR_PATH = config.todo_dir_path
 TODO_FILE_NAME = config.todo_file_name
 
+
 # Exported agent alias for patching
 class _TodoAgentWrapper:
     pass
+
 
 todo_agent = _TodoAgentWrapper()
 
@@ -26,23 +28,37 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
     try:
         last_human = state.get_last_human_message()
         if not last_human:
-            return [AIMessage(content="No user input found.", name="error", metadata={"message_id": None})]
+            return [
+                AIMessage(
+                    content="No user input found.",
+                    name="error",
+                    metadata={"message_id": None},
+                )
+            ]
         original_user_input = last_human.content.strip()
 
         # Special case: if original_user_input is empty or just "/todo", treat as empty task
         if original_user_input.startswith("/todo"):
             task_text = original_user_input[5:].strip()
             if not task_text:
-                return [AIMessage(content="Task cannot be empty", name="error", metadata={"message_id": None})]
+                return [
+                    AIMessage(
+                        content="Task cannot be empty",
+                        name="error",
+                        metadata={"message_id": None},
+                    )
+                ]
         else:
-            task_text = original_user_input  # fallback, e.g., if user didn't use slash command
+            task_text = (
+                original_user_input  # fallback, e.g., if user didn't use slash command
+            )
 
         # Pass the *full* original user input (including slash command) to the prompt for clarity
 
         # Load current todo list from file (if exists)
         current_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
         persona = getattr(state, "current_persona", "Default")
-        persona_safe = re.sub(r'[^\w\-_. ]', '_', persona)
+        persona_safe = re.sub(r"[^\w\-_. ]", "_", persona)
         dir_path = os.path.join(TODO_DIR_PATH, persona_safe, current_date)
         file_path = os.path.join(dir_path, TODO_FILE_NAME)
 
@@ -55,7 +71,9 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         persona = getattr(state, "current_persona", "Default")
         prompt_key = "todo_prompt"
         try:
-            persona_configs = getattr(config.agents, "todo_agent", {}).get("personas", {})
+            persona_configs = getattr(config.agents, "todo_agent", {}).get(
+                "personas", {}
+            )
             if isinstance(persona_configs, dict):
                 persona_entry = persona_configs.get(persona)
                 if persona_entry and isinstance(persona_entry, dict):
@@ -66,7 +84,9 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         prompt_template_str = config.loaded_prompts.get(prompt_key, "").strip()
         if not prompt_template_str:
             cl_logger.error("Todo prompt template is empty!")
-            prompt = f"User input: {original_user_input}\nExisting TODO:\n{existing_content}"
+            prompt = (
+                f"User input: {original_user_input}\nExisting TODO:\n{existing_content}"
+            )
         else:
             template = Template(prompt_template_str)
             prompt = template.render(
@@ -81,7 +101,9 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         # Call LLM
         user_settings = cl.user_session.get("chat_settings", {})
         final_temp = user_settings.get("todo_temp", 0.3)
-        final_endpoint = user_settings.get("todo_endpoint") or config.openai.get("base_url")
+        final_endpoint = user_settings.get("todo_endpoint") or config.openai.get(
+            "base_url"
+        )
         final_max_tokens = user_settings.get("todo_max_tokens", 300)
 
         llm = ChatOpenAI(
@@ -105,10 +127,14 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         # Defensive: if markdown looks like a JSON list (e.g., ["buy milk"]), convert to minimal markdown
         if updated_markdown.startswith("[") and updated_markdown.endswith("]"):
             import json
+
             try:
                 items = json.loads(updated_markdown)
                 if isinstance(items, list):
-                    updated_markdown = "**Finished**\n\n**In Progress**\n\n**Remaining**\n" + "\n".join(f"- {item}" for item in items)
+                    updated_markdown = (
+                        "**Finished**\n\n**In Progress**\n\n**Remaining**\n"
+                        + "\n".join(f"- {item}" for item in items)
+                    )
             except Exception:
                 pass  # fallback to raw content if parse fails
 
@@ -137,7 +163,13 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
 
     except Exception as e:
         cl_logger.error(f"Todo agent failed: {e}")
-        return [AIMessage(content="Todo update failed.", name="error", metadata={"message_id": None})]
+        return [
+            AIMessage(
+                content="Todo update failed.",
+                name="error",
+                metadata={"message_id": None},
+            )
+        ]
 
 
 @task
@@ -154,6 +186,8 @@ todo_agent._manage_todo = _manage_todo
 
 async def call_todo_agent(state: ChatState, query: str = "") -> list[AIMessage]:
     if query:
-        synthetic_msg = HumanMessage(content=f"/todo {query}", name="Player", metadata={"message_id": None})
+        synthetic_msg = HumanMessage(
+            content=f"/todo {query}", name="Player", metadata={"message_id": None}
+        )
         state.messages.append(synthetic_msg)
     return await _manage_todo(state)

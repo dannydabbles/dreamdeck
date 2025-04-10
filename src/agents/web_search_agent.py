@@ -27,15 +27,33 @@ cl_logger = logging.getLogger("chainlit")
 async def _web_search(state: ChatState) -> list[BaseMessage]:
     """Generate a search query, call SerpAPI, and summarize results."""
     if not WEB_SEARCH_ENABLED:
-        return [AIMessage(content="Web search is disabled.", name="error", metadata={"message_id": None})]
+        return [
+            AIMessage(
+                content="Web search is disabled.",
+                name="error",
+                metadata={"message_id": None},
+            )
+        ]
 
     if not SERPAPI_KEY:
-        return [AIMessage(content="SerpAPI key is missing.", name="error", metadata={"message_id": None})]
+        return [
+            AIMessage(
+                content="SerpAPI key is missing.",
+                name="error",
+                metadata={"message_id": None},
+            )
+        ]
 
     # Get user input and context
     user_query = state.get_last_human_message()
     if not user_query:
-        return [AIMessage(content="No user input found for search.", name="error", metadata={"message_id": None})]
+        return [
+            AIMessage(
+                content="No user input found for search.",
+                name="error",
+                metadata={"message_id": None},
+            )
+        ]
     recent_chat = state.get_recent_history_str()
 
     # Generate search query using LLM
@@ -85,7 +103,13 @@ async def _web_search(state: ChatState) -> list[BaseMessage]:
         ]
     except Exception as e:
         cl_logger.error(f"Search failed: {str(e)}")
-        return [AIMessage(content=f"Search failed: {str(e)}", name="error", metadata={"message_id": None})]
+        return [
+            AIMessage(
+                content=f"Search failed: {str(e)}",
+                name="error",
+                metadata={"message_id": None},
+            )
+        ]
 
 
 @task

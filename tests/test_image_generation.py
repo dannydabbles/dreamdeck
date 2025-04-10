@@ -4,6 +4,7 @@ from src.image_generation import generate_image_async, generate_image_generation
 import base64  # Import base64
 import httpx
 
+
 @pytest.mark.asyncio
 async def test_image_prompt_generation():
     async def mock_async_range(end):
@@ -17,21 +18,30 @@ async def test_image_prompt_generation():
         )
         assert len(prompts) == 2
 
+
 @pytest.mark.asyncio
 async def test_mocked_image_generation():
     with patch("httpx.AsyncClient.post") as mock_post:
         mock_response = MagicMock()
         # Return value directly (not a coroutine)
-        mock_response.json.return_value = {"images": ["SGVsbG8gd29ybGQ="]}  # Decodes to "Hello world"
+        mock_response.json.return_value = {
+            "images": ["SGVsbG8gd29ybGQ="]
+        }  # Decodes to "Hello world"
         mock_post.return_value = mock_response
 
         image_bytes = await generate_image_async("Test prompt", 123)
-        assert image_bytes == b"Hello world"  # Matches the mock's "Hello world" decoding
+        assert (
+            image_bytes == b"Hello world"
+        )  # Matches the mock's "Hello world" decoding
+
 
 @pytest.mark.asyncio
 async def test_generate_image_async_retries():
     from src.image_generation import generate_image_async
-    with patch("httpx.AsyncClient.post", side_effect=httpx.HTTPError("fail")) as mock_post:
+
+    with patch(
+        "httpx.AsyncClient.post", side_effect=httpx.HTTPError("fail")
+    ) as mock_post:
         try:
             await generate_image_async("prompt", 42)
         except Exception:

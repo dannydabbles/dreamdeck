@@ -77,9 +77,7 @@ class VectorStore:
     async def add_documents(self, docs: List[Document]) -> None:
         """Store a list of documents in ChromaDB."""
         doc_ids = [str(uuid.uuid4()) for _ in docs]
-        metadatas = [
-            {"source": doc.metadata.get("source", "unknown")} for doc in docs
-        ]
+        metadatas = [{"source": doc.metadata.get("source", "unknown")} for doc in docs]
         await asyncio.to_thread(
             self.collection.add,
             ids=doc_ids,

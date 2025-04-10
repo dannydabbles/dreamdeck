@@ -7,6 +7,7 @@ import src.workflows as workflows_module
 import copy
 from src.config import PERSONA_TOOL_PREFERENCES as CONFIG_PREFS
 
+
 @pytest.mark.asyncio
 async def test_persona_workflow_filters_and_reorders(monkeypatch):
     # Use the real config persona preferences instead of hardcoded dict
@@ -14,9 +15,7 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
 
     # Prepare dummy previous state
     state = ChatState(
-        messages=[
-            HumanMessage(content="Hello", name="Player", metadata={})
-        ],
+        messages=[HumanMessage(content="Hello", name="Player", metadata={})],
         thread_id="test_thread",
         current_persona="Therapist",  # Persona with avoid=["roll"], prefer=["knowledge"]
     )
@@ -31,13 +30,25 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
 
     # Patch writer_agent to just return a dummy AIMessage
     async def fake_writer(state_arg):
-        return [AIMessage(content="Story continues", name="Game Master", metadata={"message_id": "gm123"})]
+        return [
+            AIMessage(
+                content="Story continues",
+                name="Game Master",
+                metadata={"message_id": "gm123"},
+            )
+        ]
 
     monkeypatch.setattr(workflows_module, "writer_agent", fake_writer)
 
     # Patch knowledge_agent to return dummy AIMessage
     async def fake_knowledge(state_arg, knowledge_type=None, **kwargs):
-        return [AIMessage(content=f"Knowledge: {knowledge_type}", name="knowledge", metadata={"message_id": f"kn_{knowledge_type}"})]
+        return [
+            AIMessage(
+                content=f"Knowledge: {knowledge_type}",
+                name="knowledge",
+                metadata={"message_id": f"kn_{knowledge_type}"},
+            )
+        ]
 
     monkeypatch.setattr(workflows_module, "knowledge_agent", fake_knowledge)
 
@@ -52,15 +63,20 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
         if key == "config":
             return {"configurable": {}}
         return {}
+
     monkeypatch.setattr("chainlit.user_session.get", fake_user_session_get)
 
     # Patch the entire agents_map to avoid calling real dice agent etc.
-    monkeypatch.setattr(workflows_module, "agents_map", {
-        "roll": lambda *_args, **_kwargs: [],
-        "todo": lambda *_args, **_kwargs: [],
-        "write": fake_writer,
-        "continue_story": fake_writer,
-    })
+    monkeypatch.setattr(
+        workflows_module,
+        "agents_map",
+        {
+            "roll": lambda *_args, **_kwargs: [],
+            "todo": lambda *_args, **_kwargs: [],
+            "write": fake_writer,
+            "continue_story": fake_writer,
+        },
+    )
 
     # Run the workflow
     new_state = await workflows_module._chat_workflow(
@@ -75,15 +91,27 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
     # with "knowledge" first (preferred), "roll" removed
 
     # Check that the first AI message is from knowledge agent
-    knowledge_msgs = [m for m in new_state.messages if isinstance(m, AIMessage) and m.name == "knowledge"]
+    knowledge_msgs = [
+        m
+        for m in new_state.messages
+        if isinstance(m, AIMessage) and m.name == "knowledge"
+    ]
     assert knowledge_msgs, "Knowledge agent message should be present"
     assert "Knowledge: lore" in knowledge_msgs[0].content
 
     # Check that no dice_roll message is present (since 'roll' was avoided)
-    dice_msgs = [m for m in new_state.messages if isinstance(m, AIMessage) and m.name == "dice_roll"]
+    dice_msgs = [
+        m
+        for m in new_state.messages
+        if isinstance(m, AIMessage) and m.name == "dice_roll"
+    ]
     assert not dice_msgs, "Dice roll should be skipped for therapist persona"
 
     # Check that the final message is from writer agent
-    writer_msgs = [m for m in new_state.messages if isinstance(m, AIMessage) and m.name == "Game Master"]
+    writer_msgs = [
+        m
+        for m in new_state.messages
+        if isinstance(m, AIMessage) and m.name == "Game Master"
+    ]
     assert writer_msgs, "Writer agent message should be present"
     assert "Story continues" in writer_msgs[-1].content

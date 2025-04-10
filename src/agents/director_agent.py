@@ -53,8 +53,12 @@ async def _direct_actions(state) -> list[str]:
 
         user_settings = cl.user_session.get("chat_settings", {})
         final_temp = user_settings.get("decision_temp", DECISION_AGENT_TEMPERATURE)
-        final_endpoint = user_settings.get("decision_endpoint") or DECISION_AGENT_BASE_URL
-        final_max_tokens = user_settings.get("decision_max_tokens", DECISION_AGENT_MAX_TOKENS)
+        final_endpoint = (
+            user_settings.get("decision_endpoint") or DECISION_AGENT_BASE_URL
+        )
+        final_max_tokens = user_settings.get(
+            "decision_max_tokens", DECISION_AGENT_MAX_TOKENS
+        )
 
         llm = ChatOpenAI(
             base_url=final_endpoint,
@@ -78,14 +82,20 @@ async def _direct_actions(state) -> list[str]:
             parsed = json.loads(content)
             actions = parsed.get("actions", [])
             # Validate actions is a list and contains strings or dicts
-            if not isinstance(actions, list) or not all(isinstance(a, (str, dict)) for a in actions):
-                cl_logger.warning(f"Director returned invalid actions format: {actions}. Defaulting to continue_story.")
+            if not isinstance(actions, list) or not all(
+                isinstance(a, (str, dict)) for a in actions
+            ):
+                cl_logger.warning(
+                    f"Director returned invalid actions format: {actions}. Defaulting to continue_story."
+                )
                 return ["continue_story"]
             if not actions:
                 return ["continue_story"]
             return actions
         except json.JSONDecodeError:
-            cl_logger.warning("Failed to parse director JSON, defaulting to continue_story")
+            cl_logger.warning(
+                "Failed to parse director JSON, defaulting to continue_story"
+            )
             return ["continue_story"]
 
     except Exception as e:

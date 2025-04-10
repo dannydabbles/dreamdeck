@@ -17,6 +17,7 @@ def test_invalid_config():
 
 def test_missing_required_config():
     from src.config import ConfigSchema
+
     with pytest.raises(ValidationError):
         ConfigSchema.model_validate({})
 
@@ -32,17 +33,32 @@ def test_edge_case_configs():
             "presence_penalty": 0.1,
             "frequency_penalty": 0.1,
             "top_p": 1.0,
-            "verbose": True
+            "verbose": True,
         },
         "agents": {
-            "decision_agent": {"temperature": 0.0, "max_tokens": 100, "streaming": True, "verbose": True},
-            "writer_agent": {"temperature": 0.7, "max_tokens": 8000, "streaming": True, "verbose": True},
-            "storyboard_editor_agent": {"temperature": 0.7, "max_tokens": 8000, "streaming": False, "verbose": True}
+            "decision_agent": {
+                "temperature": 0.0,
+                "max_tokens": 100,
+                "streaming": True,
+                "verbose": True,
+            },
+            "writer_agent": {
+                "temperature": 0.7,
+                "max_tokens": 8000,
+                "streaming": True,
+                "verbose": True,
+            },
+            "storyboard_editor_agent": {
+                "temperature": 0.7,
+                "max_tokens": 8000,
+                "streaming": False,
+                "verbose": True,
+            },
         },
         "features": {
             "image_generation": False,
             "web_search": False,
-            "dice_rolling": False
+            "dice_rolling": False,
         },
         "prompts": {},  # Required placeholder
         "image_generation_payload": {},  # Required placeholder
@@ -64,15 +80,20 @@ def test_edge_case_configs():
         "knowledge_directory": "./knowledge",
         "image_settings": {},
         "rate_limits": {},
-        "chat": {}
+        "chat": {},
     }
     ConfigSchema.model_validate(minimal_config)
 
+
 import pytest
 
-@pytest.mark.skip(reason="Environment variable override is not supported dynamically in load_config()")
+
+@pytest.mark.skip(
+    reason="Environment variable override is not supported dynamically in load_config()"
+)
 def test_env_override(monkeypatch):
     monkeypatch.setenv("APP_LLM__TEMPERATURE", "0.9")
     from src.config import load_config
+
     cfg = load_config()
     assert abs(cfg.llm.temperature - 0.9) < 1e-6

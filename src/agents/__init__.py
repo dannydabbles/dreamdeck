@@ -35,4 +35,5 @@ agents_map = {
 
 # Make agents_map accessible as an attribute of src.agents module
 import sys as _sys
+
 _sys.modules[__name__].agents_map = agents_map
