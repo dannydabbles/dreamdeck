@@ -45,12 +45,42 @@ async def secretary_workflow(inputs: dict, state: ChatState, *, config=None) -> 
             todo_content = load_text_file(todo_path)
             state.metadata["todo"] = todo_content
 
-        await _manage_todo(state)
+        todo_messages = await _manage_todo(state)
+
+        # Patch: ensure all AIMessage outputs from _manage_todo have correct metadata
+        if isinstance(todo_messages, list):
+            for msg in todo_messages:
+                if isinstance(msg, AIMessage):
+                    if msg.metadata is None:
+                        msg.metadata = {}
+                    msg.metadata["type"] = "ai"
+                    msg.metadata["persona"] = state.current_persona
+
+        # Add todo_messages to state.messages
+        if todo_messages:
+            state.messages.extend(todo_messages)
 
         if "todo" in state.metadata:
             save_text_file(todo_path, state.metadata["todo"])
 
-        return await _generate_story(state)
+        story_messages = await _generate_story(state)
+
+        # Patch: ensure all AIMessage outputs from _generate_story have correct metadata
+        if isinstance(story_messages, list):
+            for msg in story_messages:
+                if isinstance(msg, AIMessage):
+                    if msg.metadata is None:
+                        msg.metadata = {}
+                    msg.metadata["type"] = "ai"
+                    msg.metadata["persona"] = state.current_persona
+
+        # Add story_messages to state.messages
+        if story_messages:
+            state.messages.extend(story_messages)
+
+        # Return combined list for downstream
+        return story_messages
+
     except Exception as e:
         cl_logger.error(f"secretary_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
