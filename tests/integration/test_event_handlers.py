@@ -429,7 +429,12 @@ async def test_on_message_normal_flow(mock_cl_environment):
         mock_vector_memory.put.assert_any_await(
             content="Once upon a time...",
             message_id="ai-msg-id-1",
-            metadata={"type": "ai", "author": "Game Master"},
+            metadata={
+                "type": "ai",
+                "author": "Game Master",
+                "message_id": "ai-msg-id-1",
+                "persona": "Default",
+            },
         )
 
 
