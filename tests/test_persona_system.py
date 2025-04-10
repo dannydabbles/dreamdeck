@@ -8,7 +8,8 @@ import chainlit as cl
 from tests.test_event_handlers import mock_cl_environment  # Ensure this line exists and is correct
 
 from src.event_handlers import on_message
-from src.agents.writer_agent import _generate_story  # Re-import core function for patching
+from src.agents.writer_agent import _generate_story
+from src.agents.writer_agent import call_writer_agent  # Fix undefined name
 from src.agents.director_agent import _direct_actions  # Changed import
 from src.workflows import _chat_workflow  # Changed import
 from src.agents.dice_agent import _dice_roll  # Added import
