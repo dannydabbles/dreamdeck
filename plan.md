@@ -48,31 +48,21 @@ Isolate each persona’s logic into a standalone async function or LangGraph wor
 
 ## **Phase 2: Implement Oracle Workflow**
 
+**Status:** ✅ Completed
+
+- Implemented in `src/oracle_workflow.py`
+- `oracle_workflow()` dispatches to persona workflows based on current persona
+- Calls persona classifier if persona unset or forced
+- Replaces old `chat_workflow` as the main entrypoint
+- Integrated transparently into event handlers
+
 **Goal:**  
 Create a central async function that routes inputs to the correct persona workflow, handles persona switching, and manages errors.
 
-**Note:**  
-The **Oracle Workflow** acts as the **central router and decision-maker**.  
-It observes the conversation, determines or confirms the current persona, and dispatches to the appropriate persona workflow.  
-It is the **"all-seeing eye"** guiding the flow of the conversation, capable of invoking persona classification, chaining workflows, or intercepting global commands.
-
-**Tasks:**  
-1. Create `async def oracle_workflow(inputs: dict, state: ChatState) -> list[BaseMessage]:`  
-2. If `state.current_persona` is unset or `inputs.get("force_classify")` is true:  
-   - Call the persona classifier agent.  
-   - Update `state.current_persona`.  
-3. Dispatch to the correct persona workflow from `persona_workflows`.  
-4. Handle unknown personas gracefully (fallback or error message).  
-5. Catch exceptions from persona workflows, log errors, and return a friendly message.  
-6. Replace the current `chat_workflow` entrypoint with this oracle workflow.
-
 **Notes:**  
-- This function is the **single entrypoint** for all chat interactions.  
-- It enables dynamic persona switching and modular persona logic.  
-- It can **intercept global commands** (reset, help, save) before dispatching.  
-- It can **chain or parallelize** persona workflows if needed.
-
----
+- The oracle now cleanly dispatches to modular persona workflows.
+- Persona switching is handled via classifier or explicit override.
+- Next, CLI can invoke `oracle_workflow()` directly.
 
 ## **Phase 3: CLI Interface for Persona Invocation (using `click`)**
 

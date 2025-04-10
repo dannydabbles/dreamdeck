@@ -65,7 +65,7 @@ from src.config import (
 )
 from src.initialization import init_db, DatabasePool
 from src.models import ChatState
-from src.workflows import chat_workflow
+from src.workflows import app as chat_workflow
 from src.initialization import DatabasePool  # Import DatabasePool
 
 from src.stores import VectorStore  # Import VectorStore
