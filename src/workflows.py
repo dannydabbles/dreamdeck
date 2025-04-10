@@ -60,7 +60,9 @@ async def chat_workflow(
 app = chat_workflow  # Default compiled app with checkpointer
 
 # Create a version without the checkpointer specifically for tests
-app_without_checkpoint = entrypoint(checkpointer=None)(chat_workflow)
+# IMPORTANT: do NOT try to decorate a Pregel object again!
+# Instead, just assign the same compiled Pregel to app_without_checkpoint for now
+app_without_checkpoint = app
 
 
 async def _chat_workflow(
