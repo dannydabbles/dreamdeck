@@ -35,8 +35,13 @@ async def test_chat_workflow_memory_updates(mock_chat_state):
         return_value=[dummy_knowledge_msg],
     ) as mock_knowledge_agent, patch(
         "src.workflows.writer_agent",
-        new_callable=AsyncMock,
-        return_value=[dummy_gm_msg],
+        AsyncMock(return_value=[dummy_gm_msg]),
+    ), patch(
+        "src.config.WRITER_AGENT_TEMPERATURE", 0.7
+    ), patch(
+        "src.config.WRITER_AGENT_MAX_TOKENS", 512
+    ), patch(
+        "src.config.WRITER_AGENT_BASE_URL", "http://localhost"
     ), patch(
         "src.workflows.cl.user_session.get", new_callable=MagicMock
     ) as mock_user_session_get:
@@ -58,14 +63,6 @@ async def test_chat_workflow_memory_updates(mock_chat_state):
             initial_state,
         )
 
-        # The oracle_workflow returns a list of messages, or a ChatState
-        # In our implementation, it returns list[BaseMessage]
-        # So we need to check accordingly
-        # But in our oracle_workflow.py, it returns list[BaseMessage]
-        # So updated_state_obj is a list, not a ChatState
-        # But app_without_checkpoint returns a ChatState
-        # So in this test, updated_state_obj is a ChatState
-        # Let's check accordingly
         updated_state = updated_state_obj
 
         assert dummy_ai_msg1 in updated_state.messages
@@ -92,9 +89,14 @@ async def test_storyboard_triggered_after_gm(monkeypatch):
         "src.workflows.director_agent", new_callable=AsyncMock
     ) as mock_director, patch(
         "src.workflows.writer_agent",
-        new_callable=AsyncMock,
-        return_value=[dummy_gm_msg],
-    ) as mock_writer, patch(
+        AsyncMock(return_value=[dummy_gm_msg]),
+    ), patch(
+        "src.config.WRITER_AGENT_TEMPERATURE", 0.7
+    ), patch(
+        "src.config.WRITER_AGENT_MAX_TOKENS", 512
+    ), patch(
+        "src.config.WRITER_AGENT_BASE_URL", "http://localhost"
+    ), patch(
         "src.workflows.cl.user_session.get", return_value=None
     ), patch(
         "src.workflows.storyboard_editor_agent", new_callable=AsyncMock
@@ -143,7 +145,14 @@ async def test_multi_hop_orchestration(monkeypatch):
             "search": AsyncMock(return_value=[dummy_search]),
         },
     ), patch(
-        "src.workflows.writer_agent", new_callable=AsyncMock, return_value=[dummy_gm]
+        "src.workflows.writer_agent",
+        AsyncMock(return_value=[dummy_gm]),
+    ), patch(
+        "src.config.WRITER_AGENT_TEMPERATURE", 0.7
+    ), patch(
+        "src.config.WRITER_AGENT_MAX_TOKENS", 512
+    ), patch(
+        "src.config.WRITER_AGENT_BASE_URL", "http://localhost"
     ), patch(
         "src.workflows.cl.user_session.get", return_value=None
     ):
@@ -177,6 +186,17 @@ async def test_workflow_error_fallback(monkeypatch):
         "src.workflows.director_agent",
         new_callable=AsyncMock,
         side_effect=Exception("fail"),
+    ), patch(
+        "src.workflows.writer_agent",
+        AsyncMock(return_value=[
+            AIMessage(content="The adventure continues...", name="Game Master", metadata={})
+        ]),
+    ), patch(
+        "src.config.WRITER_AGENT_TEMPERATURE", 0.7
+    ), patch(
+        "src.config.WRITER_AGENT_MAX_TOKENS", 512
+    ), patch(
+        "src.config.WRITER_AGENT_BASE_URL", "http://localhost"
     ), patch("src.workflows.cl.user_session.get", return_value=None):
 
         updated_state_obj = await _chat_workflow(
