@@ -15,7 +15,7 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
         try:
             from langchain_core.runnables import Runnable
             current_config = Runnable.get_current_config()
-        except Exception:
+        except RuntimeError:
             current_config = {}
 
         # Merge passed config with current_config
