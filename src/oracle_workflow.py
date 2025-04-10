@@ -4,11 +4,41 @@ from src.persona_workflows import persona_workflows
 from src.agents.persona_classifier_agent import persona_classifier_agent
 import logging
 
+import chainlit as cl
+
 cl_logger = logging.getLogger("chainlit")
 
 
 async def oracle_workflow(inputs: dict, state: ChatState) -> list[BaseMessage]:
     try:
+        # Support legacy positional args: (messages, previous)
+        if not isinstance(inputs, dict):
+            # assume *args style call
+            args = inputs
+            inputs = {}
+            if len(args) == 2:
+                inputs["messages"] = args[0]
+                inputs["previous"] = args[1]
+            elif len(args) == 1:
+                inputs["messages"] = args[0]
+            else:
+                # empty or unknown
+                pass
+
+        # If called with {"messages": ..., "previous": ...}
+        # convert to inputs dict and extract state
+        if "previous" in inputs and isinstance(inputs["previous"], ChatState):
+            state = inputs["previous"]
+            # update state.messages if provided
+            if "messages" in inputs and inputs["messages"] is not None:
+                state.messages = inputs["messages"]
+        elif isinstance(state, ChatState):
+            # state is passed explicitly
+            pass
+        else:
+            # fallback: create dummy state
+            state = ChatState(messages=inputs.get("messages", []), thread_id="unknown")
+
         # Check if persona is unset or force_classify requested
         force_classify = inputs.get("force_classify", False)
         if not getattr(state, "current_persona", None) or force_classify:
@@ -43,6 +73,8 @@ async def oracle_workflow(inputs: dict, state: ChatState) -> list[BaseMessage]:
 
 # Add dummy .ainvoke method so tests patching it don't fail
 async def _ainvoke(*args, **kwargs):
+    # ignore 'config' kwarg if passed
+    kwargs.pop("config", None)
     return await oracle_workflow(*args, **kwargs)
 
 
@@ -50,7 +82,9 @@ oracle_workflow.ainvoke = _ainvoke
 
 
 class OracleWorkflowWrapper:
-    async def ainvoke(self, inputs: dict, state):
-        return await oracle_workflow(inputs, state)
+    async def ainvoke(self, *args, **kwargs):
+        # ignore 'config' kwarg if passed
+        kwargs.pop("config", None)
+        return await oracle_workflow(*args, **kwargs)
 
 chat_workflow = OracleWorkflowWrapper()

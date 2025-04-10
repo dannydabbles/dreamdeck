@@ -4,6 +4,8 @@ from src.agents.knowledge_agent import knowledge_agent
 from src.agents.storyboard_editor_agent import storyboard_editor_agent
 from src.oracle_workflow import oracle_workflow, chat_workflow
 
+import chainlit as cl
+
 app = chat_workflow
 app_without_checkpoint = chat_workflow
 
