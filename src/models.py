@@ -7,7 +7,7 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 import chainlit as cl
 
@@ -33,6 +33,8 @@ class ChatState(BaseModel):
         - Messages are immutable - new states are created with .copy_with_updates()
         - Memories are automatically populated from vector store queries
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     messages: List[BaseMessage] = Field(default_factory=list)
     is_last_step: bool = False
