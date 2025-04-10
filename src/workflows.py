@@ -50,6 +50,9 @@ async def chat_workflow(
     return await _chat_workflow(messages=messages, previous=previous)
 
 
+app = chat_workflow.compile()  # Compile the graph for external invocation
+
+
 async def _chat_workflow(
     messages: list[BaseMessage],
     previous: ChatState,
