@@ -132,7 +132,7 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     async def fake_writer_agent(state, **kwargs):
         return await fake_writer(state, **kwargs)
     import src.agents.writer_agent as writer_agent_module
-    writer_agent_module.writer_agent.__call__ = fake_writer_agent
+    setattr(writer_agent_module.writer_agent.__class__, "__call__", fake_writer_agent)
 
     # Mock vector store get method if needed
     mock_vector_store = MagicMock()
@@ -177,7 +177,7 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     async def fake_writer_agent(state, **kwargs):
         return await fake_writer(state, **kwargs)
     import src.agents.writer_agent as writer_agent_module
-    writer_agent_module.writer_agent.__call__ = fake_writer_agent
+    setattr(writer_agent_module.writer_agent.__class__, "__call__", fake_writer_agent)
 
     # Mock vector store get method
     mock_vector_store = MagicMock()
