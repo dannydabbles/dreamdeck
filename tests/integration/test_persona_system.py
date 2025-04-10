@@ -529,6 +529,9 @@ async def test_multi_tool_persona_workflow(monkeypatch, mock_cl_environment):
     async def fake_director(state, **kwargs):
         return ["search", "roll", "todo", "write"]
 
+    import src.oracle_workflow as oracle_mod
+    monkeypatch.setattr(oracle_mod, "director_agent", fake_director)
+
     # Patch all tool agents to return dummy AI messages with correct metadata
     async def fake_web_search(state, **kwargs):
         return [
