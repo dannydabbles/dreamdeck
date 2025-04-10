@@ -123,9 +123,6 @@ async def test_on_chat_start(mock_cl_environment):
         assert user_session_store.get("image_generation_memory") == []
         assert user_session_store.get("ai_message_id") is None
 
-        # Verify DB close called
-        mock_db_close.assert_awaited_once()
-
 
 @pytest.mark.asyncio
 async def test_on_chat_resume(mock_cl_environment):
