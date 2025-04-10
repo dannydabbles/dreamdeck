@@ -4,6 +4,7 @@ from src.persona_workflows import persona_workflows
 from src.agents.persona_classifier_agent import persona_classifier_agent
 from langchain_core.runnables import RunnableLambda
 import logging
+import datetime
 
 import chainlit as cl
 
@@ -11,14 +12,13 @@ cl_logger = logging.getLogger("chainlit")
 
 
 async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
+    from src.storage import append_log, get_persona_daily_dir, save_text_file
+
     try:
-        # Defensive: get passed config or empty dict
         if config is None:
             config = {}
 
-        # Support legacy positional args: (messages, previous)
         if not isinstance(inputs, dict):
-            # assume *args style call
             args = inputs
             inputs = {}
             if len(args) == 2:
@@ -27,22 +27,33 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
             elif len(args) == 1:
                 inputs["messages"] = args[0]
             else:
-                # empty or unknown
                 pass
 
-        # If called with {"messages": ..., "previous": ...}
-        # convert to inputs dict and extract state
         if "previous" in inputs and isinstance(inputs["previous"], ChatState):
             state = inputs["previous"]
-            # update state.messages if provided
             if "messages" in inputs and inputs["messages"] is not None:
                 state.messages = inputs["messages"]
         elif isinstance(state, ChatState):
-            # state is passed explicitly
             pass
         else:
-            # fallback: create dummy state
             state = ChatState(messages=inputs.get("messages", []), thread_id="unknown")
+
+        # Summarize chat history if too long
+        if len(state.messages) > 50:
+            try:
+                recent_msgs = state.get_recent_history(50)
+                text = "\n".join(
+                    f"{m.name}: {m.content}" for m in recent_msgs if hasattr(m, "content")
+                )
+                summary = text[:1000] + "..." if len(text) > 1000 else text
+                state.memories = [summary]
+                append_log(state.current_persona, "Memory summary updated.")
+                today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+                persona_dir = get_persona_daily_dir(state.current_persona, today)
+                summary_path = persona_dir / "memories.txt"
+                save_text_file(summary_path, "\n\n".join(state.memories))
+            except Exception as e:
+                cl_logger.error(f"Failed to summarize chat history: {e}")
 
         # Check if persona is unset or force_classify requested
         force_classify = inputs.get("force_classify", False)
@@ -52,6 +63,7 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
             suggested_persona = result.get("persona", "default")
             cl_logger.info(f"Oracle: Classifier suggests persona '{suggested_persona}'")
             state.current_persona = suggested_persona
+            append_log(state.current_persona, f"Oracle dispatched to persona workflow: {state.current_persona}")
 
         persona_key = state.current_persona.lower().replace(" ", "_")
         workflow_func = persona_workflows.get(persona_key)
@@ -62,21 +74,22 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
             )
             workflow_func = persona_workflows.get("default")
 
+        append_log(state.current_persona, f"Oracle dispatched to persona workflow: {state.current_persona}")
+
         response = await workflow_func(inputs, state, config=config)
 
-        # Wrap list of messages into ChatState for compatibility
         if isinstance(response, list):
             state.messages.extend(response)
             return state
         elif isinstance(response, ChatState):
             return response
         else:
-            # Unexpected return type, wrap into state
             return state
 
     except Exception as e:
         cl_logger.error(f"Oracle workflow failed: {e}")
-        # Wrap error message into ChatState
+        from src.storage import append_log
+        append_log(state.current_persona, f"Error: {str(e)}")
         error_msg = AIMessage(
             content="An error occurred in the oracle workflow.",
             name="error",
@@ -86,7 +99,6 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
         return state
 
 
-# Add dummy .ainvoke method so tests patching it don't fail
 async def _ainvoke(*args, **kwargs):
     config = kwargs.pop("config", None)
     return await oracle_workflow(*args, **kwargs, config=config)
@@ -101,8 +113,8 @@ class OracleWorkflowWrapper:
         return await oracle_workflow(*args, **kwargs, config=config)
 
     async def __call__(self, *args, **kwargs):
-        # support calling instance directly as async callable
         return await self.ainvoke(*args, **kwargs)
+
 
 chat_workflow = OracleWorkflowWrapper()
 

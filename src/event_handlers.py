@@ -422,6 +422,8 @@ async def on_message(message: cl.Message):
             cl.user_session.set("current_persona", pending_persona)
             if hasattr(state, "current_persona"):
                 state.current_persona = pending_persona
+            from src.storage import append_log
+            append_log(pending_persona, f"Persona switched to {pending_persona} by user confirmation.")
             await cl.Message(
                 content=f"🔄 Switching persona to **{pending_persona}** to better assist you."
             ).send()

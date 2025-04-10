@@ -33,8 +33,8 @@ async def _knowledge(state: ChatState, knowledge_type: str) -> list[BaseMessage]
 
         template = Template(prompt_template_str)
         formatted_prompt = template.render(
-            recent_chat_history=state.get_recent_history_str(),
-            memories=state.get_memories_str(),
+            recent_chat_history=state.get_recent_history_str(n=20),
+            memories="\n".join(state.memories) if state.memories else "",
             tool_results=state.get_tool_results_str(),
             user_preferences=state.user_preferences,
         )

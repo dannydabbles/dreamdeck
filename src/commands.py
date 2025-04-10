@@ -59,6 +59,9 @@ async def command_roll(query: str = ""):
     cl_logger.info(f"Executing /roll command with query: {query}")
     response_messages = await dice_agent(state)
 
+    from src.storage import append_log
+    append_log(state.current_persona, "Tool call: /roll")
+
     # Update state and vector store for AI response
     if response_messages:
         ai_msg = response_messages[0]
@@ -134,6 +137,9 @@ async def command_search(query: str = ""):
     cl_logger.info(f"Executing /search command with query: {query}")
     response_messages = await web_search_agent(state)
 
+    from src.storage import append_log
+    append_log(state.current_persona, "Tool call: /search")
+
     # Update state and vector store for AI response
     if response_messages:
         ai_msg = response_messages[0]
@@ -206,6 +212,9 @@ async def command_todo(query: str = ""):
 
     cl_logger.info(f"Executing /todo command with query: {query}")
     response_messages = await call_todo_agent(state)
+
+    from src.storage import append_log
+    append_log(state.current_persona, "Tool call: /todo")
 
     # Update state and vector store for AI response
     if response_messages:
@@ -289,6 +298,9 @@ async def command_write(query: str = ""):
 
     response_messages = await call_writer_agent(state)
 
+    from src.storage import append_log
+    append_log(state.current_persona, "Tool call: /write")
+
     # Update state and vector store for AI response
     if response_messages:
         ai_msg = response_messages[0]
@@ -343,6 +355,8 @@ async def command_storyboard(query: str = ""):
         )
         await cl.Message(content="Generating storyboard for the last scene...").send()
         await storyboard_editor_agent(state=state, gm_message_id=last_gm_message_id)
+        from src.storage import append_log
+        append_log(state.current_persona, "Tool call: /storyboard")
         cl_logger.info(f"/storyboard command completed.")
     else:
         await cl.Message(
@@ -441,6 +455,10 @@ async def command_report():
 
     cl_logger.info("Executing /report command")
     responses = await report_agent(state)
+
+    from src.storage import append_log
+    append_log(state.current_persona, "Tool call: /report")
+
     if responses:
         ai_msg = responses[0]
         state.messages.append(ai_msg)
@@ -450,7 +468,8 @@ async def command_report():
                 message_id=ai_msg.metadata["message_id"],
                 metadata={"type": "ai", "author": ai_msg.name},
             )
-    cl.user_session.set("state", state)
+    cl_user_session = cl.user_session
+    cl_user_session.set("state", state)
     cl_logger.info("/report command processed.")
 
 
@@ -467,6 +486,9 @@ async def command_persona(query: str = ""):
     if state:
         state.current_persona = persona_name
         cl.user_session.set("state", state)
+
+    from src.storage import append_log
+    append_log(persona_name, f"Persona forcibly switched to {persona_name} via slash command.")
 
     cl_logger.info(f"Persona forcibly switched to: {persona_name} via slash command")
     await cl.Message(
