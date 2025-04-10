@@ -2,6 +2,11 @@ import asyncio
 import logging
 import json
 from typing import List, Optional
+
+async def resolve_if_future(obj):
+    if isinstance(obj, asyncio.Future):
+        return await obj
+    return obj
 from langgraph.prebuilt import create_react_agent
 from langgraph.func import entrypoint, task
 from langgraph.checkpoint.memory import MemorySaver
@@ -158,6 +163,8 @@ async def _chat_workflow(
                             cl_logger.warning(f"Knowledge action missing 'type': {action}")
                             continue
 
+                agent_response = await resolve_if_future(agent_response)
+
                 for msg in agent_response:
                     state.messages.append(msg)
                     if vector_memory and msg.metadata and "message_id" in msg.metadata:
@@ -172,6 +179,7 @@ async def _chat_workflow(
             if gm_needed or chain_count >= MAX_CHAIN_LENGTH:
                 # Call GM to continue story
                 writer_response = await writer_agent(state)
+                writer_response = await resolve_if_future(writer_response)
                 if writer_response:
                     for msg in writer_response:
                         state.messages.append(msg)
