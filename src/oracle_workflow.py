@@ -78,7 +78,10 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
 
         # Run the director to get list of actions/tools
         from src.agents.director_agent import director_agent
-        actions = await director_agent(state, config=config)
+        if config is not None:
+            actions = await director_agent(state, config=config)
+        else:
+            actions = await director_agent(state)
 
         from src.agents import agents_map
 
@@ -87,7 +90,10 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
             tool_func = agents_map.get(action)
             if tool_func:
                 try:
-                    tool_outputs = await tool_func(state, config=config)
+                    if config is not None:
+                        tool_outputs = await tool_func(state, config=config)
+                    else:
+                        tool_outputs = await tool_func(state)
                     if isinstance(tool_outputs, list):
                         state.messages.extend(tool_outputs)
                     elif isinstance(tool_outputs, dict) and "messages" in tool_outputs:
