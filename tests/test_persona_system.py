@@ -8,7 +8,7 @@ import chainlit as cl
 from tests.test_event_handlers import mock_cl_environment  # Ensure this line exists and is correct
 
 from src.event_handlers import on_message
-from src.agents.writer_agent import _generate_story
+from src.agents.writer_agent import _generate_story, call_writer_agent
 from src.agents.writer_agent import _WriterAgentWrapper  # For patching __call__
 from src.agents.director_agent import _direct_actions, director_agent
 from src.workflows import app as chat_workflow_app  # Import compiled LangGraph app
