@@ -22,9 +22,6 @@ from src.models import ChatState
 
 import chainlit as cl
 
-# Expose _dice_roll for testing monkeypatch
-__all__ = ["dice_roll", "dice_roll_agent", "dice_agent", "_dice_roll"]
-
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
@@ -165,6 +162,9 @@ async def dice_roll(state: ChatState, callbacks: Optional[list] = None) -> list[
 
 # Export the function as dice_roll_agent
 dice_roll_agent = dice_roll
+
+# Also assign dice_agent for patching in tests
+dice_agent = _dice_roll
 
 
 def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:

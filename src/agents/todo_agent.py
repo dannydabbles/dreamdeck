@@ -14,6 +14,9 @@ from jinja2 import Template
 TODO_DIR_PATH = config.todo_dir_path
 TODO_FILE_NAME = config.todo_file_name
 
+# Exported agent alias for patching
+todo_agent = None  # Will be assigned after function definition
+
 
 @cl.step(name="Todo Agent", type="tool")
 async def _manage_todo(state: ChatState) -> list[AIMessage]:
@@ -142,7 +145,8 @@ async def manage_todo(state: ChatState) -> list[AIMessage]:
 # Expose internal function for monkeypatching in tests
 _manage_todo = _manage_todo
 
-todo_agent = _manage_todo  # assign the raw function, not the @task partial
+# Also assign todo_agent for patching in tests
+todo_agent = _manage_todo
 
 
 async def call_todo_agent(state: ChatState, query: str = "") -> list[AIMessage]:
