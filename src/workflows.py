@@ -165,6 +165,10 @@ async def _chat_workflow(
 
                 agent_response = await resolve_if_future(agent_response)
 
+                # Unwrap dicts with 'messages' key (mock or real agent output)
+                if isinstance(agent_response, dict) and "messages" in agent_response:
+                    agent_response = agent_response["messages"]
+
                 for msg in agent_response:
                     state.messages.append(msg)
                     if vector_memory and msg.metadata and "message_id" in msg.metadata:
@@ -180,6 +184,11 @@ async def _chat_workflow(
                 # Call GM to continue story
                 writer_response = await writer_agent(state)
                 writer_response = await resolve_if_future(writer_response)
+
+                # Unwrap dicts with 'messages' key (mock or real agent output)
+                if isinstance(writer_response, dict) and "messages" in writer_response:
+                    writer_response = writer_response["messages"]
+
                 if writer_response:
                     for msg in writer_response:
                         state.messages.append(msg)
