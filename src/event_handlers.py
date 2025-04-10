@@ -592,24 +592,34 @@ async def on_message(message: cl.Message):
             for msg in state.messages:
                 if isinstance(msg, AIMessage):
                     msg_id = msg.metadata.get("message_id") if msg.metadata else None
-                    if msg_id:
-                        # Always set type to 'ai' for AI messages
-                        meta = {
-                            "type": "ai",
-                            "author": msg.name,
-                        }
-                        # Preserve persona info if present
-                        if msg.metadata and "persona" in msg.metadata:
-                            meta["persona"] = msg.metadata["persona"]
-                        await vector_memory.put(
-                            content=msg.content,
-                            message_id=msg_id,
-                            metadata=meta,
-                        )
-                    else:
+                    if not msg_id:
                         cl_logger.warning(
                             f"AIMessage missing message_id, skipping vector store save: {msg.content}"
                         )
+                        continue
+
+                    # Defensive copy of metadata or empty dict
+                    meta = dict(msg.metadata) if msg.metadata else {}
+
+                    # --- PHASE 2 PATCH: Enforce consistent metadata ---
+                    # Always set type to 'ai'
+                    meta["type"] = "ai"
+
+                    # Always set author to message name
+                    meta["author"] = msg.name
+
+                    # Prefer persona from message metadata if present, else use current state persona
+                    if "persona" not in meta or not meta["persona"]:
+                        meta["persona"] = state.current_persona
+
+                    # Comment: Consistent metadata improves vector search, persona tracking, and test reliability
+                    # See plan.md Phase 2
+
+                    await vector_memory.put(
+                        content=msg.content,
+                        message_id=msg_id,
+                        metadata=meta,
+                    )
 
             cl.user_session.set("state", state)
 

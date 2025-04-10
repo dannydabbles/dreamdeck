@@ -16,26 +16,14 @@ Next, proceed with **Phase 2**: vector store `.put()` metadata consistency.
 
 ## Phase 2: Enhance Vector Store Metadata Handling
 
-### Goal
-Make sure **all vector store `.put()` calls** for AI messages **include**:
+**Phase 2 completed:** All vector store `.put()` calls for AI messages now enforce:
 - `"type": "ai"`
-- `"persona": <persona at message creation time>`
-- `"author": <AI message name>`
+- `"persona"` (prefer message metadata, fallback to current persona)
+- `"author"` (AI message name)
 
-### Context & Tips
-- In `src/event_handlers.py`, after workflows run, AI messages are saved to the vector store.
-- Sometimes, metadata is missing or incomplete.
-- This causes test failures (e.g., expecting `"type": "ai"` but getting `"human"`).
-- Consistent metadata improves search, filtering, and persona tracking.
+This ensures consistent metadata for search, filtering, and persona tracking.
 
-### Tasks
-1. In `src/event_handlers.py`, **inside the loop** that saves AI messages to the vector store:
-   - Before calling `vector_memory.put()`, **ensure**:
-     - `meta["type"] = "ai"`
-     - `meta["persona"] = state.current_persona` (if not already set)
-     - `meta["author"] = msg.name`
-2. Defensive: if `msg.metadata` exists and contains `"persona"`, prefer that.
-3. Add comments explaining the importance of consistent metadata.
+Next, proceed with **Phase 3**: Add more realistic multi-tool conversation tests.
 
 ---
 
