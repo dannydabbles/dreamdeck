@@ -12,6 +12,14 @@ from jinja2 import Template
 
 @cl.step(name="Report Agent", type="tool")
 async def _generate_report(state: ChatState) -> list[AIMessage]:
+    """
+    Generates a daily report summarizing TODOs and listing image filenames.
+
+    Note:
+    - The LLM **does NOT receive** any image data, URLs, or embeddings.
+    - Only a plain text list of image filenames (like 'map.png') is included in the prompt.
+    - The LLM cannot analyze or "see" the images, just their names.
+    """
     try:
         current_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
         base_dir = config.todo_dir_path
@@ -43,7 +51,7 @@ async def _generate_report(state: ChatState) -> list[AIMessage]:
 
         prompt_template_str = config.loaded_prompts.get("daily_report_prompt", "").strip()
 
-        image_list_str = ""
+        # Build plain text list of image filenames (not URLs or data)
         if all_images:
             image_list_str = "\n".join(
                 f"- {persona}: {os.path.basename(path)}"
