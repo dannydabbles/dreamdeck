@@ -5,12 +5,7 @@ from src.models import ChatState
 from langchain_core.messages import HumanMessage, AIMessage
 import chainlit as cl
 
-import pytest
-
-@pytest.fixture
-def mock_cl_environment(monkeypatch):
-    # Minimal dummy fixture to avoid import error
-    pass
+from tests.test_event_handlers import mock_cl_environment  # Ensure this line exists and is correct
 
 from src.event_handlers import on_message
 from src.agents.writer_agent import _generate_story, call_writer_agent  # Changed import
@@ -125,7 +120,7 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
         return [AIMessage(content="Therapy response", name="Therapist", metadata={"message_id": "w1"})]
 
     # Patch the underlying functions, not the @task decorated ones
-    monkeypatch.setattr("src.agents.director_agent._direct_actions", fake_director)
+    monkeypatch.setattr("src.workflows.director_agent", fake_director)
     monkeypatch.setattr("src.agents.dice_agent._dice_roll", fake_dice)
     monkeypatch.setattr("src.agents.writer_agent._generate_story", fake_writer)
 
@@ -161,8 +156,8 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
         return [AIMessage(content="Default response.", name="default", metadata={"message_id": "w1"})]
 
     # Patch underlying functions
-    monkeypatch.setattr("src.agents.persona_classifier_agent._classify_persona", fake_classifier)
-    monkeypatch.setattr("src.agents.director_agent._direct_actions", fake_director)
+    monkeypatch.setattr("src.event_handlers.persona_classifier_agent", fake_classifier)
+    monkeypatch.setattr("src.workflows.director_agent", fake_director)
     monkeypatch.setattr("src.agents.todo_agent._manage_todo", fake_todo)
     monkeypatch.setattr("src.agents.writer_agent._generate_story", fake_writer)
 
