@@ -6,15 +6,23 @@ from unittest.mock import MagicMock
 from src.agents.todo_agent import _manage_todo
 from src.models import ChatState
 from langchain_core.messages import HumanMessage
+import datetime as dt_module
 
 @pytest.mark.asyncio
 async def test_manage_todo_creates_file(tmp_path):
-    # Patch module-level constants, not the config object
-    with patch("src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)), \
+    fixed_now = dt_module.datetime.now()
+
+    with patch("src.agents.todo_agent.datetime") as mock_datetime, \
+         patch("src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)), \
          patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), \
          patch("src.agents.todo_agent.CLMessage", new_callable=MagicMock) as mock_cl_msg_cls, \
          patch("src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke, \
          patch("src.agents.todo_agent.cl", new_callable=MagicMock) as mock_cl_module:
+
+        # Patch datetime.utcnow() to fixed_now
+        mock_datetime.datetime.utcnow.return_value = fixed_now
+        mock_datetime.datetime.strftime = dt_module.datetime.strftime
+        mock_datetime.datetime.now.return_value = fixed_now
 
         # Patch cl.user_session.get to avoid "Chainlit context not found"
         mock_cl_module.user_session.get.return_value = {}
@@ -27,7 +35,6 @@ async def test_manage_todo_creates_file(tmp_path):
 
         # Mock LLM response to output a JSON list with the task
         mock_response = MagicMock()
-        # Simulate the LLM outputting just a JSON list, as the real LLM might do on first run
         mock_response.content = '["buy milk"]'
         mock_ainvoke.return_value = mock_response
 
@@ -38,14 +45,10 @@ async def test_manage_todo_creates_file(tmp_path):
         state.current_persona = "Default"
 
         result = await _manage_todo(state)
-        # Check AIMessage returned
         assert result
-        # The LLM output is just a JSON list, so only check for the task string
         assert "buy milk" in result[0].content
 
-        # Check file created inside date-based subfolder
-        import datetime
-        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        current_date = fixed_now.strftime("%Y-%m-%d")
         todo_file = tmp_path / "Default" / current_date / "todo.md"
         assert todo_file.exists()
         content = todo_file.read_text()
