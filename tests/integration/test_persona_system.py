@@ -398,13 +398,20 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
 
     # Check if vector store 'put' was called for the AI message
     mock_vector_store.put.assert_called()
-    last_call_args, last_call_kwargs = mock_vector_store.put.call_args_list[-1]
-    # Relax: skip UUID validation, accept any string
-    # because test uses dummy message_id like 'u1' which is not a UUID
-    # Just check it's a non-empty string
+
+    # Find the last call where metadata["type"] == "ai"
+    ai_put_calls = [
+        call for call in mock_vector_store.put.call_args_list
+        if call[1].get("metadata", {}).get("type") == "ai"
+    ]
+
+    assert ai_put_calls, "No vector_store.put() call with metadata type 'ai' found"
+
+    last_ai_call = ai_put_calls[-1]
+    last_call_args, last_call_kwargs = last_ai_call
+
     msg_id = last_call_kwargs.get("message_id")
     assert isinstance(msg_id, str) and msg_id, f"message_id should be a non-empty string, got: {msg_id}"
     assert last_call_kwargs["metadata"]["type"] == "ai"
-    # Accept either 'todo' or '🤖 secretary' as author
     assert last_call_kwargs["metadata"]["author"] in ("todo", "🤖 secretary")
     assert last_call_kwargs["metadata"]["persona"] == "secretary"
