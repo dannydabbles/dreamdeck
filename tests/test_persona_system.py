@@ -84,10 +84,12 @@ async def test_writer_agent_selects_persona_prompt(monkeypatch, mock_cl_environm
         async def send(self): pass
         async def update(self): pass # Add update if needed
 
+    import src.agents.writer_agent as writer_agent_module
+
     mock_cl_message_instance = DummyMsg()
-    monkeypatch.setattr("src.agents.writer_agent.cl.Message", MagicMock(return_value=mock_cl_message_instance))
-    monkeypatch.setattr("src.agents.writer_agent.cl.user_session.get", lambda key, default=None: {} if key == "chat_settings" else default) # Mock settings get
-    monkeypatch.setattr("src.agents.writer_agent.cl.user_session.set", MagicMock()) # Mock session set
+    monkeypatch.setattr(writer_agent_module.cl, "Message", MagicMock(return_value=mock_cl_message_instance))
+    monkeypatch.setattr(writer_agent_module.cl.user_session, "get", lambda key, default=None: {} if key == "chat_settings" else default)
+    monkeypatch.setattr(writer_agent_module.cl.user_session, "set", MagicMock())
 
     # Mock config and template rendering
     # Create a mock object that mimics the structure needed for persona lookup
