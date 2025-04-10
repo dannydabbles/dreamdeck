@@ -496,8 +496,8 @@ async def test_multi_tool_persona_workflow(monkeypatch, mock_cl_environment):
         ]
 
     # Patch all relevant agents
-    import src.agents.persona_classifier_agent as classifier_mod
-    monkeypatch.setattr(classifier_mod, "persona_classifier_agent", fake_classifier)
+    import src.agents as agents_mod
+    monkeypatch.setattr(agents_mod, "persona_classifier_agent", fake_classifier)
 
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
     monkeypatch.setattr("src.agents.web_search_agent.web_search_agent", fake_web_search)
