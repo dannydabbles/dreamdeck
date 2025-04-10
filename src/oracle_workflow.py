@@ -39,3 +39,11 @@ async def oracle_workflow(inputs: dict, state: ChatState) -> list[BaseMessage]:
                 metadata={"message_id": None},
             )
         ]
+
+
+# Add dummy .ainvoke method so tests patching it don't fail
+async def _ainvoke(*args, **kwargs):
+    return await oracle_workflow(*args, **kwargs)
+
+
+oracle_workflow.ainvoke = _ainvoke
