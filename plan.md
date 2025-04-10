@@ -107,7 +107,12 @@ Enable saving/loading of chat state and structured file storage for persona and 
 **Notes:**  
 - Use ISO date format: `YYYY-MM-DD`.  
 - This supports future cron jobs and data ingestion.  
-- Enables session persistence and auditability.
+- Enables session persistence and auditability.  
+- **Persist ChromaDB vector store data across sessions:**  
+  - When saving chat state, ensure relevant embeddings/documents are stored in ChromaDB’s persistent database.  
+  - When resuming a conversation, reload or query ChromaDB as needed to restore context.  
+  - Do **not** clear or reset ChromaDB between sessions.  
+  - This ensures knowledge, memories, and embeddings remain available across conversation reloads.
 
 ---
 
