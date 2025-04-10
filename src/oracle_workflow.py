@@ -76,6 +76,26 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
 
         append_log(state.current_persona, f"Oracle dispatched to persona workflow: {state.current_persona}")
 
+        # Run the director to get list of actions/tools
+        from src.agents.director_agent import director_agent
+        actions = await director_agent(state)
+
+        from src.agents import agents_map
+
+        # For each tool, run it and append its outputs
+        for action in actions:
+            tool_func = agents_map.get(action)
+            if tool_func:
+                try:
+                    tool_outputs = await tool_func(state)
+                    if isinstance(tool_outputs, list):
+                        state.messages.extend(tool_outputs)
+                    elif isinstance(tool_outputs, dict) and "messages" in tool_outputs:
+                        state.messages.extend(tool_outputs["messages"])
+                except Exception as e:
+                    cl_logger.error(f"Tool '{action}' failed: {e}")
+
+        # After all tools, run the persona-specific writer agent
         response = await workflow_func(inputs, state, config=config)
 
         # Defensive: handle dict response (legacy or tool output)
