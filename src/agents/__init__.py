@@ -37,3 +37,7 @@ agents_map = {
 import sys as _sys
 
 _sys.modules[__name__].agents_map = agents_map
+
+# Also expose director_agent and persona_classifier_agent on src.agents module for patching
+_sys.modules[__name__].director_agent = director_agent
+_sys.modules[__name__].persona_classifier_agent = persona_classifier_agent

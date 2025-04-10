@@ -2,6 +2,7 @@ from src.models import ChatState
 from langchain_core.messages import BaseMessage, AIMessage
 from src.persona_workflows import persona_workflows
 from src.agents.persona_classifier_agent import persona_classifier_agent
+from src.agents.director_agent import director_agent  # ADD THIS IMPORT
 from langchain_core.runnables import RunnableLambda
 import logging
 import datetime
@@ -11,7 +12,7 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
-async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
+async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list[BaseMessage]:
     from src.storage import append_log, get_persona_daily_dir, save_text_file
 
     try:
@@ -77,7 +78,6 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
         append_log(state.current_persona, f"Oracle dispatched to persona workflow: {state.current_persona}")
 
         # Run the director to get list of actions/tools
-        from src.agents.director_agent import director_agent
         if config is not None:
             actions = await director_agent(state, config=config)
         else:
