@@ -13,7 +13,6 @@ from src.agents.writer_agent import _generate_story, call_writer_agent
 from src.agents.writer_agent import _WriterAgentWrapper  # For patching __call__
 from src.agents.director_agent import _direct_actions, director_agent
 from src.workflows import app as chat_workflow_app  # Import compiled LangGraph app
-import src.workflows as workflows_module  # Import workflows module to patch agents_map
 from src.agents.dice_agent import _dice_roll, _DiceAgentWrapper  # For patching __call__
 from src.agents.todo_agent import _manage_todo, manage_todo  # For patching
 
@@ -124,9 +123,10 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
 
     # Patch the underlying functions
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    # Patch agents_map entries directly
-    monkeypatch.setitem(workflows_module.agents_map, "roll", fake_dice)
-    monkeypatch.setitem(workflows_module.agents_map, "write", fake_writer)
+    # Patch the @task decorated dice_roll function
+    monkeypatch.setattr("src.agents.dice_agent.dice_roll", fake_dice)
+    # Patch the @task decorated generate_story function
+    monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
 
     # Mock vector store get method if needed
     mock_vector_store = MagicMock()
@@ -171,9 +171,10 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     # Patch underlying functions
     monkeypatch.setattr("src.event_handlers.persona_classifier_agent", fake_classifier)
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    # Patch agents_map entries directly
-    monkeypatch.setitem(workflows_module.agents_map, "todo", fake_todo)
-    monkeypatch.setitem(workflows_module.agents_map, "write", fake_writer)
+    # Patch the specific manage_todo function
+    monkeypatch.setattr("src.agents.todo_agent.manage_todo", fake_todo)
+    # Patch the @task decorated generate_story function
+    monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
 
     # Mock vector store get method
     mock_vector_store = MagicMock()
