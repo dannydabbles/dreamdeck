@@ -80,10 +80,12 @@ async def _chat_workflow(
     new_messages = previous.messages.copy()
     new_messages.extend(messages)
 
+    # Carry over persona explicitly
     state = ChatState(
         messages=new_messages,
         thread_id=previous.thread_id,
         error_count=previous.error_count,
+        current_persona=previous.current_persona,
     )
 
     try:
