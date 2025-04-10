@@ -12,29 +12,14 @@ def mock_chat_state():
 
 @pytest.mark.asyncio
 async def test_oracle_workflow_memory_updates(mock_chat_state):
-    dummy_ai_msg1 = AIMessage(
-        content="Tool1 done", name="tool1", metadata={"message_id": "m1"}
-    )
-    dummy_knowledge_msg = AIMessage(
-        content="Character info", name="character", metadata={"message_id": "k1"}
-    )
     dummy_gm_msg = AIMessage(
         content="Story continues", name="Game Master", metadata={"message_id": "gm1"}
     )
 
+    # Patch persona_workflows dict
     with patch(
         "src.oracle_workflow.persona_workflows",
-        {
-            "default": AsyncMock(
-                return_value=[dummy_gm_msg]
-            ),  # fallback persona workflow
-        },
-    ), patch(
-        "src.oracle_workflow.append_log"
-    ), patch(
-        "src.oracle_workflow.get_persona_daily_dir"
-    ), patch(
-        "src.oracle_workflow.save_text_file"
+        {"default": AsyncMock(return_value=[dummy_gm_msg])},
     ), patch(
         "src.oracle_workflow.persona_classifier_agent",
         AsyncMock(return_value={"persona": "default"}),
@@ -42,18 +27,21 @@ async def test_oracle_workflow_memory_updates(mock_chat_state):
         "src.oracle_workflow.cl.user_session.get", new_callable=MagicMock
     ) as mock_user_session_get:
 
-        vector_store = AsyncMock()
         mock_user_session_get.return_value = {}
+
+        # Patch append_log etc. which are imported inside oracle_workflow()
+        import src.oracle_workflow as owf
+        owf.append_log = lambda *a, **kw: None
+        owf.get_persona_daily_dir = lambda *a, **kw: MagicMock()
+        owf.save_text_file = lambda *a, **kw: None
 
         initial_state = mock_chat_state
         initial_state.messages.append(HumanMessage(content="Hi"))
 
         result_state = await oracle_workflow.ainvoke(
-            {"messages": initial_state.messages, "previous": initial_state}
+            {"messages": initial_state.messages, "previous": initial_state},
+            initial_state,
         )
-
-        # Defensive: print messages for debugging
-        # print([m.name for m in result_state.messages])
 
         assert isinstance(result_state, ChatState)
         assert any(
@@ -75,7 +63,10 @@ async def test_oracle_workflow_dispatches_to_persona(monkeypatch):
     monkeypatch.setitem(pw.persona_workflows, "secretary", fake_secretary)
 
     state = ChatState(messages=[], thread_id="t", current_persona="secretary")
-    await oracle_workflow.ainvoke({"messages": [], "previous": state})
+    await oracle_workflow.ainvoke(
+        {"messages": [], "previous": state},
+        state,
+    )
 
     assert called.get("secretary")
 
@@ -102,8 +93,12 @@ async def test_oracle_workflow_classifier_switch(monkeypatch):
         fake_therapist,
     )
 
-    state = ChatState(messages=[], thread_id="t", current_persona=None)
-    result_state = await oracle_workflow.ainvoke({"messages": [], "previous": state})
+    # current_persona cannot be None (pydantic validation), so set to empty string
+    state = ChatState(messages=[], thread_id="t", current_persona="")
+    result_state = await oracle_workflow.ainvoke(
+        {"messages": [], "previous": state},
+        state,
+    )
 
     assert result_state.current_persona == "therapist"
     assert any(
@@ -122,7 +117,10 @@ async def test_oracle_workflow_error_handling(monkeypatch):
     monkeypatch.setitem(owf.persona_workflows, "default", broken_workflow)
 
     state = ChatState(messages=[], thread_id="t", current_persona="default")
-    result_state = await oracle_workflow.ainvoke({"messages": [], "previous": state})
+    result_state = await oracle_workflow.ainvoke(
+        {"messages": [], "previous": state},
+        state,
+    )
 
     # Should append an error message
     assert any(
@@ -130,7 +128,6 @@ async def test_oracle_workflow_error_handling(monkeypatch):
     )
 
 
-# New test: all persona workflows run without error
 import src.persona_workflows as pw
 
 @pytest.mark.asyncio
@@ -146,12 +143,10 @@ async def test_all_persona_workflows_run(persona_key):
     assert isinstance(result, list)
 
 
-# New test: multi-hop tool call simulation
 @pytest.mark.asyncio
 async def test_oracle_workflow_multi_hop(monkeypatch):
     from src.oracle_workflow import oracle_workflow
 
-    # Simulate a persona workflow that returns multiple messages
     async def fake_storyteller(inputs, state, **kwargs):
         state.messages.append(
             AIMessage(content="Lore info", name="lore", metadata={})
@@ -169,7 +164,10 @@ async def test_oracle_workflow_multi_hop(monkeypatch):
         thread_id="t",
         current_persona="storyteller_gm",
     )
-    result_state = await oracle_workflow.ainvoke({"messages": state.messages, "previous": state})
+    result_state = await oracle_workflow.ainvoke(
+        {"messages": state.messages, "previous": state},
+        state,
+    )
 
     contents = [m.content for m in result_state.messages]
     assert "Lore info" in contents
