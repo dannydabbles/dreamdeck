@@ -129,3 +129,8 @@ generate_story_task = generate_story
 
 # Expose internal function for monkeypatching in tests
 writer_agent._generate_story = _generate_story
+
+
+async def call_writer_agent(state: ChatState) -> list[BaseMessage]:
+    """Call the writer agent outside of LangGraph workflows (e.g., slash commands)."""
+    return await _generate_story(state)
