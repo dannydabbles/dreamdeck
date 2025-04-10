@@ -93,8 +93,14 @@ oracle_workflow.ainvoke = _ainvoke
 
 class OracleWorkflowWrapper:
     async def ainvoke(self, *args, **kwargs):
-        # ignore 'config' kwarg if passed
-        kwargs.pop("config", None)
+        # extract and propagate 'config' if passed
+        config = kwargs.pop("config", None)
+        if config is not None:
+            kwargs["config"] = config
         return await oracle_workflow(*args, **kwargs)
+
+    async def __call__(self, *args, **kwargs):
+        # support calling instance directly as async callable
+        return await self.ainvoke(*args, **kwargs)
 
 chat_workflow = OracleWorkflowWrapper()
