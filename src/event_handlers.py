@@ -594,13 +594,17 @@ async def on_message(message: cl.Message):
                     msg_id = msg.metadata.get("message_id") if msg.metadata else None
                     if msg_id:
                         # Always set type to 'ai' for AI messages
+                        meta = {
+                            "type": "ai",
+                            "author": msg.name,
+                        }
+                        # Preserve persona info if present
+                        if msg.metadata and "persona" in msg.metadata:
+                            meta["persona"] = msg.metadata["persona"]
                         await vector_memory.put(
                             content=msg.content,
                             message_id=msg_id,
-                            metadata={
-                                "type": "ai",
-                                "author": msg.name,
-                            },
+                            metadata=meta,
                         )
                     else:
                         cl_logger.warning(
