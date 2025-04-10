@@ -190,7 +190,7 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
 
     # Simulate persona switch confirmation (assuming user says 'yes')
     cl.user_session.set("current_persona", "secretary")
-    dummy_state.current_persona = "secretary"
+    # Do NOT modify dummy_state.current_persona directly; instead, pass persona explicitly in input_data
 
     # Call the workflow with the updated state
     # Provide necessary config for LangGraph execution context
@@ -198,18 +198,18 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     input_data = {
         "messages": dummy_state.messages,
         "thread_id": dummy_state.thread_id,
-        "current_persona": dummy_state.current_persona,
+        "current_persona": "secretary",  # Explicitly set persona for this invocation
     }
     final_state_dict = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
 
     result_messages = final_state_dict.get("messages", [])
-    final_persona = final_state_dict.get("current_persona", "secretary")
+    final_persona = final_state_dict.get("current_persona")
 
     # Assertions
     names = [m.name for m in result_messages if isinstance(m, AIMessage)]
     assert "todo" in names, f"Expected 'todo' in AI message names: {names}"
     assert "writer" not in names
-    assert final_persona == "secretary"
+    assert final_persona == "secretary", f"Expected final persona to be 'secretary', but got '{final_persona}'"
 
     # Check if vector store 'put' was called for the AI message
     mock_vector_store.put.assert_called()
