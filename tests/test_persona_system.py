@@ -128,6 +128,12 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     # Patch the @task-decorated function that LangGraph likely calls
     monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
 
+    # Patch the writer_agent instance itself to be callable, to avoid '_WriterAgentWrapper' object is not callable error
+    async def fake_writer_agent(state, **kwargs):
+        return await fake_writer(state, **kwargs)
+    import src.agents.writer_agent as writer_agent_module
+    setattr(writer_agent_module.writer_agent.__class__, "__call__", fake_writer_agent)
+
     # Mock vector store get method if needed
     mock_vector_store = MagicMock()
     mock_vector_store.get = MagicMock(return_value=[])
@@ -166,6 +172,12 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     monkeypatch.setattr("src.agents.todo_agent.manage_todo", fake_todo)
     # Patch the @task-decorated function that LangGraph likely calls
     monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
+
+    # Patch the writer_agent instance itself to be callable, to avoid '_WriterAgentWrapper' object is not callable error
+    async def fake_writer_agent(state, **kwargs):
+        return await fake_writer(state, **kwargs)
+    import src.agents.writer_agent as writer_agent_module
+    setattr(writer_agent_module.writer_agent.__class__, "__call__", fake_writer_agent)
 
     # Mock vector store get method
     mock_vector_store = MagicMock()
