@@ -59,6 +59,13 @@ async def test_oracle_workflow_dispatches_to_persona(monkeypatch):
     # Patch persona_workflows to dummy workflows to avoid real LLM calls
     import src.persona_workflows as pw
 
+    called = {}
+
+    async def fake_secretary(inputs, state, **kwargs):
+        called["secretary"] = True
+        return []
+
+    # Patch *all* persona_workflows to dummy_workflow, except 'secretary' to fake_secretary
     async def dummy_workflow(inputs, state, **kwargs):
         from langchain_core.messages import AIMessage
         return [
@@ -72,13 +79,20 @@ async def test_oracle_workflow_dispatches_to_persona(monkeypatch):
     for key in pw.persona_workflows:
         monkeypatch.setitem(pw.persona_workflows, key, dummy_workflow)
 
-    called = {}
-
-    async def fake_secretary(inputs, state, **kwargs):
-        called["secretary"] = True
-        return []
-
     monkeypatch.setitem(pw.persona_workflows, "secretary", fake_secretary)
+
+    # Patch the entire src.agents.agents_map to dummy tools to avoid real LLM calls
+    import src.agents as agents_mod
+    dummy_tool = AsyncMock(return_value=[])
+    agents_map_patch = {
+        "roll": dummy_tool,
+        "search": dummy_tool,
+        "todo": dummy_tool,
+        "write": dummy_tool,
+        "continue_story": dummy_tool,
+        "report": dummy_tool,
+    }
+    monkeypatch.setattr(agents_mod, "agents_map", agents_map_patch)
 
     state = ChatState(messages=[], thread_id="t", current_persona="secretary")
     await oracle_workflow.ainvoke(
