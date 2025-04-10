@@ -31,28 +31,35 @@ Isolate each persona’s logic into a standalone async function or LangGraph wor
 **Notes:**  
 - Use existing code in `src/agents/` as a base.  
 - Pass `ChatState` and `inputs` explicitly.  
-- These workflows will be invoked by the supervisor and CLI.
+- These workflows will be invoked by the oracle and CLI.
 
 ---
 
-## **Phase 2: Implement Supervisor Workflow**
+## **Phase 2: Implement Oracle Workflow**
 
 **Goal:**  
 Create a central async function that routes inputs to the correct persona workflow, handles persona switching, and manages errors.
 
+**Note:**  
+The **Oracle Workflow** acts as the **central router and decision-maker**.  
+It observes the conversation, determines or confirms the current persona, and dispatches to the appropriate persona workflow.  
+It is the **"all-seeing eye"** guiding the flow of the conversation, capable of invoking persona classification, chaining workflows, or intercepting global commands.
+
 **Tasks:**  
-1. Create `async def supervisor_workflow(inputs: dict, state: ChatState) -> list[BaseMessage]:`  
+1. Create `async def oracle_workflow(inputs: dict, state: ChatState) -> list[BaseMessage]:`  
 2. If `state.current_persona` is unset or `inputs.get("force_classify")` is true:  
    - Call the persona classifier agent.  
    - Update `state.current_persona`.  
 3. Dispatch to the correct persona workflow from `persona_workflows`.  
 4. Handle unknown personas gracefully (fallback or error message).  
 5. Catch exceptions from persona workflows, log errors, and return a friendly message.  
-6. Replace the current `chat_workflow` entrypoint with this supervisor.
+6. Replace the current `chat_workflow` entrypoint with this oracle workflow.
 
 **Notes:**  
 - This function is the **single entrypoint** for all chat interactions.  
-- It enables dynamic persona switching and modular persona logic.
+- It enables dynamic persona switching and modular persona logic.  
+- It can **intercept global commands** (reset, help, save) before dispatching.  
+- It can **chain or parallelize** persona workflows if needed.
 
 ---
 
@@ -70,7 +77,7 @@ Add a CLI tool to invoke persona workflows directly from the command line, imple
    ```  
 4. The CLI should:  
    - Load or create a `ChatState` (optionally from a file).  
-   - Call `supervisor_workflow()` with the input and state.  
+   - Call `oracle_workflow()` with the input and state.  
    - Print the persona’s response(s).  
    - Optionally save updated state back to file.  
 5. Add commands:  
@@ -102,7 +109,7 @@ Enable saving/loading of chat state and structured file storage for persona and 
    - Read from shared daily directory (e.g., news, events).  
    - Read/write persona-specific daily files (e.g., memories, notes).  
 4. Ensure directories are created if missing.  
-5. Optionally, update CLI and supervisor to save state after each interaction.
+5. Optionally, update CLI and oracle to save state after each interaction.
 
 **Notes:**  
 - Use ISO date format: `YYYY-MM-DD`.  
@@ -142,7 +149,7 @@ Enhance persona experience with explicit switching, tailored prompts, and tool f
 Make the system more robust, transparent, and efficient.
 
 **Tasks:**  
-1. Add try/except blocks in supervisor and persona workflows.  
+1. Add try/except blocks in oracle and persona workflows.  
 2. On error, return a friendly message and log details.  
 3. Log all persona switches, tool calls, and errors with timestamps.  
 4. Periodically summarize long chat histories into concise memories.  
