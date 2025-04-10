@@ -588,18 +588,24 @@ async def on_message(message: cl.Message):
                 inputs, config=RunnableConfig(callbacks=[cb], **thread_config)
             )
 
-            if state.messages and isinstance(state.messages[-1], AIMessage):
-                ai_msg = state.messages[-1]
-                if ai_msg.metadata and "message_id" in ai_msg.metadata:
-                    await vector_memory.put(
-                        content=ai_msg.content,
-                        message_id=ai_msg.metadata["message_id"],
-                        metadata={"type": "ai", "author": ai_msg.name},
-                    )
-                else:
-                    cl_logger.warning(
-                        f"Final AIMessage from workflow missing message_id: {ai_msg.content}"
-                    )
+            # Save *all* new AI messages from the workflow to vector store
+            for msg in state.messages:
+                if isinstance(msg, AIMessage):
+                    msg_id = msg.metadata.get("message_id") if msg.metadata else None
+                    if msg_id:
+                        await vector_memory.put(
+                            content=msg.content,
+                            message_id=msg_id,
+                            metadata={
+                                "type": "ai",
+                                "author": msg.name,
+                                "persona": getattr(state, "current_persona", None),
+                            },
+                        )
+                    else:
+                        cl_logger.warning(
+                            f"AIMessage missing message_id, skipping vector store save: {msg.content}"
+                        )
 
             cl.user_session.set("state", state)
 
