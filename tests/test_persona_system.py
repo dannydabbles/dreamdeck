@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock, call  # Added MagicMock, call
-from src.agents.persona_classifier_agent import _classify_persona, PERSONA_LIST  # Changed import
+from src.agents.persona_classifier_agent import _classify_persona, PERSONA_LIST
 from src.models import ChatState
 from langchain_core.messages import HumanMessage, AIMessage
 import chainlit as cl
@@ -9,11 +9,11 @@ from tests.test_event_handlers import mock_cl_environment  # Ensure this line ex
 
 from src.event_handlers import on_message
 from src.agents.writer_agent import _generate_story
-from src.agents.writer_agent import call_writer_agent  # Fix undefined name
-from src.agents.director_agent import _direct_actions  # Changed import
-from src.workflows import _chat_workflow  # Changed import
-from src.agents.dice_agent import _dice_roll  # Added import
-from src.agents.todo_agent import _manage_todo  # Added import
+from src.agents.writer_agent import _WriterAgentWrapper  # For patching __call__
+from src.agents.director_agent import _direct_actions, director_agent
+from src.workflows import app as chat_workflow_app  # Import compiled LangGraph app
+from src.agents.dice_agent import _dice_roll, _DiceAgentWrapper  # For patching __call__
+from src.agents.todo_agent import _manage_todo, manage_todo  # For patching
 
 
 @pytest.mark.asyncio
@@ -135,8 +135,15 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
 
     # Provide necessary config for LangGraph execution context
     workflow_config = {"configurable": {"thread_id": dummy_state.thread_id}}
-    result_state = await _chat_workflow(dummy_state.messages, dummy_state, config=workflow_config)
-    assert any(m.name == "Therapist" for m in result_state.messages)
+    input_data = {
+        "messages": dummy_state.messages,
+        "thread_id": dummy_state.thread_id,
+        "current_persona": dummy_state.current_persona,
+    }
+    final_state_dict = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
+
+    result_messages = final_state_dict.get("messages", [])
+    assert any(isinstance(m, AIMessage) and m.name == "Therapist" for m in result_messages), f"Expected Therapist message in {result_messages}"
 
 
 @pytest.mark.asyncio
@@ -188,13 +195,21 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     # Call the workflow with the updated state
     # Provide necessary config for LangGraph execution context
     workflow_config = {"configurable": {"thread_id": dummy_state.thread_id}}
-    result_state = await _chat_workflow(dummy_state.messages, dummy_state, config=workflow_config)
+    input_data = {
+        "messages": dummy_state.messages,
+        "thread_id": dummy_state.thread_id,
+        "current_persona": dummy_state.current_persona,
+    }
+    final_state_dict = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
+
+    result_messages = final_state_dict.get("messages", [])
+    final_persona = final_state_dict.get("current_persona", "secretary")
 
     # Assertions
-    names = [m.name for m in result_state.messages]
-    assert "todo" in names
+    names = [m.name for m in result_messages if isinstance(m, AIMessage)]
+    assert "todo" in names, f"Expected 'todo' in AI message names: {names}"
     assert "writer" not in names
-    assert result_state.current_persona == "secretary"
+    assert final_persona == "secretary"
 
     # Check if vector store 'put' was called for the AI message
     mock_vector_store.put.assert_called()
