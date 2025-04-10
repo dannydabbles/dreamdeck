@@ -4,7 +4,13 @@ from src.agents.persona_classifier_agent import _classify_persona, PERSONA_LIST 
 from src.models import ChatState
 from langchain_core.messages import HumanMessage, AIMessage
 import chainlit as cl
-from tests.test_event_handlers import mock_cl_environment  # Added import
+
+import pytest
+
+@pytest.fixture
+def mock_cl_environment(monkeypatch):
+    # Minimal dummy fixture to avoid import error
+    pass
 
 from src.event_handlers import on_message
 from src.agents.writer_agent import _generate_story, call_writer_agent  # Changed import
