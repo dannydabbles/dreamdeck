@@ -50,7 +50,7 @@ async def chat_workflow(
     return await _chat_workflow(messages=messages, previous=previous)
 
 
-app = chat_workflow.compile()  # Compile the graph for external invocation
+app = chat_workflow  # Assign the entrypoint directly, do not call compile()
 
 
 async def _chat_workflow(
