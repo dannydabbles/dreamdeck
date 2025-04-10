@@ -4,22 +4,9 @@ import json
 from pathlib import Path
 from src.models import ChatState, HumanMessage
 from src.oracle_workflow import oracle_workflow
+from src.storage import save_state as save_state_to_file, load_state as load_state_from_file
 
 STATE_FILE = Path("chat_state.json")
-
-
-def save_state(state: ChatState, path: Path = STATE_FILE):
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(state.model_dump(), f, indent=2)
-
-
-def load_state(path: Path = STATE_FILE) -> ChatState:
-    if path.exists():
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return ChatState.model_validate(data)
-    else:
-        return ChatState(messages=[], thread_id="cli_thread")
 
 
 @click.group()
@@ -33,7 +20,7 @@ def cli():
 @click.option("--input", "user_input", required=True, help="User input message")
 def chat(persona, user_input):
     """Send a message to the AI and get a response."""
-    state = load_state()
+    state = load_state_from_file(STATE_FILE)
 
     # Set persona if provided
     if persona:
@@ -47,7 +34,7 @@ def chat(persona, user_input):
     async def run():
         updated_state = await oracle_workflow({"messages": state.messages, "previous": state}, state)
         # Save updated state
-        save_state(updated_state)
+        save_state_to_file(updated_state, STATE_FILE)
         # Print AI responses
         for msg in updated_state.messages[len(state.messages):]:
             if hasattr(msg, "content"):
@@ -68,9 +55,9 @@ def list_personas():
 @click.argument("persona_name")
 def switch_persona(persona_name):
     """Switch current persona."""
-    state = load_state()
+    state = load_state_from_file(STATE_FILE)
     state.current_persona = persona_name
-    save_state(state)
+    save_state_to_file(state, STATE_FILE)
     print(f"Persona switched to: {persona_name}")
 
 
@@ -79,7 +66,7 @@ def switch_persona(persona_name):
 @click.option("--output", type=click.Path(), default="chat_export.md")
 def export(format, output):
     """Export chat history."""
-    state = load_state()
+    state = load_state_from_file(STATE_FILE)
     if format == "json":
         with open(output, "w", encoding="utf-8") as f:
             json.dump(state.model_dump(), f, indent=2)

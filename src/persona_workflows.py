@@ -3,6 +3,14 @@ from langchain_core.messages import BaseMessage
 from src.agents.writer_agent import writer_agent
 from src.agents.todo_agent import manage_todo
 from src.agents.knowledge_agent import knowledge_agent
+from src.storage import (
+    get_persona_daily_dir,
+    get_shared_daily_dir,
+    save_text_file,
+    load_text_file,
+)
+import datetime
+import os
 
 async def storyteller_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     # Optionally update state with inputs here
@@ -14,8 +22,23 @@ async def therapist_workflow(inputs: dict, state: ChatState, *, config=None) -> 
     return await writer_agent(state)
 
 async def secretary_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
-    # Optionally, run TODO update first
+    # Load today's TODO file for secretary persona
+    today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+    persona_dir = get_persona_daily_dir(state.current_persona, today)
+    todo_path = persona_dir / "todo.md"
+    if todo_path.exists():
+        todo_content = load_text_file(todo_path)
+        # Optionally, attach to state metadata or memories
+        state.metadata["todo"] = todo_content
+
+    # Run TODO update first
     await manage_todo(state)
+
+    # Save updated TODO back to file
+    # The todo agent writes to file, so this is redundant, but safe
+    if "todo" in state.metadata:
+        save_text_file(todo_path, state.metadata["todo"])
+
     # Then generate secretary-style response
     return await writer_agent(state)
 
