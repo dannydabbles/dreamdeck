@@ -129,6 +129,7 @@ generate_story_task = generate_story
 
 # Expose internal function for monkeypatching in tests
 writer_agent._generate_story = _generate_story
+writer_agent.generate_story = generate_story  # <-- Add this attribute for patching
 
 
 async def call_writer_agent(state: ChatState) -> list[BaseMessage]:
