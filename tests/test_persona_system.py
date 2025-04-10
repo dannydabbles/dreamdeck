@@ -121,8 +121,8 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
 
     # Patch the underlying functions, not the @task decorated ones
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    # Patch the function referenced in agents_map['roll']
-    monkeypatch.setattr("src.agents.agents_map['roll']", fake_dice)
+    # Patch the function referenced in agents_map['roll'] (which is dice_roll from dice_agent)
+    monkeypatch.setattr("src.agents.dice_agent.dice_roll", fake_dice)
     # Patch the function referenced in agents_map['write']
     monkeypatch.setattr("src.agents.agents_map['write']", fake_writer)
 
@@ -160,8 +160,8 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     # Patch underlying functions
     monkeypatch.setattr("src.event_handlers.persona_classifier_agent", fake_classifier)
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    # Patch the function referenced in agents_map['todo']
-    monkeypatch.setattr("src.agents.agents_map['todo']", fake_todo)
+    # Patch the function referenced in agents_map['todo'] (which is manage_todo from todo_agent)
+    monkeypatch.setattr("src.agents.todo_agent.manage_todo", fake_todo)
     # Patch the function referenced in agents_map['write']
     monkeypatch.setattr("src.agents.agents_map['write']", fake_writer)
 
