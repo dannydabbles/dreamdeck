@@ -217,7 +217,8 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
 
     # Call the workflow with the updated state
     # Provide unique thread_id for this test
-    test_thread_id = f"test_thread_{uuid.uuid4()}"
+    import uuid as _uuid
+    test_thread_id = f"test_thread_{_uuid.uuid4()}"
     workflow_config = {"configurable": {"thread_id": test_thread_id}}
 
     # Construct the 'previous' state reflecting the persona switch
