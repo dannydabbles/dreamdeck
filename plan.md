@@ -6,6 +6,13 @@ This roadmap guides an LLM through incremental, manageable phases to refactor th
 
 ## **Phase 1: Modularize Persona Workflows**
 
+**Status:** ✅ Completed
+
+- Implemented in `src/persona_workflows.py`
+- Contains async functions per persona, no Chainlit UI calls
+- Exports `persona_workflows` registry
+- Ready for integration in Phase 2
+
 **Goal:**  
 Isolate each persona’s logic into a standalone async function or LangGraph workflow, decoupled from Chainlit or UI code.
 
@@ -32,6 +39,10 @@ Isolate each persona’s logic into a standalone async function or LangGraph wor
 - Use existing code in `src/agents/` as a base.  
 - Pass `ChatState` and `inputs` explicitly.  
 - These workflows will be invoked by the oracle and CLI.
+
+---
+
+**Next:** Implement `oracle_workflow()` that dispatches to these persona workflows based on current persona or classifier output.
 
 ---
 
