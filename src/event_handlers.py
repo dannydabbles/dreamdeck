@@ -593,13 +593,16 @@ async def on_message(message: cl.Message):
                 if isinstance(msg, AIMessage):
                     msg_id = msg.metadata.get("message_id") if msg.metadata else None
                     if msg_id:
+                        # Respect existing 'type' if present, else default to 'ai'
+                        msg_type = "ai"
+                        if msg.metadata and "type" in msg.metadata:
+                            msg_type = msg.metadata["type"]
                         await vector_memory.put(
                             content=msg.content,
                             message_id=msg_id,
                             metadata={
-                                "type": "ai",
+                                "type": msg_type,
                                 "author": msg.name,
-                                "persona": getattr(state, "current_persona", None),
                             },
                         )
                     else:
