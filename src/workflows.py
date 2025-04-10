@@ -56,10 +56,11 @@ async def chat_workflow(
     return await _chat_workflow(messages=messages, previous=previous)
 
 
-app = chat_workflow.compile()  # Default compiled app with checkpointer
+# LangGraph >=0.0.40: .compile() is deprecated/removed, entrypoint returns Pregel directly
+app = chat_workflow  # Default compiled app with checkpointer
 
 # Create a version without the checkpointer specifically for tests
-app_without_checkpoint = entrypoint(checkpointer=None)(chat_workflow).compile()
+app_without_checkpoint = entrypoint(checkpointer=None)(chat_workflow)
 
 
 async def _chat_workflow(
