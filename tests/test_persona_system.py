@@ -14,7 +14,6 @@ from src.agents.director_agent import _direct_actions  # Changed import
 from src.workflows import _chat_workflow  # Changed import
 from src.agents.dice_agent import _dice_roll  # Added import
 from src.agents.todo_agent import _manage_todo  # Added import
-import src.agents.writer_agent as writer_agent_module
 
 
 @pytest.mark.asyncio
@@ -129,11 +128,6 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
 
     # Patch the writer_agent instance itself to be callable, to avoid '_WriterAgentWrapper' object is not callable error
-    async def fake_writer_agent(state, **kwargs):
-        return await fake_writer(state, **kwargs)
-    import src.agents.writer_agent as writer_agent_module
-    setattr(type(writer_agent_module.writer_agent), "__call__", fake_writer_agent)
-
     # Mock vector store get method if needed
     mock_vector_store = MagicMock()
     mock_vector_store.get = MagicMock(return_value=[])
@@ -174,11 +168,6 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
 
     # Patch the writer_agent instance itself to be callable, to avoid '_WriterAgentWrapper' object is not callable error
-    async def fake_writer_agent(state, **kwargs):
-        return await fake_writer(state, **kwargs)
-    import src.agents.writer_agent as writer_agent_module
-    setattr(type(writer_agent_module.writer_agent), "__call__", fake_writer_agent)
-
     # Mock vector store get method
     mock_vector_store = MagicMock()
     mock_vector_store.get = MagicMock(return_value=[])
