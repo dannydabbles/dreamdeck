@@ -66,6 +66,8 @@ Create a central async function that routes inputs to the correct persona workfl
 
 ## **Phase 3: CLI Interface for Persona Invocation (using `click`)**
 
+**Status:** ✅ Completed
+
 **Goal:**  
 Add a CLI tool to invoke persona workflows directly from the command line, implemented with the `click` package.
 
@@ -87,10 +89,10 @@ Add a CLI tool to invoke persona workflows directly from the command line, imple
    - `export` (save chat history to markdown or JSON)
 
 **Notes:**  
-- CLI should **reuse the same workflows** as the server.  
-- Avoid duplicating logic.  
-- This enables automation, testing, and scripting.  
-- `click` provides a clean, user-friendly CLI interface.
+- Implemented in `cli.py` with commands: `chat`, `list-personas`, `switch-persona`, `export`.
+- Chat state is saved in `chat_state.json` for persistence.
+- CLI calls `oracle_workflow()` directly, sharing logic with server.
+- Supports persona switching and exporting chat history.
 
 ---
 
