@@ -86,14 +86,13 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 
 ---
 
-### **8. User Experience Enhancements**
+### **8. User Experience Enhancements** ✅ **Completed**
 
-- **Persona switch notifications**:  
-  _"Switching to Therapist persona to better assist you."_
-- **Persona icons/avatars** in UI.
-- **Settings toggle**: enable/disable auto persona switching.
-- **Slash command** `/persona [name]` to force switch.
-- **Logging**: track persona suggestions, switches, tool usage.
+- Persona switch notifications implemented.
+- Persona icons/avatars added to chat messages.
+- Settings toggle for auto persona switching added.
+- Slash command `/persona [name]` implemented.
+- Logging added for persona suggestions, switches, and forced changes.
 
 ---
 
@@ -115,12 +114,12 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 |--------|--------------------------------------|-------------------------------------------|
 | 1      | Persona classifier agent             | **✅ Completed**                          |
 | 2      | User confirmation flow               | **✅ Completed**                          |
-| 3      | Persona-aware prompts                | Config, prompt templates, agent updates   |
-| 4      | Persona-aware director               | Director prompt update, tool prefs config |
-| 5      | Persona-aware workflows              | Workflow filtering, persona triggers      |
-| 6      | New personas                         | Prompts, config, optional new agents      |
-| 7      | Daily report agent                   | Report agent, slash command               |
-| 8      | UX enhancements                      | Notifications, UI, slash commands         |
+| 3      | Persona-aware prompts                | **✅ Completed**                          |
+| 4      | Persona-aware director               | **✅ Completed**                          |
+| 5      | Persona-aware workflows              | **✅ Completed**                          |
+| 6      | New personas                         | **✅ Completed**                          |
+| 7      | Daily report agent                   | **✅ Completed**                          |
+| 8      | UX enhancements                      | **✅ Completed**                          |
 | 9      | Testing                              | Unit tests, scenario tests                |
 
 ---

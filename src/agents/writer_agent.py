@@ -91,9 +91,20 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
             await gm_message.stream_token(chunk.content)
         await gm_message.send()
 
+        persona_icon = {
+            "Therapist": "🧠",
+            "Secretary": "🗒️",
+            "Coder": "💻",
+            "Friend": "🤝",
+            "Lorekeeper": "📚",
+            "Dungeon Master": "🎲",
+            "Storyteller GM": "🎭",
+            "Default": "🤖",
+        }.get(state.current_persona, "🤖")
+
         story_segment = AIMessage(
             content=gm_message.content.strip(),
-            name="Game Master",
+            name=f"{persona_icon} {state.current_persona}",
             metadata={"message_id": gm_message.id},
         )
 

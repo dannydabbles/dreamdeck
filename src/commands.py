@@ -263,6 +263,7 @@ async def command_help():
 /write [prompt] — Directly prompt the writer agent
 /storyboard — Generate storyboard images for the last Game Master message
 /report — Generate a daily summary report
+/persona [name] — Force switch to a specific persona
 /help — Show this help message
 /reset — Reset the current story and start fresh
 /save — Export the current story as a markdown file
@@ -342,3 +343,21 @@ async def command_report():
             await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
     cl.user_session.set("state", state)
     cl_logger.info("/report command processed.")
+
+
+async def command_persona(query: str = ""):
+    """Slash command: /persona [name] - Force switch persona immediately"""
+    persona_name = query.strip()
+    if not persona_name:
+        await cl.Message(content="Usage: `/persona [persona_name]`").send()
+        return
+
+    # Update session and state
+    cl.user_session.set("current_persona", persona_name)
+    state: ChatState = cl.user_session.get("state")
+    if state:
+        state.current_persona = persona_name
+        cl.user_session.set("state", state)
+
+    cl_logger.info(f"Persona forcibly switched to: {persona_name} via slash command")
+    await cl.Message(content=f"✅ Persona forcibly switched to **{persona_name}**.").send()

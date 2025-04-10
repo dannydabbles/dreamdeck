@@ -77,7 +77,7 @@ from langchain_core.callbacks.manager import CallbackManagerForChainRun  # Impor
 from langchain_core.stores import BaseStore
 
 import chainlit as cl
-from chainlit.input_widget import Slider, TextInput, Select  # Import widgets
+from chainlit.input_widget import Slider, TextInput, Select, Switch  # Import widgets including Switch
 from src import config  # Import your config
 from chainlit import Action  # Import Action for buttons
 
@@ -194,6 +194,11 @@ async def on_chat_start():
                     initial=config.WRITER_AGENT_BASE_URL or "",
                     placeholder="e.g., http://localhost:5000/v1"
                 ),
+                Switch(
+                    id="auto_persona_switch",
+                    label="Auto Persona Switching",
+                    initial=True
+                ),
             ]
         ).send()
 
@@ -203,6 +208,7 @@ async def on_chat_start():
 
         cl.user_session.set("chat_settings", settings)
         cl.user_session.set("current_persona", settings.get("persona", "Storyteller GM"))
+        cl.user_session.set("auto_persona_switch", settings.get("auto_persona_switch", True))
 
         # Launch knowledge loading in the background
         asyncio.create_task(load_knowledge_documents())
@@ -372,7 +378,7 @@ async def on_message(message: cl.Message):
             cl.user_session.set("current_persona", pending_persona)
             if hasattr(state, "current_persona"):
                 state.current_persona = pending_persona
-            await cl.Message(content=f"✅ Persona switched to **{pending_persona}**.").send()
+            await cl.Message(content=f"🔄 Switching persona to **{pending_persona}** to better assist you.").send()
         elif user_reply in ["no", "n"]:
             cl_logger.info(f"User declined persona switch to: {pending_persona}")
             await cl.Message(content=f"❌ Keeping current persona.").send()
@@ -424,6 +430,8 @@ async def on_message(message: cl.Message):
                     await cmd_mod.command_reset()
                 elif cmd_name == "save":
                     await cmd_mod.command_save()
+                elif cmd_name == "persona":
+                    await cmd_mod.command_persona(arg)
                 else:
                     await cl.Message(content=f"Unknown command: {cmd_name}").send()
             except Exception as e:
@@ -457,11 +465,16 @@ async def on_message(message: cl.Message):
             current_persona = cl.user_session.get("current_persona", "default").lower()
             suggested_persona = suggestion.get("persona", "").lower()
 
-            # If suggestion is different and not default, prompt user
-            if suggested_persona and suggested_persona != current_persona and suggested_persona != "default":
-                cl_logger.info(f"Persona switch suggested: {current_persona} -> {suggested_persona}")
-                cl.user_session.set("pending_persona_switch", suggested_persona)
-                await cl.Message(content=f"🤖 The AI suggests switching persona to **{suggested_persona}**. Reply 'Yes' to switch or 'No' to keep current persona.").send()
+            auto_switch_enabled = cl.user_session.get("auto_persona_switch", True)
+
+            if auto_switch_enabled:
+                # If suggestion is different and not default, prompt user
+                if suggested_persona and suggested_persona != current_persona and suggested_persona != "default":
+                    cl_logger.info(f"Persona switch suggested: {current_persona} -> {suggested_persona}")
+                    cl.user_session.set("pending_persona_switch", suggested_persona)
+                    await cl.Message(content=f"🤖 The AI suggests switching persona to **{suggested_persona}**. Reply 'Yes' to switch or 'No' to keep current persona.").send()
+            else:
+                cl_logger.info("Auto persona switching disabled by user setting. Ignoring suggestion.")
         except Exception as e:
             cl_logger.error(f"Persona classifier error: {e}")
 
@@ -573,4 +586,6 @@ async def load_knowledge_documents():
 async def on_settings_update(settings):
     cl.user_session.set("chat_settings", settings)
     cl.user_session.set("current_persona", settings.get("persona", "Storyteller GM"))
+    cl.user_session.set("auto_persona_switch", settings.get("auto_persona_switch", True))
+    cl_logger.info(f"Persona changed via settings to: {settings.get('persona', 'Storyteller GM')}")
     await cl.Message(content=f"🔄 Persona changed to **{settings.get('persona', 'Storyteller GM')}**.").send()
