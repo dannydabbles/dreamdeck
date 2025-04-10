@@ -106,4 +106,10 @@ class OracleWorkflowWrapper:
 
 chat_workflow = OracleWorkflowWrapper()
 
-oracle_workflow_runnable = RunnableLambda(oracle_workflow)
+
+async def _oracle_workflow_wrapper(*args, **kwargs):
+    config = kwargs.pop("config", None)
+    return await oracle_workflow(*args, **kwargs, config=config)
+
+
+oracle_workflow_runnable = RunnableLambda(_oracle_workflow_wrapper)
