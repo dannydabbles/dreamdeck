@@ -1,8 +1,11 @@
-from src.oracle_workflow import oracle_workflow
+from src.agents.director_agent import director_agent
+from src.agents.writer_agent import writer_agent
+from src.agents.knowledge_agent import knowledge_agent
+from src.agents.storyboard_editor_agent import storyboard_editor_agent
+from src.oracle_workflow import oracle_workflow, chat_workflow
 
-app = oracle_workflow
-
-app_without_checkpoint = app
+app = chat_workflow
+app_without_checkpoint = chat_workflow
 
 
 async def _chat_workflow(*args, **kwargs):
@@ -11,20 +14,4 @@ async def _chat_workflow(*args, **kwargs):
 
 
 # Dummy stubs for test monkeypatching
-async def director_agent(*args, **kwargs):
-    raise NotImplementedError("director_agent stub")
-
-
-async def knowledge_agent(*args, **kwargs):
-    raise NotImplementedError("knowledge_agent stub")
-
-
-async def writer_agent(*args, **kwargs):
-    raise NotImplementedError("writer_agent stub")
-
-
-async def storyboard_editor_agent(*args, **kwargs):
-    raise NotImplementedError("storyboard_editor_agent stub")
-
-
 agents_map = {}

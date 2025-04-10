@@ -47,3 +47,10 @@ async def _ainvoke(*args, **kwargs):
 
 
 oracle_workflow.ainvoke = _ainvoke
+
+
+class OracleWorkflowWrapper:
+    async def ainvoke(self, inputs: dict, state):
+        return await oracle_workflow(inputs, state)
+
+chat_workflow = OracleWorkflowWrapper()
