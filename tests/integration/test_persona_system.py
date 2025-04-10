@@ -5,9 +5,9 @@ from src.models import ChatState
 from langchain_core.messages import HumanMessage, AIMessage
 import chainlit as cl
 import uuid
-from tests.test_event_handlers import (
+from tests.integration.test_event_handlers import (
     mock_cl_environment,
-)  # Ensure this line exists and is correct
+)  # Adjusted import path to fix ModuleNotFoundError
 from src.event_handlers import on_message
 
 # Imports needed for the modified test:
