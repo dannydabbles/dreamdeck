@@ -128,6 +128,14 @@ Enable saving/loading of chat state and structured file storage for persona and 
 
 ## **Phase 5: Persona Switching, Tool Preferences, and Prompt Customization**
 
+**Status:** ✅ Completed
+
+- CLI supports explicit persona switching (`switch-persona` command).
+- Onboarding message printed after persona switch.
+- Persona switches and tool calls logged to daily directories (`helper/<persona>/<date>/log.txt`).
+- Persona-specific prompt templates loaded dynamically from `prompts/`.
+- Tool preferences enforced via `PERSONA_TOOL_PREFERENCES`.
+
 **Goal:**  
 Enhance persona experience with explicit switching, tailored prompts, and tool filtering.
 
