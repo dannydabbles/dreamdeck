@@ -108,6 +108,8 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
 
         # Save updated markdown back to file
         try:
+            # Defensive: ensure directory exists before saving
+            os.makedirs(dir_path, exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(updated_markdown)
         except Exception as e:
