@@ -90,10 +90,28 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         response = await llm.ainvoke([("system", prompt)])
         updated_markdown = response.content.strip()
 
+        # Defensive: ensure directory exists before saving
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+        except Exception as e:
+            cl_logger.warning(f"Failed to create todo directory {dir_path}: {e}")
+
+        # Defensive: if markdown looks like a JSON list (e.g., ["buy milk"]), convert to minimal markdown
+        if updated_markdown.startswith("[") and updated_markdown.endswith("]"):
+            import json
+            try:
+                items = json.loads(updated_markdown)
+                if isinstance(items, list):
+                    updated_markdown = "**Finished**\n\n**In Progress**\n\n**Remaining**\n" + "\n".join(f"- {item}" for item in items)
+            except Exception:
+                pass  # fallback to raw content if parse fails
+
         # Save updated markdown back to file
-        os.makedirs(dir_path, exist_ok=True)
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(updated_markdown)
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(updated_markdown)
+        except Exception as e:
+            cl_logger.warning(f"Failed to write todo file {file_path}: {e}")
 
         cl_msg = CLMessage(
             content=f"📝 Updated TODO list:\n{updated_markdown}",
