@@ -64,7 +64,6 @@ async def test_oracle_workflow_dispatches_to_persona(monkeypatch):
     async def fake_secretary(inputs, state, **kwargs):
         called["secretary"] = True
         return [
-            # Return a dummy AI message so oracle_workflow doesn't error
             __import__("langchain_core.messages", fromlist=["AIMessage"]).AIMessage(
                 content="Dummy secretary response",
                 name="secretary",
@@ -100,6 +99,18 @@ async def test_oracle_workflow_dispatches_to_persona(monkeypatch):
         "report": dummy_tool,
     }
     monkeypatch.setattr(agents_mod, "agents_map", agents_map_patch)
+
+    # Patch src.agents.persona_classifier_agent to always return secretary
+    async def fake_classifier(state, **kwargs):
+        return {"persona": "secretary", "reason": "test"}
+
+    monkeypatch.setattr(agents_mod, "persona_classifier_agent", fake_classifier)
+
+    # Patch src.agents.director_agent to return empty list so no tools run
+    async def fake_director(state, **kwargs):
+        return []
+
+    monkeypatch.setattr(agents_mod, "director_agent", fake_director)
 
     state = ChatState(messages=[], thread_id="t", current_persona="secretary")
     await oracle_workflow.ainvoke(
