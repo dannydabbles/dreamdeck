@@ -78,10 +78,11 @@ async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list
         append_log(state.current_persona, f"Oracle dispatched to persona workflow: {state.current_persona}")
 
         # Run the director to get list of actions/tools
-        if config is not None:
+        try:
             actions = await director_agent(state, config=config)
-        else:
-            actions = await director_agent(state)
+        except Exception as e:
+            cl_logger.error(f"Director agent failed: {e}")
+            actions = ["continue_story"]
 
         from src.agents import agents_map
 
@@ -90,10 +91,7 @@ async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list
             tool_func = agents_map.get(action)
             if tool_func:
                 try:
-                    if config is not None:
-                        tool_outputs = await tool_func(state, config=config)
-                    else:
-                        tool_outputs = await tool_func(state)
+                    tool_outputs = await tool_func(state, config=config)
                     if isinstance(tool_outputs, list):
                         state.messages.extend(tool_outputs)
                     elif isinstance(tool_outputs, dict) and "messages" in tool_outputs:
@@ -102,7 +100,17 @@ async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list
                     cl_logger.error(f"Tool '{action}' failed: {e}")
 
         # After all tools, run the persona-specific writer agent
-        response = await workflow_func(inputs, state, config=config)
+        try:
+            response = await workflow_func(inputs, state, config=config)
+        except Exception as e:
+            cl_logger.error(f"Persona workflow '{persona_key}' failed: {e}")
+            response = [
+                AIMessage(
+                    content="An error occurred in the oracle workflow.",
+                    name="error",
+                    metadata={"message_id": None},
+                )
+            ]
 
         # Defensive: handle dict response (legacy or tool output)
         if isinstance(response, dict) and "messages" in response:
