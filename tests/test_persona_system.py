@@ -123,8 +123,8 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
     # Patch the function referenced in agents_map['roll'] (which is dice_roll from dice_agent)
     monkeypatch.setattr("src.agents.dice_agent.dice_roll", fake_dice)
-    # Patch the function referenced in agents_map['write'] (which is call_writer_agent exposed on writer_agent wrapper)
-    monkeypatch.setattr("src.agents.writer_agent.writer_agent.call_writer_agent", fake_writer)
+    # Patch the underlying function called by the writer_agent instance
+    monkeypatch.setattr("src.agents.writer_agent.call_writer_agent", fake_writer)
 
     # Mock vector store get method if needed
     mock_vector_store = MagicMock()
@@ -162,8 +162,8 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
     # Patch the function referenced in agents_map['todo'] (which is manage_todo from todo_agent)
     monkeypatch.setattr("src.agents.todo_agent.manage_todo", fake_todo)
-    # Patch the function referenced in agents_map['write'] (which is call_writer_agent exposed on writer_agent wrapper)
-    monkeypatch.setattr("src.agents.writer_agent.writer_agent.call_writer_agent", fake_writer)
+    # Patch the underlying function called by the writer_agent instance
+    monkeypatch.setattr("src.agents.writer_agent.call_writer_agent", fake_writer)
 
     # Mock vector store get method
     mock_vector_store = MagicMock()
