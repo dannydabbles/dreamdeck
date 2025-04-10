@@ -137,7 +137,8 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     cl.user_session.set("vector_memory", mock_vector_store)
 
     # Provide unique thread_id for this test
-    test_thread_id = f"test_thread_{uuid.uuid4()}"
+    import uuid as _uuid
+    test_thread_id = f"test_thread_{_uuid.uuid4()}"
     workflow_config = {"configurable": {"thread_id": test_thread_id}}
 
     # Construct the 'previous' state expected by the entrypoint
@@ -160,7 +161,7 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     # Check if the fake_writer output was merged into the state messages
     therapist_msg_found = False
     for msg in result_messages:
-        if isinstance(msg, AIMessage) and msg.name == "Therapist":
+        if isinstance(msg, AIMessage) and msg.name in ("Therapist", "🤖 therapist"):
             therapist_msg_found = True
             break
     assert therapist_msg_found, f"Expected Therapist message in {result_messages}"
@@ -247,9 +248,12 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     # Check if vector store 'put' was called for the AI message
     mock_vector_store.put.assert_called()
     last_call_args, last_call_kwargs = mock_vector_store.put.call_args_list[-1]
-    import uuid
     try:
-        uuid.UUID(last_call_kwargs['message_id'])
+        import uuid as _uuid
+    except ImportError:
+        import uuid as _uuid
+    try:
+        _uuid.UUID(last_call_kwargs['message_id'])
     except ValueError:
         assert False, f"message_id is not a valid UUID: {last_call_kwargs['message_id']}"
     assert last_call_kwargs['metadata']['type'] == 'ai'
