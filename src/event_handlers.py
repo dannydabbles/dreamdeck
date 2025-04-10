@@ -241,9 +241,6 @@ async def on_chat_start():
     except Exception as e:
         cl_logger.error(f"Application failed to start: {e}", exc_info=True)
         raise
-    finally:
-        # Close database pool
-        await DatabasePool.close()
 
 
 @cl.on_chat_resume
