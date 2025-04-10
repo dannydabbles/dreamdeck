@@ -230,6 +230,22 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
         current_persona="therapist",
     )
 
+    # Patch persona_workflows to dummy workflows to avoid real LLM calls
+    import src.persona_workflows as pw
+
+    async def dummy_workflow(inputs, state, **kwargs):
+        from langchain_core.messages import AIMessage
+        return [
+            AIMessage(
+                content=f"Dummy response for persona {state.current_persona}",
+                name=state.current_persona,
+                metadata={"message_id": "dummy_id"},
+            )
+        ]
+
+    for key in pw.persona_workflows:
+        monkeypatch.setitem(pw.persona_workflows, key, dummy_workflow)
+
     async def fake_director(state):
         return ["roll", "write"]
 
@@ -295,6 +311,22 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
 @pytest.mark.asyncio
 async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     dummy_state = ChatState(messages=[], thread_id="thread1", current_persona="default")
+
+    # Patch persona_workflows to dummy workflows to avoid real LLM calls
+    import src.persona_workflows as pw
+
+    async def dummy_workflow(inputs, state, **kwargs):
+        from langchain_core.messages import AIMessage
+        return [
+            AIMessage(
+                content=f"Dummy response for persona {state.current_persona}",
+                name=state.current_persona,
+                metadata={"message_id": "dummy_id"},
+            )
+        ]
+
+    for key in pw.persona_workflows:
+        monkeypatch.setitem(pw.persona_workflows, key, dummy_workflow)
 
     async def fake_classifier(state, **kwargs):
         # Simulate classifier suggesting secretary
@@ -433,6 +465,22 @@ async def test_multi_tool_persona_workflow(monkeypatch, mock_cl_environment):
     from langchain_core.messages import AIMessage, HumanMessage
     from src.models import ChatState
 
+    # Patch persona_workflows to dummy workflows to avoid real LLM calls
+    import src.persona_workflows as pw
+
+    async def dummy_workflow(inputs, state, **kwargs):
+        from langchain_core.messages import AIMessage
+        return [
+            AIMessage(
+                content=f"Dummy response for persona {state.current_persona}",
+                name=state.current_persona,
+                metadata={"message_id": "dummy_id"},
+            )
+        ]
+
+    for key in pw.persona_workflows:
+        monkeypatch.setitem(pw.persona_workflows, key, dummy_workflow)
+
     # Patch persona_classifier_agent to suggest 'secretary'
     async def fake_classifier(state, **kwargs):
         cl.user_session.set("current_persona", "secretary")
@@ -552,6 +600,22 @@ async def test_declined_persona_suppresses_reprompt(monkeypatch, mock_cl_environ
     cl.user_session.set("current_persona", "default")
 
     dummy_state = ChatState(messages=[], thread_id="thread1", current_persona="default")
+
+    # Patch persona_workflows to dummy workflows to avoid real LLM calls
+    import src.persona_workflows as pw
+
+    async def dummy_workflow(inputs, state, **kwargs):
+        from langchain_core.messages import AIMessage
+        return [
+            AIMessage(
+                content=f"Dummy response for persona {state.current_persona}",
+                name=state.current_persona,
+                metadata={"message_id": "dummy_id"},
+            )
+        ]
+
+    for key in pw.persona_workflows:
+        monkeypatch.setitem(pw.persona_workflows, key, dummy_workflow)
 
     # Patch classifier to always suggest 'therapist'
     async def fake_classifier(state):

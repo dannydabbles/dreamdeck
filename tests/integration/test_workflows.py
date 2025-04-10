@@ -56,13 +56,28 @@ async def test_oracle_workflow_memory_updates(mock_chat_state):
 async def test_oracle_workflow_dispatches_to_persona(monkeypatch):
     from src.oracle_workflow import oracle_workflow
 
+    # Patch persona_workflows to dummy workflows to avoid real LLM calls
+    import src.persona_workflows as pw
+
+    async def dummy_workflow(inputs, state, **kwargs):
+        from langchain_core.messages import AIMessage
+        return [
+            AIMessage(
+                content=f"Dummy response for persona {state.current_persona}",
+                name=state.current_persona,
+                metadata={"message_id": "dummy_id"},
+            )
+        ]
+
+    for key in pw.persona_workflows:
+        monkeypatch.setitem(pw.persona_workflows, key, dummy_workflow)
+
     called = {}
 
     async def fake_secretary(inputs, state, **kwargs):
         called["secretary"] = True
         return []
 
-    import src.persona_workflows as pw
     monkeypatch.setitem(pw.persona_workflows, "secretary", fake_secretary)
 
     state = ChatState(messages=[], thread_id="t", current_persona="secretary")
