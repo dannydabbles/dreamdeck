@@ -121,7 +121,7 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
 
     async def fake_writer(state, **kwargs):
         # Return a simple dict to test serialization
-        return {"messages": [AIMessage(content="Therapy response", name="Therapist", metadata={"message_id": "w1"})]}
+        return {"messages": [AIMessage(content="Therapy response", name="🤖 therapist", metadata={"message_id": "w1"})]}
 
     # Patch the underlying functions
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
@@ -247,7 +247,11 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     # Check if vector store 'put' was called for the AI message
     mock_vector_store.put.assert_called()
     last_call_args, last_call_kwargs = mock_vector_store.put.call_args_list[-1]
-    assert last_call_kwargs['message_id'] == 't1'
+    import uuid
+    try:
+        uuid.UUID(last_call_kwargs['message_id'])
+    except ValueError:
+        assert False, f"message_id is not a valid UUID: {last_call_kwargs['message_id']}"
     assert last_call_kwargs['metadata']['type'] == 'ai'
     assert last_call_kwargs['metadata']['author'] == 'todo'
     assert last_call_kwargs['metadata']['persona'] == 'secretary'
