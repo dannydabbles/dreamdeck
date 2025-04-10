@@ -1,21 +1,21 @@
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock, call  # Added MagicMock, call
+from unittest.mock import patch, AsyncMock, MagicMock, call
 from src.agents.persona_classifier_agent import _classify_persona, PERSONA_LIST
 from src.models import ChatState
 from langchain_core.messages import HumanMessage, AIMessage
 import chainlit as cl
-import uuid  # Add uuid import
-
+import uuid
 from tests.test_event_handlers import mock_cl_environment  # Ensure this line exists and is correct
-
 from src.event_handlers import on_message
-from src.agents.writer_agent import _generate_story, call_writer_agent
-from src.agents.writer_agent import _WriterAgentWrapper  # For patching __call__
+# Imports needed for the modified test:
+from src.agents.writer_agent import _generate_story, call_writer_agent, _WriterAgentWrapper
 from src.agents.director_agent import _direct_actions, director_agent
-# Import the compiled LangGraph app *without* the checkpointer for these tests
 from src.workflows import app_without_checkpoint as chat_workflow_app
-from src.agents.dice_agent import _dice_roll, _DiceAgentWrapper  # For patching __call__
-from src.agents.todo_agent import _manage_todo, manage_todo  # For patching
+from src.agents.dice_agent import _dice_roll, _DiceAgentWrapper
+from src.agents.todo_agent import _manage_todo, manage_todo
+from jinja2 import Template
+from src.config import config as app_config
+from langchain_openai import ChatOpenAI
 
 
 @pytest.mark.asyncio
@@ -54,38 +54,102 @@ async def test_persona_switch_confirmation(monkeypatch, mock_cl_environment):
     assert cl.user_session.get("current_persona") == "therapist"
 
 
+# --- Replace the existing test_writer_agent_selects_persona_prompt function with this ---
 @pytest.mark.asyncio
 async def test_writer_agent_selects_persona_prompt(monkeypatch, mock_cl_environment):
-    dummy_state = ChatState(messages=[], thread_id="thread1", current_persona="Secretary")
+    # Import necessary mocks and classes within the test or ensure they are at the top level
+    from unittest.mock import patch, MagicMock, AsyncMock
+    from src.models import ChatState
+    from langchain_core.messages import AIMessage
+    from jinja2 import Template # Ensure Jinja2 Template is imported
+    from src.agents.writer_agent import _generate_story # Import the internal function
+    from src.config import config as app_config # Import the actual config object to mock parts of it
+    from langchain_openai import ChatOpenAI # Ensure ChatOpenAI is imported if not already
 
+    # Setup: Define persona and state
+    test_persona = "Secretary"
+    dummy_state = ChatState(messages=[], thread_id="thread1", current_persona=test_persona)
+
+    # Mock LLM stream behavior
     async def fake_stream(*args, **kwargs):
         class FakeChunk:
             content = "Test story content"
         yield FakeChunk()
 
+    # Mock cl.Message and its methods (needed by _generate_story)
     class DummyMsg:
         content = ""
         id = "msgid"
         async def stream_token(self, chunk): self.content += chunk
         async def send(self): pass
+        async def update(self): pass # Add update if needed
 
-    # Patch the ChatOpenAI class used within the writer_agent module
+    mock_cl_message_instance = DummyMsg()
+    monkeypatch.setattr("src.agents.writer_agent.cl.Message", MagicMock(return_value=mock_cl_message_instance))
+    monkeypatch.setattr("src.agents.writer_agent.cl.user_session.get", lambda key, default=None: {} if key == "chat_settings" else default) # Mock settings get
+    monkeypatch.setattr("src.agents.writer_agent.cl.user_session.set", MagicMock()) # Mock session set
+
+    # Mock config and template rendering
+    # Create a mock object that mimics the structure needed for persona lookup
+    mock_config = MagicMock()
+    mock_config.loaded_prompts = {
+        "default_writer_prompt": "Default prompt text",
+        "secretary_writer_prompt": "Secretary prompt text {{ recent_chat_history }}" # Example key
+    }
+    # Simulate the nested structure for agent personas config
+    mock_writer_agent_config = MagicMock()
+    mock_writer_agent_config.personas = {
+        "Secretary": {"prompt_key": "secretary_writer_prompt"}
+    }
+    mock_agents_config = MagicMock()
+    mock_agents_config.writer_agent = mock_writer_agent_config
+    mock_config.agents = mock_agents_config
+    # Add other necessary config attributes if _generate_story uses them directly
+    mock_config.WRITER_AGENT_STREAMING = True # Example: Add necessary attributes
+    mock_config.WRITER_AGENT_VERBOSE = False
+    mock_config.LLM_TIMEOUT = 300
+    mock_config.WRITER_AGENT_BASE_URL = "http://mock.url"
+    mock_config.WRITER_AGENT_TEMPERATURE = 0.7
+    mock_config.WRITER_AGENT_MAX_TOKENS = 1000
+
+
+    mock_template_instance = MagicMock()
+    mock_template_instance.render = MagicMock(return_value="Rendered Secretary Prompt") # Mocked render output
+    mock_template_class = MagicMock(return_value=mock_template_instance)
+
+    # Patch the config and Template used within the writer_agent module
+    monkeypatch.setattr("src.agents.writer_agent.config", mock_config)
+    monkeypatch.setattr("src.agents.writer_agent.Template", mock_template_class)
+
+    # Patch ChatOpenAI within the writer_agent module
     with patch("src.agents.writer_agent.ChatOpenAI") as MockChatOpenAI:
-        # Configure the mock instance that will be created inside the agent
-        mock_instance = MockChatOpenAI.return_value
-        mock_instance.astream = fake_stream
+        mock_llm_instance = MockChatOpenAI.return_value
+        mock_llm_instance.astream = fake_stream
 
-        # Mock cl.Message creation and its methods
-        with patch("src.agents.writer_agent.cl.Message", return_value=DummyMsg()) as mock_cl_msg:
-            # Call the actual agent function
-            result = await call_writer_agent(dummy_state)
+        # Call the internal function directly
+        await _generate_story(dummy_state)
 
-            # Assert that ChatOpenAI was called
-            MockChatOpenAI.assert_called_once()
-            # Assert cl.Message was used correctly
-            mock_cl_msg.assert_called_once()
-            # Assert the returned message has the correct persona icon/name
-            assert result[0].name.startswith("🗒️ Secretary")
+        # Assertions
+        # 1. Check that the Template was initialized with the correct persona's prompt text
+        # Access the actual prompt string used based on the mocked config structure
+        expected_prompt_str = mock_config.loaded_prompts["secretary_writer_prompt"]
+        mock_template_class.assert_called_once_with(expected_prompt_str)
+
+        # 2. Check that render was called with context derived from the state
+        mock_template_instance.render.assert_called_once()
+        render_kwargs = mock_template_instance.render.call_args.kwargs
+        assert "recent_chat_history" in render_kwargs # Check context keys
+        assert "memories" in render_kwargs
+        assert "tool_results" in render_kwargs
+        assert "user_preferences" in render_kwargs
+
+        # 3. Check LLM was called with the rendered prompt
+        mock_llm_instance.astream.assert_called_once()
+        astream_call_args = mock_llm_instance.astream.call_args[0][0]
+        assert astream_call_args[0] == ("system", "Rendered Secretary Prompt")
+
+        # 4. Check cl.Message was used correctly (send was called)
+        assert mock_cl_message_instance.send.called
 
 
 @pytest.mark.asyncio
