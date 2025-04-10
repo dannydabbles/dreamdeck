@@ -11,20 +11,9 @@ cl_logger = logging.getLogger("chainlit")
 
 async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        # Defensive: try to get current Runnable config, fallback to empty dict
-        try:
-            from langchain_core.runnables import Runnable
-            current_config = Runnable.get_current_config()
-        except RuntimeError:
-            current_config = {}
-
-        # Merge passed config with current_config
+        # Defensive: get passed config or empty dict
         if config is None:
-            config = current_config
-        else:
-            merged = dict(current_config)
-            merged.update(config)
-            config = merged
+            config = {}
 
         # Support legacy positional args: (messages, previous)
         if not isinstance(inputs, dict):
