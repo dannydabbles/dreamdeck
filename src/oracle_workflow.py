@@ -11,6 +11,9 @@ cl_logger = logging.getLogger("chainlit")
 
 async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
+        if config is None:
+            config = {}
+
         # Support legacy positional args: (messages, previous)
         if not isinstance(inputs, dict):
             # assume *args style call
@@ -43,7 +46,7 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
         force_classify = inputs.get("force_classify", False)
         if not getattr(state, "current_persona", None) or force_classify:
             cl_logger.info("Oracle: Running persona classifier...")
-            result = await persona_classifier_agent(state)
+            result = await persona_classifier_agent(state, config=config)
             suggested_persona = result.get("persona", "default")
             cl_logger.info(f"Oracle: Classifier suggests persona '{suggested_persona}'")
             state.current_persona = suggested_persona
@@ -57,7 +60,7 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
             )
             workflow_func = persona_workflows.get("default")
 
-        response = await workflow_func(inputs, state)
+        response = await workflow_func(inputs, state, config=config)
 
         # Wrap list of messages into ChatState for compatibility
         if isinstance(response, list):
@@ -83,9 +86,8 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
 
 # Add dummy .ainvoke method so tests patching it don't fail
 async def _ainvoke(*args, **kwargs):
-    # ignore 'config' kwarg if passed
-    kwargs.pop("config", None)
-    return await oracle_workflow(*args, **kwargs)
+    config = kwargs.pop("config", None)
+    return await oracle_workflow(*args, **kwargs, config=config)
 
 
 oracle_workflow.ainvoke = _ainvoke
@@ -93,11 +95,8 @@ oracle_workflow.ainvoke = _ainvoke
 
 class OracleWorkflowWrapper:
     async def ainvoke(self, *args, **kwargs):
-        # extract and propagate 'config' if passed
         config = kwargs.pop("config", None)
-        if config is not None:
-            kwargs["config"] = config
-        return await oracle_workflow(*args, **kwargs)
+        return await oracle_workflow(*args, **kwargs, config=config)
 
     async def __call__(self, *args, **kwargs):
         # support calling instance directly as async callable
