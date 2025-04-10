@@ -1,4 +1,5 @@
 from typing import List, Optional
+import asyncio
 from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
@@ -26,6 +27,7 @@ class ChatState(BaseModel):
         thread_data (dict): Metadata about the conversation thread
         current_persona (str): The active persona/profile name.
         last_agent_called (Optional[str]): The last agent that successfully added a message.
+        background_tasks (List[asyncio.Task]): List of background asyncio tasks to track.
 
     State Transitions:
         - Messages are immutable - new states are created with .copy_with_updates()
@@ -43,6 +45,7 @@ class ChatState(BaseModel):
     thread_data: dict = Field(default_factory=dict)
     current_persona: str = "Default" # Default persona if none selected/resumed
     last_agent_called: Optional[str] = None  # Track last agent that added a message
+    background_tasks: List[asyncio.Task] = Field(default_factory=list)
 
     def increment_error_count(self) -> None:
         self.error_count += 1
