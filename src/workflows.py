@@ -47,10 +47,16 @@ async def chat_workflow(
 
     cl_logger.info(f"Received {len(messages)} messages.")
 
+    # If previous state is not provided, initialize a default one
+    if previous is None:
+        # Attempt to get thread_id from input if available, otherwise use a default
+        thread_id = inputs.get("thread_id", "default_test_thread")
+        previous = ChatState(messages=[], thread_id=thread_id)
+
     return await _chat_workflow(messages=messages, previous=previous)
 
 
-app = chat_workflow  # Assign the entrypoint directly, do not call compile()
+app = chat_workflow.compile()  # Compile the graph to create the runnable application
 
 
 async def _chat_workflow(
