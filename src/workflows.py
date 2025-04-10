@@ -16,8 +16,9 @@ async def _chat_workflow(*args, **kwargs):
     # Fix: avoid passing ChatState as config positional arg
     if len(args) >= 2 and isinstance(args[1], ChatState):
         # Remove ChatState positional arg from args, pass as 'state' kwarg instead
+        state_arg = args[1]
         args = (args[0],)
-        kwargs['state'] = args[1]
+        kwargs['state'] = state_arg
     # Fix: avoid passing ChatState as config kwarg
     if 'config' in kwargs and isinstance(kwargs['config'], ChatState):
         kwargs['config'] = None

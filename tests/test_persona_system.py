@@ -312,27 +312,23 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
 
     async def fake_todo(state, **kwargs):
         # Return a simple dict to test serialization
-        return {
-            "messages": [
-                AIMessage(
-                    content="TODO list updated.",
-                    name="todo",
-                    metadata={"message_id": "t1"},
-                )
-            ]
-        }
+        return [
+            AIMessage(
+                content="TODO list updated.",
+                name="todo",
+                metadata={"message_id": "t1"},
+            )
+        ]
 
     async def fake_writer(state, **kwargs):
         # Return a simple dict to test serialization
-        return {
-            "messages": [
-                AIMessage(
-                    content="Default response.",
-                    name="default",
-                    metadata={"message_id": "w1"},
-                )
-            ]
-        }
+        return [
+            AIMessage(
+                content="Default response.",
+                name="default",
+                metadata={"message_id": "w1"},
+            )
+        ]
 
     # Patch underlying functions
     monkeypatch.setattr("src.event_handlers.persona_classifier_agent", fake_classifier)

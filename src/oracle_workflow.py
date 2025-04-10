@@ -78,7 +78,11 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
 
         response = await workflow_func(inputs, state, config=config)
 
-        if isinstance(response, list):
+        # Defensive: handle dict response (legacy or tool output)
+        if isinstance(response, dict) and "messages" in response:
+            state.messages.extend(response["messages"])
+            return state
+        elif isinstance(response, list):
             state.messages.extend(response)
             return state
         elif isinstance(response, ChatState):
