@@ -24,7 +24,9 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 class _WriterAgentWrapper:
-    pass
+    async def __call__(self, state: ChatState, **kwargs) -> list[BaseMessage]:
+        """Makes the wrapper instance callable by LangGraph, delegating to the task."""
+        return await generate_story(state, **kwargs)
 
 writer_agent = _WriterAgentWrapper()
 

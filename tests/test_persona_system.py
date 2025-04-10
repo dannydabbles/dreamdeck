@@ -122,19 +122,20 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
 
     # Patch the underlying functions, not the @task decorated ones
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    # Patch the function referenced in agents_map['roll'] (which is dice_roll from dice_agent)
-    monkeypatch.setattr("src.agents.dice_agent.dice_roll", fake_dice)
-    # Patch the @task-decorated function that LangGraph likely calls
-    monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
+    # Patch the __call__ method on the _DiceAgentWrapper class
+    monkeypatch.setattr("src.agents.dice_agent._DiceAgentWrapper.__call__", fake_dice)
+    # Patch the __call__ method on the _WriterAgentWrapper class
+    monkeypatch.setattr("src.agents.writer_agent._WriterAgentWrapper.__call__", fake_writer)
 
-    # Patch the writer_agent instance itself to be callable, to avoid '_WriterAgentWrapper' object is not callable error
     # Mock vector store get method if needed
     mock_vector_store = MagicMock()
     mock_vector_store.get = MagicMock(return_value=[])
     mock_vector_store.put = AsyncMock()
     cl.user_session.set("vector_memory", mock_vector_store)
 
-    result_state = await _chat_workflow(dummy_state.messages, dummy_state)
+    # Provide necessary config for LangGraph execution context
+    workflow_config = {"configurable": {"thread_id": dummy_state.thread_id}}
+    result_state = await _chat_workflow(dummy_state.messages, dummy_state, config=workflow_config)
     assert any(m.name == "Therapist" for m in result_state.messages)
 
 
@@ -164,10 +165,9 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
     # Patch the function referenced in agents_map['todo'] (which is manage_todo from todo_agent)
     monkeypatch.setattr("src.agents.todo_agent.manage_todo", fake_todo)
-    # Patch the @task-decorated function that LangGraph likely calls
-    monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
+    # Patch the __call__ method on the _WriterAgentWrapper class
+    monkeypatch.setattr("src.agents.writer_agent._WriterAgentWrapper.__call__", fake_writer)
 
-    # Patch the writer_agent instance itself to be callable, to avoid '_WriterAgentWrapper' object is not callable error
     # Mock vector store get method
     mock_vector_store = MagicMock()
     mock_vector_store.get = MagicMock(return_value=[])
@@ -186,7 +186,9 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     dummy_state.current_persona = "secretary"
 
     # Call the workflow with the updated state
-    result_state = await _chat_workflow(dummy_state.messages, dummy_state)
+    # Provide necessary config for LangGraph execution context
+    workflow_config = {"configurable": {"thread_id": dummy_state.thread_id}}
+    result_state = await _chat_workflow(dummy_state.messages, dummy_state, config=workflow_config)
 
     # Assertions
     names = [m.name for m in result_state.messages]
