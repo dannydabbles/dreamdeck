@@ -121,7 +121,7 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
 
     # Patch the underlying functions, not the @task decorated ones
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    monkeypatch.setattr("src.agents.dice_agent.dice_agent", fake_dice)  # Patch the exported agent name
+    monkeypatch.setattr("src.agents.dice_agent.dice_agent._dice_roll", fake_dice)  # Patch the exported agent attribute
     monkeypatch.setattr("src.agents.writer_agent._generate_story", fake_writer)
 
     # Mock vector store get method if needed
@@ -158,7 +158,7 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     # Patch underlying functions
     monkeypatch.setattr("src.event_handlers.persona_classifier_agent", fake_classifier)
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    monkeypatch.setattr("src.agents.todo_agent.todo_agent", fake_todo)  # Patch the exported agent name
+    monkeypatch.setattr("src.agents.todo_agent.todo_agent._manage_todo", fake_todo)  # Patch the exported agent attribute
     monkeypatch.setattr("src.agents.writer_agent._generate_story", fake_writer)
 
     # Mock vector store get method
