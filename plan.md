@@ -96,15 +96,17 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 
 ---
 
-### **9. Testing**
+### **9. Testing** ✅ **Completed**
 
-- **Unit tests** for:
-  - Persona classifier output.
-  - Persona switch confirmation.
-  - Persona-aware prompt selection.
-  - Director persona context.
-  - Workflow filtering.
-- **Simulate** conversation scenarios to validate switching.
+- Unit tests added for:
+  - Persona classifier output
+  - Persona switch confirmation flow
+  - Persona-aware prompt selection
+  - Director persona context
+  - Workflow filtering and reordering
+  - Simulated conversation with persona switching
+- Tests use mocks and monkeypatching to isolate components.
+- Next: consider integration tests with real LLMs and UI flows.
 
 ---
 
