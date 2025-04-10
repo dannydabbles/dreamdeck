@@ -39,6 +39,10 @@ def chat(persona, user_input):
         for msg in updated_state.messages[len(state.messages):]:
             if hasattr(msg, "content"):
                 print(f"{msg.name or 'AI'}: {msg.content}")
+                # Log tool call or AI message
+                from src.storage import append_log
+                persona = updated_state.current_persona or "default"
+                append_log(persona, f"{msg.name or 'AI'}: {msg.content}")
 
     asyncio.run(run())
 
@@ -59,6 +63,14 @@ def switch_persona(persona_name):
     state.current_persona = persona_name
     save_state_to_file(state, STATE_FILE)
     print(f"Persona switched to: {persona_name}")
+
+    # Log persona switch
+    from src.storage import append_log
+    append_log(persona_name, f"Persona switched to: {persona_name}")
+
+    # Print onboarding message
+    onboarding_message = f"🧭 You are now interacting with **{persona_name}** persona."
+    print(onboarding_message)
 
 
 @cli.command()

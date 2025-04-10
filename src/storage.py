@@ -50,3 +50,15 @@ def load_text_file(path: Path) -> str:
         return ""
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
+
+def append_log(persona: str, message: str, date: str = None):
+    """Append a log entry for a persona on a given date."""
+    if date is None:
+        date = datetime.utcnow().strftime("%Y-%m-%d")
+    safe_persona = "".join(c if c.isalnum() or c in "-_." else "_" for c in persona)
+    log_dir = Path("helper") / safe_persona / date
+    log_file = log_dir / "log.txt"
+    ensure_dir(log_dir)
+    timestamp = datetime.utcnow().isoformat()
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(f"[{timestamp}] {message}\n")
