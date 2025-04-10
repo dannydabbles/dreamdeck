@@ -9,6 +9,7 @@ from .director_agent import director_agent
 from .todo_agent import todo_agent
 from .knowledge_agent import knowledge_agent
 from .persona_classifier_agent import persona_classifier_agent
+from .report_agent import report_agent
 
 __all__ = [
     "web_search_agent",
@@ -18,6 +19,7 @@ __all__ = [
     "todo_agent",
     "knowledge_agent",
     "persona_classifier_agent",
+    "report_agent",
 ]
 
 agents_map = {
@@ -27,4 +29,5 @@ agents_map = {
     # "knowledge" handled explicitly in workflow
     "write": writer_agent,
     "continue_story": writer_agent,
+    "report": report_agent,
 }

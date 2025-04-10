@@ -17,6 +17,7 @@ from src.agents import (
     todo_agent,
     writer_agent,
     storyboard_editor_agent,
+    report_agent,
 )
 from src.agents.todo_agent import call_todo_agent
 from src.config import IMAGE_GENERATION_ENABLED, START_MESSAGE
@@ -261,6 +262,7 @@ async def command_help():
 /todo [note] — Add a TODO item
 /write [prompt] — Directly prompt the writer agent
 /storyboard — Generate storyboard images for the last Game Master message
+/report — Generate a daily summary report
 /help — Show this help message
 /reset — Reset the current story and start fresh
 /save — Export the current story as a markdown file
@@ -321,3 +323,22 @@ async def command_save():
             )
         ],
     ).send()
+
+
+async def command_report():
+    """Slash command: /report - Generate a daily summary report"""
+    state: ChatState = cl.user_session.get("state")
+    vector_store: VectorStore = cl.user_session.get("vector_memory")
+    if not state or not vector_store:
+        await cl.Message(content="Error: Session state not found.").send()
+        return
+
+    cl_logger.info("Executing /report command")
+    responses = await report_agent(state)
+    if responses:
+        ai_msg = responses[0]
+        state.messages.append(ai_msg)
+        if ai_msg.metadata and "message_id" in ai_msg.metadata:
+            await vector_store.put(content=ai_msg.content, message_id=ai_msg.metadata["message_id"], metadata={"type": "ai", "author": ai_msg.name})
+    cl.user_session.set("state", state)
+    cl_logger.info("/report command processed.")
