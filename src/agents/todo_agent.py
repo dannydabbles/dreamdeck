@@ -139,6 +139,10 @@ async def manage_todo(state: ChatState) -> list[AIMessage]:
     return await _manage_todo(state)
 
 
+# Expose internal function for monkeypatching in tests
+_manage_todo = _manage_todo
+
+
 todo_agent = manage_todo
 
 
