@@ -22,6 +22,7 @@ __all__ = [
     "report_agent",
 ]
 
+# Expose agents_map as a module attribute for patching
 agents_map = {
     "roll": dice_roll,
     "search": web_search_agent,
@@ -31,3 +32,7 @@ agents_map = {
     "continue_story": writer_agent,
     "report": report_agent,
 }
+
+# Make agents_map accessible as an attribute of src.agents module
+import sys as _sys
+_sys.modules[__name__].agents_map = agents_map
