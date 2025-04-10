@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from langchain_core.messages import AIMessage, HumanMessage
-from src.workflows import _chat_workflow
+from src.workflows import app_without_checkpoint as _chat_workflow
 from langgraph.func import task
 from src.models import ChatState
 
@@ -53,7 +53,19 @@ async def test_chat_workflow_memory_updates(mock_chat_state):
             "write",
         ]
 
-        updated_state = await _chat_workflow([], previous=initial_state)
+        updated_state_obj = await _chat_workflow(
+            {"messages": initial_state.messages, "previous": initial_state}
+        )
+
+        # The oracle_workflow returns a list of messages, or a ChatState
+        # In our implementation, it returns list[BaseMessage]
+        # So we need to check accordingly
+        # But in our oracle_workflow.py, it returns list[BaseMessage]
+        # So updated_state_obj is a list, not a ChatState
+        # But app_without_checkpoint returns a ChatState
+        # So in this test, updated_state_obj is a ChatState
+        # Let's check accordingly
+        updated_state = updated_state_obj
 
         assert dummy_ai_msg1 in updated_state.messages
         assert dummy_knowledge_msg in updated_state.messages
@@ -68,7 +80,7 @@ async def test_chat_workflow_memory_updates(mock_chat_state):
 
 @pytest.mark.asyncio
 async def test_storyboard_triggered_after_gm(monkeypatch):
-    from src.workflows import _chat_workflow
+    from src.workflows import app_without_checkpoint as _chat_workflow
 
     dummy_gm_msg = AIMessage(
         content="Story continues", name="Game Master", metadata={"message_id": "gm123"}
@@ -89,7 +101,11 @@ async def test_storyboard_triggered_after_gm(monkeypatch):
 
         mock_director.return_value = ["write"]
 
-        updated_state = await _chat_workflow([], previous=dummy_state)
+        updated_state_obj = await _chat_workflow(
+            {"messages": dummy_state.messages, "previous": dummy_state}
+        )
+
+        updated_state = updated_state_obj
 
         mock_storyboard.assert_called_once()
         args, kwargs = mock_storyboard.call_args
@@ -99,7 +115,7 @@ async def test_storyboard_triggered_after_gm(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_multi_hop_orchestration(monkeypatch):
-    from src.workflows import _chat_workflow
+    from src.workflows import app_without_checkpoint as _chat_workflow
 
     dummy_search = AIMessage(
         content="Search results", name="search", metadata={"message_id": "s1"}
@@ -136,7 +152,11 @@ async def test_multi_hop_orchestration(monkeypatch):
             ["write"],
         ]
 
-        updated_state = await _chat_workflow([], previous=state)
+        updated_state_obj = await _chat_workflow(
+            {"messages": state.messages, "previous": state}
+        )
+
+        updated_state = updated_state_obj
 
         contents = [m.content for m in updated_state.messages]
         assert "Search results" in contents
@@ -146,7 +166,7 @@ async def test_multi_hop_orchestration(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_workflow_error_fallback(monkeypatch):
-    from src.workflows import _chat_workflow
+    from src.workflows import app_without_checkpoint as _chat_workflow
 
     state = ChatState(messages=[HumanMessage(content="Hi")], thread_id="t1")
 
@@ -156,6 +176,10 @@ async def test_workflow_error_fallback(monkeypatch):
         side_effect=Exception("fail"),
     ), patch("src.workflows.cl.user_session.get", return_value=None):
 
-        updated_state = await _chat_workflow([], previous=state)
+        updated_state_obj = await _chat_workflow(
+            {"messages": state.messages, "previous": state}
+        )
+
+        updated_state = updated_state_obj
 
         assert updated_state.messages[-1].content == "The adventure continues..."
