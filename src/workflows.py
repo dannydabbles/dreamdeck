@@ -80,22 +80,26 @@ async def _chat_workflow(
     new_messages = previous.messages.copy()
     new_messages.extend(messages)
 
-    # Carry over persona explicitly
+    # Carry over persona and last agent explicitly
     state = ChatState(
         messages=new_messages,
         thread_id=previous.thread_id,
         error_count=previous.error_count,
         current_persona=previous.current_persona,
+        last_agent_called=previous.last_agent_called,
     )
 
     try:
         vector_memory = cl.user_session.get("vector_memory")
 
         chain_count = 0
+        # Director is exempt from redundancy check, call it first
         actions = await director_agent(state)
         cl_logger.info(f"Initial director actions: {actions}")
+        # Reset last agent called after director runs and before tool loop
+        state.last_agent_called = None
 
-        # Persona-aware filtering and reordering of actions (Phase 5)
+        # Persona-aware filtering and reordering
         persona = getattr(state, "current_persona", "default").lower()
         prefs = PERSONA_TOOL_PREFERENCES.get(persona, {})
 
@@ -105,20 +109,18 @@ async def _chat_workflow(
         # Filter out avoided actions
         filtered_actions = []
         for act in actions:
-            # act can be string or dict
             if isinstance(act, str):
                 if act in avoid:
                     cl_logger.info(f"Skipping action '{act}' due to persona '{persona}' avoid list")
                     continue
             elif isinstance(act, dict):
-                # For dict actions, check 'action' key
                 act_name = act.get("action")
                 if act_name in avoid:
                     cl_logger.info(f"Skipping action '{act_name}' due to persona '{persona}' avoid list")
                     continue
             filtered_actions.append(act)
 
-        # Reorder preferred actions to the front, preserving relative order
+        # Reorder preferred actions to the front
         preferred_actions = []
         other_actions = []
         for act in filtered_actions:
@@ -131,12 +133,14 @@ async def _chat_workflow(
                 other_actions.append(act)
 
         actions = preferred_actions + other_actions
-
         cl_logger.info(f"Persona-aware filtered and reordered actions: {actions}")
 
         while actions and chain_count < MAX_CHAIN_LENGTH:
+            # Check if the last message was from a human before this iteration
+            human_intervened = isinstance(state.messages[-1], HumanMessage) if state.messages else False
+
             # Remove trailing GM call if present
-            if actions[-1] in ("write", "continue_story"):
+            if actions and actions[-1] in ("write", "continue_story"):
                 gm_action = actions.pop()
                 gm_needed = True
             else:
@@ -145,10 +149,17 @@ async def _chat_workflow(
             # Process tool actions
             for action in actions:
                 agent_response = []
+                agent_name_to_call = None
+
                 if isinstance(action, str):
+                    agent_name_to_call = action
                     agent_func = agents_map.get(action)
                     if not agent_func:
                         cl_logger.warning(f"Unknown action string from director: {action}")
+                        continue
+                    # Redundancy check
+                    if agent_name_to_call == state.last_agent_called and not human_intervened:
+                        cl_logger.warning(f"Skipping redundant call to agent: {agent_name_to_call}")
                         continue
                     maybe_coro = agent_func(state)
                     if asyncio.iscoroutine(maybe_coro):
@@ -159,15 +170,20 @@ async def _chat_workflow(
                     action_name = action.get("action")
                     if action_name == "knowledge":
                         knowledge_type = action.get("type")
-                        if knowledge_type:
-                            agent_response = await knowledge_agent(state, knowledge_type=knowledge_type)
-                        else:
+                        agent_name_to_call = f"knowledge_{knowledge_type}"
+                        if not knowledge_type:
                             cl_logger.warning(f"Knowledge action missing 'type': {action}")
                             continue
+                        # Redundancy check
+                        if agent_name_to_call == state.last_agent_called and not human_intervened:
+                            cl_logger.warning(f"Skipping redundant call to agent: {agent_name_to_call}")
+                            continue
+                        agent_response = await knowledge_agent(state, knowledge_type=knowledge_type)
+                    # Add elif for other dict actions if needed
 
                 agent_response = await resolve_if_future(agent_response)
 
-                # Unwrap dicts with 'messages' key (mock or real agent output)
+                # Unwrap dicts with 'messages' key
                 if isinstance(agent_response, dict) and "messages" in agent_response:
                     agent_response = agent_response["messages"]
 
@@ -180,14 +196,24 @@ async def _chat_workflow(
                             metadata={"type": "ai", "author": msg.name, "persona": state.current_persona},
                         )
 
+                # Update last_agent_called if this agent produced output
+                if agent_name_to_call and agent_response:
+                    state.last_agent_called = agent_name_to_call
+                    cl_logger.debug(f"Updated last_agent_called to: {agent_name_to_call}")
+
             # After tools, decide next actions
             chain_count += 1
             if gm_needed or chain_count >= MAX_CHAIN_LENGTH:
-                # Call GM to continue story
+                writer_agent_name = "writer"
+                # Redundancy check for writer
+                if writer_agent_name == state.last_agent_called and not human_intervened:
+                    cl_logger.warning(f"Skipping redundant call to agent: {writer_agent_name}")
+                    break
+
                 writer_response = await writer_agent(state)
                 writer_response = await resolve_if_future(writer_response)
 
-                # Unwrap dicts with 'messages' key (mock or real agent output)
+                # Unwrap dicts with 'messages' key
                 if isinstance(writer_response, dict) and "messages" in writer_response:
                     writer_response = writer_response["messages"]
 
@@ -200,36 +226,38 @@ async def _chat_workflow(
                                 message_id=msg.metadata["message_id"],
                                 metadata={"type": "ai", "author": msg.name, "persona": state.current_persona},
                             )
+                    # Update last_agent_called if writer produced output
+                    state.last_agent_called = writer_agent_name
+                    cl_logger.debug(f"Updated last_agent_called to: {writer_agent_name}")
+
                 break  # Always stop after GM
             else:
                 # Re-orchestrate based on updated state
                 actions = await director_agent(state)
                 cl_logger.info(f"Next director actions: {actions}")
+                # Reset last agent called after director runs
+                state.last_agent_called = None
 
-                # Persona-aware filtering and reordering of actions (Phase 5)
+                # Persona-aware filtering and reordering
                 persona = getattr(state, "current_persona", "default").lower()
                 prefs = PERSONA_TOOL_PREFERENCES.get(persona, {})
 
                 avoid = set(prefs.get("avoid", []))
                 prefer = prefs.get("prefer", [])
 
-                # Filter out avoided actions
                 filtered_actions = []
                 for act in actions:
-                    # act can be string or dict
                     if isinstance(act, str):
                         if act in avoid:
                             cl_logger.info(f"Skipping action '{act}' due to persona '{persona}' avoid list")
                             continue
                     elif isinstance(act, dict):
-                        # For dict actions, check 'action' key
                         act_name = act.get("action")
                         if act_name in avoid:
                             cl_logger.info(f"Skipping action '{act_name}' due to persona '{persona}' avoid list")
                             continue
                     filtered_actions.append(act)
 
-                # Reorder preferred actions to the front, preserving relative order
                 preferred_actions = []
                 other_actions = []
                 for act in filtered_actions:
@@ -242,7 +270,6 @@ async def _chat_workflow(
                         other_actions.append(act)
 
                 actions = preferred_actions + other_actions
-
                 cl_logger.info(f"Persona-aware filtered and reordered actions: {actions}")
 
         # Trigger storyboard generation after GM response
