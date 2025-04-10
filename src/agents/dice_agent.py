@@ -22,6 +22,9 @@ from src.models import ChatState
 
 import chainlit as cl
 
+# Expose _dice_roll for testing monkeypatch
+__all__ = ["dice_roll", "dice_roll_agent", "dice_agent", "_dice_roll"]
+
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 

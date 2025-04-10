@@ -6,6 +6,9 @@ import base64
 import httpx
 from typing import List, Optional
 
+# Expose persona_classifier_agent for tests
+from src.agents.persona_classifier_agent import persona_classifier_agent
+
 # Define Chainlit commands for UI buttons
 commands = [
     {"id": "roll", "icon": "dice-5", "description": "Roll dice"},
