@@ -23,7 +23,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 - Stores suggestion in `cl.user_session["suggested_persona"]`.
 - Falls back to "default" on error.
 - Persona classifier prompt moved to `src/prompts/persona_classifier_prompt.j2` and loaded via config.
-- Next: integrate user confirmation flow.
+- **Completed**
 
 ---
 
@@ -34,6 +34,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
   - On **Yes**: update `cl.user_session["current_persona"]` and `ChatState.current_persona`.
   - On **No**: keep current persona.
 - Always allow **manual override** via UI or `/persona` command. (Planned for later phase)
+- **Completed**
 
 ---
 
@@ -42,7 +43,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 - Config now supports persona-specific prompt keys for writer, todo, and knowledge agents.
 - Agents dynamically select prompt template based on `ChatState.current_persona`.
 - New prompt templates added for therapist, coder, secretary, lorekeeper personas.
-- Next: **Phase 4** will update the director prompt and tool preferences.
+- **Completed**
 
 ---
 
@@ -54,7 +55,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
   `"Persona tool preferences: {{ persona_preferences }}"`
 - **Config** now supports `persona_tool_preferences` dict with `prefer` and `avoid` lists per persona.
 - **Director agent** passes persona and preferences into the prompt, enabling persona-aware tool selection.
-- Next: **Phase 5** will filter or reorder director actions based on these preferences programmatically.
+- **Completed**
 
 ---
 
@@ -64,6 +65,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
   - Director actions are now **filtered and reordered** dynamically based on persona preferences.
   - E.g., dice rolls are skipped if persona is therapist; preferred tools are prioritized.
 - **Note:** Persona-specific agents like report agent will be added in Phase 7.
+- **Completed**
 
 ---
 
@@ -73,6 +75,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 - Created prompt templates for each persona.
 - Updated config with persona-specific prompt keys.
 - Persona-aware prompts, director, and workflows now fully support these personas.
+- **Completed**
 
 ---
 
@@ -83,6 +86,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 - Triggered by `/report` command or can be invoked programmatically.
 - Summarizes progress and suggests next steps.
 - Future: can extend to aggregate notes, calendar, or other data sources.
+- **Completed**
 
 ---
 
@@ -93,6 +97,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
 - Settings toggle for auto persona switching added.
 - Slash command `/persona [name]` implemented.
 - Logging added for persona suggestions, switches, and forced changes.
+- **Completed**
 
 ---
 
@@ -106,7 +111,7 @@ This plan guides the evolution of Dreamdeck into a **dynamic, persona-aware, mul
   - Workflow filtering and reordering
   - Simulated conversation with persona switching
 - Tests use mocks and monkeypatching to isolate components.
-- Next: consider integration tests with real LLMs and UI flows.
+- **Completed**
 
 ---
 
