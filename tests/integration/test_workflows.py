@@ -1,20 +1,17 @@
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from langchain_core.messages import AIMessage, HumanMessage
-from src.workflows import app_without_checkpoint as _chat_workflow
-from langgraph.func import task
+from src.oracle_workflow import oracle_workflow
 from src.models import ChatState
 
 
 @pytest.fixture
 def mock_chat_state():
-    from src.models import ChatState
-
     return ChatState(messages=[], thread_id="test-thread-id")
 
 
 @pytest.mark.asyncio
-async def test_chat_workflow_memory_updates(mock_chat_state):
+async def test_oracle_workflow_memory_updates(mock_chat_state):
     dummy_ai_msg1 = AIMessage(
         content="Tool1 done", name="tool1", metadata={"message_id": "m1"}
     )
@@ -26,231 +23,154 @@ async def test_chat_workflow_memory_updates(mock_chat_state):
     )
 
     with patch(
-        "src.workflows.director_agent", new_callable=AsyncMock
-    ) as mock_director, patch(
-        "src.workflows.agents_map", {"tool1": AsyncMock(return_value=[dummy_ai_msg1])}
+        "src.oracle_workflow.persona_workflows",
+        {
+            "default": AsyncMock(
+                return_value=[dummy_gm_msg]
+            ),  # fallback persona workflow
+        },
     ), patch(
-        "src.workflows.knowledge_agent",
-        new_callable=AsyncMock,
-        return_value=[dummy_knowledge_msg],
-    ) as mock_knowledge_agent, patch(
-        "src.workflows.writer_agent",
-        AsyncMock(return_value=[dummy_gm_msg]),
+        "src.oracle_workflow.append_log"
     ), patch(
-        "src.config.WRITER_AGENT_TEMPERATURE", 0.7
+        "src.oracle_workflow.get_persona_daily_dir"
     ), patch(
-        "src.config.WRITER_AGENT_MAX_TOKENS", 512
+        "src.oracle_workflow.save_text_file"
     ), patch(
-        "src.config.WRITER_AGENT_BASE_URL", "http://localhost"
+        "src.oracle_workflow.persona_classifier_agent",
+        AsyncMock(return_value={"persona": "default"}),
     ), patch(
-        "src.workflows.cl.user_session.get", new_callable=MagicMock
+        "src.oracle_workflow.cl.user_session.get", new_callable=MagicMock
     ) as mock_user_session_get:
 
         vector_store = AsyncMock()
-        mock_user_session_get.return_value = vector_store
+        mock_user_session_get.return_value = {}
 
         initial_state = mock_chat_state
         initial_state.messages.append(HumanMessage(content="Hi"))
 
-        mock_director.return_value = [
-            "tool1",
-            {"action": "knowledge", "type": "character"},
-            "write",
-        ]
-
-        # Patch config values inside src.agents.writer_agent to avoid validation errors
-        import src.agents.writer_agent as writer_mod
-        writer_mod.config.WRITER_AGENT_TEMPERATURE = 0.7
-        writer_mod.config.WRITER_AGENT_MAX_TOKENS = 512
-        writer_mod.config.WRITER_AGENT_BASE_URL = "http://localhost"
-
-        updated_state_obj = await _chat_workflow(
-            {"messages": initial_state.messages},
-            initial_state,
+        result_state = await oracle_workflow.ainvoke(
+            {"messages": initial_state.messages, "previous": initial_state}
         )
-
-        updated_state = updated_state_obj
 
         # Defensive: print messages for debugging
-        # print([m.name for m in updated_state.messages])
+        # print([m.name for m in result_state.messages])
 
-        assert dummy_ai_msg1 in updated_state.messages
-        assert dummy_knowledge_msg in updated_state.messages
-        assert dummy_gm_msg in updated_state.messages
-
-        calls = [call.kwargs for call in vector_store.put.await_args_list]
-        msg_ids = [c["message_id"] for c in calls]
-        assert "m1" in msg_ids
-        assert "k1" in msg_ids
-        assert "gm1" in msg_ids
+        assert isinstance(result_state, ChatState)
+        assert any(
+            m.content == "Story continues" for m in result_state.messages
+        )
 
 
 @pytest.mark.asyncio
-async def test_storyboard_triggered_after_gm(monkeypatch):
-    from src.workflows import app_without_checkpoint as _chat_workflow
+async def test_oracle_workflow_dispatches_to_persona(monkeypatch):
+    from src.oracle_workflow import oracle_workflow
 
-    dummy_gm_msg = AIMessage(
-        content="Story continues", name="Game Master", metadata={"message_id": "gm123"}
-    )
-    dummy_state = ChatState(messages=[HumanMessage(content="Hi")], thread_id="t1")
+    called = {}
 
-    with patch(
-        "src.workflows.director_agent", new_callable=AsyncMock
-    ) as mock_director, patch(
-        "src.workflows.writer_agent",
-        AsyncMock(return_value=[dummy_gm_msg]),
-    ), patch(
-        "src.config.WRITER_AGENT_TEMPERATURE", 0.7
-    ), patch(
-        "src.config.WRITER_AGENT_MAX_TOKENS", 512
-    ), patch(
-        "src.config.WRITER_AGENT_BASE_URL", "http://localhost"
-    ), patch(
-        "src.workflows.cl.user_session.get", return_value=None
-    ), patch(
-        "src.workflows.storyboard_editor_agent", new_callable=AsyncMock
-    ) as mock_storyboard:
+    async def fake_secretary(inputs, state, **kwargs):
+        called["secretary"] = True
+        return []
 
-        # Patch config values inside src.agents.writer_agent to avoid validation errors
-        import src.agents.writer_agent as writer_mod
-        writer_mod.config.WRITER_AGENT_TEMPERATURE = 0.7
-        writer_mod.config.WRITER_AGENT_MAX_TOKENS = 512
-        writer_mod.config.WRITER_AGENT_BASE_URL = "http://localhost"
+    import src.persona_workflows as pw
+    monkeypatch.setitem(pw.persona_workflows, "secretary", fake_secretary)
 
-        mock_director.return_value = ["write"]
+    state = ChatState(messages=[], thread_id="t", current_persona="secretary")
+    await oracle_workflow.ainvoke({"messages": [], "previous": state})
 
-        updated_state_obj = await _chat_workflow(
-            {"messages": dummy_state.messages},
-            dummy_state,
-        )
-
-        updated_state = updated_state_obj
-
-        # Defensive: print messages for debugging
-        # print([m.name for m in updated_state.messages])
-
-        # The storyboard agent is only called if the writer agent succeeds
-        # and returns a GM message, so if writer fails, storyboard won't be called
-        # So relax the assertion to allow zero calls
-        # mock_storyboard.assert_called_once()
-        # Instead:
-        if mock_storyboard.call_count == 0:
-            pass  # acceptable if writer failed
-        else:
-            mock_storyboard.assert_called_once()
-            args, kwargs = mock_storyboard.call_args
-            assert kwargs["state"] == updated_state
-            assert kwargs["gm_message_id"] == "gm123"
+    assert called.get("secretary")
 
 
 @pytest.mark.asyncio
-async def test_multi_hop_orchestration(monkeypatch):
-    from src.workflows import app_without_checkpoint as _chat_workflow
+async def test_oracle_workflow_classifier_switch(monkeypatch):
+    from src.oracle_workflow import oracle_workflow
 
-    dummy_search = AIMessage(
-        content="Search results", name="search", metadata={"message_id": "s1"}
-    )
-    dummy_knowledge = AIMessage(
-        content="Lore details", name="lore", metadata={"message_id": "k1"}
-    )
-    dummy_gm = AIMessage(
-        content="Story", name="Game Master", metadata={"message_id": "gm1"}
-    )
+    async def fake_classifier(state, **kwargs):
+        return {"persona": "therapist", "reason": "User mentioned feelings"}
 
-    state = ChatState(messages=[HumanMessage(content="Hi")], thread_id="t1")
-
-    with patch(
-        "src.workflows.director_agent", new_callable=AsyncMock
-    ) as mock_director, patch(
-        "src.workflows.knowledge_agent",
-        new_callable=AsyncMock,
-        return_value=[dummy_knowledge],
-    ) as mock_knowledge, patch(
-        "src.workflows.agents_map",
-        {
-            "search": AsyncMock(return_value=[dummy_search]),
-        },
-    ), patch(
-        "src.workflows.writer_agent",
-        AsyncMock(return_value=[dummy_gm]),
-    ), patch(
-        "src.config.WRITER_AGENT_TEMPERATURE", 0.7
-    ), patch(
-        "src.config.WRITER_AGENT_MAX_TOKENS", 512
-    ), patch(
-        "src.config.WRITER_AGENT_BASE_URL", "http://localhost"
-    ), patch(
-        "src.workflows.cl.user_session.get", return_value=None
-    ):
-
-        # Patch config values inside src.agents.writer_agent to avoid validation errors
-        import src.agents.writer_agent as writer_mod
-        writer_mod.config.WRITER_AGENT_TEMPERATURE = 0.7
-        writer_mod.config.WRITER_AGENT_MAX_TOKENS = 512
-        writer_mod.config.WRITER_AGENT_BASE_URL = "http://localhost"
-
-        mock_director.side_effect = [
-            ["search"],
-            [{"action": "knowledge", "type": "lore"}],
-            ["write"],
-        ]
-
-        updated_state_obj = await _chat_workflow(
-            {"messages": state.messages},
-            state,
+    async def fake_therapist(inputs, state, **kwargs):
+        state.current_persona = "therapist"
+        state.messages.append(
+            AIMessage(content="Therapist response", name="therapist", metadata={})
         )
+        return state.messages[-1:]
 
-        updated_state = updated_state_obj
+    import src.oracle_workflow as owf
+    monkeypatch.setattr(owf, "persona_classifier_agent", fake_classifier)
+    monkeypatch.setitem(
+        owf.persona_workflows,
+        "therapist",
+        fake_therapist,
+    )
 
-        contents = [m.content for m in updated_state.messages]
-        assert "Search results" in contents or "Story generation failed." in contents
-        assert "Lore details" in contents or "Story generation failed." in contents
-        assert "Story" in contents or "Story generation failed." in contents
+    state = ChatState(messages=[], thread_id="t", current_persona=None)
+    result_state = await oracle_workflow.ainvoke({"messages": [], "previous": state})
+
+    assert result_state.current_persona == "therapist"
+    assert any(
+        m.content == "Therapist response" for m in result_state.messages
+    )
 
 
 @pytest.mark.asyncio
-async def test_workflow_error_fallback(monkeypatch):
-    from src.workflows import app_without_checkpoint as _chat_workflow
+async def test_oracle_workflow_error_handling(monkeypatch):
+    from src.oracle_workflow import oracle_workflow
 
-    state = ChatState(messages=[HumanMessage(content="Hi")], thread_id="t1")
+    async def broken_workflow(inputs, state, **kwargs):
+        raise RuntimeError("fail")
 
-    with patch(
-        "src.workflows.director_agent",
-        new_callable=AsyncMock,
-        side_effect=Exception("fail"),
-    ), patch(
-        "src.workflows.writer_agent",
-        AsyncMock(return_value=[
-            AIMessage(content="The adventure continues...", name="Game Master", metadata={})
-        ]),
-    ), patch(
-        "src.config.WRITER_AGENT_TEMPERATURE", 0.7
-    ), patch(
-        "src.config.WRITER_AGENT_MAX_TOKENS", 512
-    ), patch(
-        "src.config.WRITER_AGENT_BASE_URL", "http://localhost"
-    ), patch("src.workflows.cl.user_session.get", return_value=None):
+    import src.oracle_workflow as owf
+    monkeypatch.setitem(owf.persona_workflows, "default", broken_workflow)
 
-        # Patch config values inside src.agents.writer_agent to avoid validation errors
-        import src.agents.writer_agent as writer_mod
-        writer_mod.config.WRITER_AGENT_TEMPERATURE = 0.7
-        writer_mod.config.WRITER_AGENT_MAX_TOKENS = 512
-        writer_mod.config.WRITER_AGENT_BASE_URL = "http://localhost"
+    state = ChatState(messages=[], thread_id="t", current_persona="default")
+    result_state = await oracle_workflow.ainvoke({"messages": [], "previous": state})
 
-        updated_state_obj = await _chat_workflow(
-            {"messages": state.messages},
-            state,
+    # Should append an error message
+    assert any(
+        m.name == "error" or "error" in m.content.lower() for m in result_state.messages
+    )
+
+
+# New test: all persona workflows run without error
+import src.persona_workflows as pw
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("persona_key", list(pw.persona_workflows.keys()))
+async def test_all_persona_workflows_run(persona_key):
+    workflow = pw.persona_workflows[persona_key]
+    state = ChatState(
+        messages=[HumanMessage(content="Hello", name="Player")],
+        thread_id="test",
+        current_persona=persona_key,
+    )
+    result = await workflow({}, state)
+    assert isinstance(result, list)
+
+
+# New test: multi-hop tool call simulation
+@pytest.mark.asyncio
+async def test_oracle_workflow_multi_hop(monkeypatch):
+    from src.oracle_workflow import oracle_workflow
+
+    # Simulate a persona workflow that returns multiple messages
+    async def fake_storyteller(inputs, state, **kwargs):
+        state.messages.append(
+            AIMessage(content="Lore info", name="lore", metadata={})
         )
-
-        updated_state = updated_state_obj
-
-        # Defensive: print last message for debugging
-        # print(updated_state.messages[-1].content)
-
-        # Accept either fallback message or error message
-        last_content = updated_state.messages[-1].content
-        assert last_content in (
-            "The adventure continues...",
-            "Story generation failed.",
-            "An error occurred in the oracle workflow.",
+        state.messages.append(
+            AIMessage(content="Story continues", name="Game Master", metadata={})
         )
+        return state.messages[-2:]
+
+    import src.oracle_workflow as owf
+    monkeypatch.setitem(owf.persona_workflows, "storyteller_gm", fake_storyteller)
+
+    state = ChatState(
+        messages=[HumanMessage(content="Tell me a story", name="Player")],
+        thread_id="t",
+        current_persona="storyteller_gm",
+    )
+    result_state = await oracle_workflow.ainvoke({"messages": state.messages, "previous": state})
+
+    contents = [m.content for m in result_state.messages]
+    assert "Lore info" in contents
+    assert "Story continues" in contents
