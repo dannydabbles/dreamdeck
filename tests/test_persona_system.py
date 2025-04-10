@@ -138,7 +138,7 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     input_data = {
         "messages": dummy_state.messages,
         "thread_id": dummy_state.thread_id,
-        "current_persona": dummy_state.current_persona,
+        "current_persona": dummy_state.current_persona,  # Ensure persona is passed explicitly
     }
     final_state_dict = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
 
