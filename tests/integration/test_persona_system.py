@@ -238,7 +238,7 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
         return [
             AIMessage(
                 content=f"Dummy response for persona {state.current_persona}",
-                name=state.current_persona,
+                name="🤖 therapist",
                 metadata={"message_id": "dummy_id"},
             )
         ]
@@ -333,7 +333,7 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
         return [
             AIMessage(
                 content=f"Dummy response for persona {state.current_persona}",
-                name=state.current_persona,
+                name="🤖 secretary",
                 metadata={"message_id": "dummy_id"},
             )
         ]
@@ -499,7 +499,7 @@ async def test_multi_tool_persona_workflow(monkeypatch, mock_cl_environment):
         return [
             AIMessage(
                 content=f"Dummy response for persona {state.current_persona}",
-                name=state.current_persona,
+                name="🤖 secretary",
                 metadata={"message_id": "dummy_id"},
             )
         ]

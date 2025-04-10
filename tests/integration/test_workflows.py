@@ -63,7 +63,14 @@ async def test_oracle_workflow_dispatches_to_persona(monkeypatch):
 
     async def fake_secretary(inputs, state, **kwargs):
         called["secretary"] = True
-        return []
+        return [
+            # Return a dummy AI message so oracle_workflow doesn't error
+            __import__("langchain_core.messages", fromlist=["AIMessage"]).AIMessage(
+                content="Dummy secretary response",
+                name="secretary",
+                metadata={"message_id": "dummy_id"},
+            )
+        ]
 
     # Patch *all* persona_workflows to dummy_workflow, except 'secretary' to fake_secretary
     async def dummy_workflow(inputs, state, **kwargs):
