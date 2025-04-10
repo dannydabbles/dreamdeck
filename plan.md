@@ -168,10 +168,56 @@ Make the system more robust, transparent, and efficient.
 
 ---
 
-# **End of Roadmap**
+## **Phase 7: Organize Tests into Smoke and Integration Suites**
+
+**Goal:**  
+Separate fast, unit-level smoke tests from slower, integration and long-running tests.  
+Ensure prompt templates and multi-agent workflows are properly validated.
+
+**Tasks:**  
+1. **Create two test directories:**  
+   - `tests/smoke/` for **fast, isolated unit tests**  
+   - `tests/integration/` for **longer, multi-component, or LLM-involving tests**  
+2. **Move existing fast tests** (e.g., simple function/unit tests) into `tests/smoke/`.  
+3. **Move or write integration tests** into `tests/integration/`, including:  
+   - **Prompt template validation:**  
+     - Load each persona’s prompt template.  
+     - Run a dummy LLM call (mocked or real) to ensure no syntax errors.  
+   - **End-to-end persona workflow tests:**  
+     - Simulate multi-turn conversations.  
+     - Check persona switching works.  
+     - Validate persistence and reload.  
+   - **ChromaDB persistence tests:**  
+     - Add/query embeddings.  
+     - Restart and verify data is retained.  
+4. **Update your `Makefile`:**  
+   - `make smoke` runs only fast tests:  
+     ```bash
+     pytest tests/smoke
+     ```  
+   - `make integration` runs only integration tests:  
+     ```bash
+     pytest tests/integration
+     ```  
+   - `make test` runs **both** suites:  
+     ```bash
+     pytest tests/smoke tests/integration
+     ```  
+5. **Add a README or comments** explaining the difference and when to run each suite.  
+6. **Encourage running smoke tests frequently** during development, and integration tests before merges or releases.
+
+**Notes:**  
+- Integration tests **may call real LLM endpoints** or use **high-fidelity mocks**.  
+- Prompt template tests **catch errors early** in persona-specific prompts.  
+- This separation **keeps CI fast** while ensuring **deep validation** is still performed regularly.  
+- You can later add **nightly or scheduled runs** for integration tests if desired.
+
+---
+
+## **End of Roadmap**
 
 Proceed **one phase at a time**.  
 After each phase, **test thoroughly** before starting the next.  
-This plan ensures a clean, modular, extensible, and robust multi-persona conversational system.
+This plan ensures a clean, modular, extensible, and robust multi-persona conversational system, with **properly organized testing** to maintain quality.
 
 ---
