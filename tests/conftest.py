@@ -58,3 +58,12 @@ def mock_env_vars(monkeypatch):
     monkeypatch.setenv("APP_DATABASE_URL", "sqlite:///:memory:")
     monkeypatch.setenv("APP_SERPAPI_KEY", "test-serp-api-key")
     monkeypatch.setenv("OPENAI_API_KEY", "fake-openai-key")
+
+
+import logging
+import pytest
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_logging():
+    yield
+    logging.shutdown()
