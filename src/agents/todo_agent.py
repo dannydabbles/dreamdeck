@@ -141,9 +141,6 @@ async def manage_todo(state: ChatState) -> list[AIMessage]:
 
 todo_agent = manage_todo
 
-# Expose internal function for monkeypatching in tests
-_manage_todo = _manage_todo
-
 
 async def call_todo_agent(state: ChatState, query: str = "") -> list[AIMessage]:
     if query:

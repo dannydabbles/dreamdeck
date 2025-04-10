@@ -190,6 +190,3 @@ def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
 
 
 dice_agent = dice_roll
-
-# Expose internal function for monkeypatching in tests
-_dice_roll = _dice_roll
