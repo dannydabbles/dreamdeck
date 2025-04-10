@@ -75,10 +75,7 @@ async def _generate_storyboard(
 async def generate_storyboard(
     state: ChatState, gm_message_id: str
 ) -> list[BaseMessage]:
-    task = asyncio.create_task(_generate_storyboard(state, gm_message_id))
-    if hasattr(state, "background_tasks"):
-        state.background_tasks.append(task)
-    return []
+    return await _generate_storyboard(state, gm_message_id)
 
 
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
