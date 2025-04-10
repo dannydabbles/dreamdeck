@@ -142,6 +142,9 @@ async def generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
 # Expose the @task-decorated function as a separate callable
 generate_story_task = generate_story
 
+# Patch target compatibility: make generate_story point to undecorated function
+generate_story = _generate_story
+
 # Expose internal function for monkeypatching in tests
 writer_agent._generate_story = _generate_story
 writer_agent.generate_story = generate_story  # <-- Add this attribute for patching

@@ -180,6 +180,9 @@ async def manage_todo(state: ChatState) -> list[AIMessage]:
 # Expose internal function for monkeypatching in tests
 _manage_todo = _manage_todo
 
+# Patch target compatibility: make manage_todo point to undecorated function
+manage_todo = _manage_todo
+
 # Also assign todo_agent._manage_todo for patching in tests
 todo_agent._manage_todo = _manage_todo
 
