@@ -56,7 +56,10 @@ async def chat_workflow(
     return await _chat_workflow(messages=messages, previous=previous)
 
 
-app = chat_workflow  # Already a compiled Pregel object, no .compile() needed
+app = chat_workflow.compile()  # Default compiled app with checkpointer
+
+# Create a version without the checkpointer specifically for tests
+app_without_checkpoint = entrypoint(checkpointer=None)(chat_workflow).compile()
 
 
 async def _chat_workflow(

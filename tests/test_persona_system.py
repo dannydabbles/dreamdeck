@@ -12,7 +12,8 @@ from src.event_handlers import on_message
 from src.agents.writer_agent import _generate_story, call_writer_agent
 from src.agents.writer_agent import _WriterAgentWrapper  # For patching __call__
 from src.agents.director_agent import _direct_actions, director_agent
-from src.workflows import app as chat_workflow_app  # Import compiled LangGraph app
+# Import the compiled LangGraph app *without* the checkpointer for these tests
+from src.workflows import app_without_checkpoint as chat_workflow_app
 from src.agents.dice_agent import _dice_roll, _DiceAgentWrapper  # For patching __call__
 from src.agents.todo_agent import _manage_todo, manage_todo  # For patching
 
@@ -137,14 +138,24 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     # Provide unique thread_id for this test
     test_thread_id = f"test_thread_{uuid.uuid4()}"
     workflow_config = {"configurable": {"thread_id": test_thread_id}}
+
+    # Construct the 'previous' state expected by the entrypoint
+    previous_state = ChatState(
+        messages=[],
+        thread_id=test_thread_id,
+        current_persona=dummy_state.current_persona
+    )
     input_data = {
         "messages": dummy_state.messages,
-        "current_persona": dummy_state.current_persona,  # Ensure persona is passed explicitly
+        "previous": previous_state
     }
-    final_state = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
+    final_state_obj = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
 
-    # final_state is a ChatState, not a dict
-    result_messages = getattr(final_state, "messages", [])
+    if isinstance(final_state_obj, ChatState):
+        result_messages = final_state_obj.messages
+    else:
+        raise TypeError(f"Expected ChatState, got {type(final_state_obj)}")
+
     assert any(isinstance(m, AIMessage) and m.name == "Therapist" for m in result_messages), f"Expected Therapist message in {result_messages}"
 
 
@@ -198,15 +209,24 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     # Provide unique thread_id for this test
     test_thread_id = f"test_thread_{uuid.uuid4()}"
     workflow_config = {"configurable": {"thread_id": test_thread_id}}
+
+    # Construct the 'previous' state reflecting the persona switch
+    previous_state = ChatState(
+        messages=[],
+        thread_id=test_thread_id,
+        current_persona="secretary"
+    )
     input_data = {
         "messages": dummy_state.messages,
-        "current_persona": "secretary",  # Explicitly set persona for this invocation
+        "previous": previous_state
     }
-    final_state = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
+    final_state_obj = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
 
-    # final_state is a ChatState, not a dict
-    result_messages = getattr(final_state, "messages", [])
-    final_persona = getattr(final_state, "current_persona", None)
+    if isinstance(final_state_obj, ChatState):
+        result_messages = final_state_obj.messages
+        final_persona = final_state_obj.current_persona
+    else:
+        raise TypeError(f"Expected ChatState, got {type(final_state_obj)}")
 
     # Assertions
     names = [m.name for m in result_messages if isinstance(m, AIMessage)]

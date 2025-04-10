@@ -124,13 +124,7 @@ async def _generate_story(state: ChatState) -> list[BaseMessage]:
 
 @task
 async def generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
-    # If this is a Future (due to patching), await it
-    if asyncio.isfuture(state):
-        state = await state
     result = await _generate_story(state)
-    # If the result is a Future (due to patching), await it
-    if asyncio.isfuture(result):
-        result = await result
     return result
 
 
