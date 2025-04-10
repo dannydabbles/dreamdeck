@@ -418,3 +418,125 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
         assert last_call_kwargs["metadata"]["type"] == "ai"
         assert last_call_kwargs["metadata"]["author"] in ("todo", "🤖 secretary")
         assert last_call_kwargs["metadata"]["persona"] == "secretary"
+
+
+@pytest.mark.asyncio
+async def test_multi_tool_persona_workflow(monkeypatch, mock_cl_environment):
+    """
+    This test simulates a realistic multi-tool turn:
+    classifier suggests persona switch to secretary,
+    director returns multiple actions,
+    each tool runs and returns a dummy message,
+    then the writer agent generates the final story segment.
+    We verify all outputs are present and metadata is consistent.
+    """
+    from langchain_core.messages import AIMessage, HumanMessage
+    from src.models import ChatState
+
+    # Patch persona_classifier_agent to suggest 'secretary'
+    async def fake_classifier(state, **kwargs):
+        cl.user_session.set("current_persona", "secretary")
+        return {"persona": "secretary", "reason": "User asked about tasks"}
+
+    # Patch director_agent to return multiple actions
+    async def fake_director(state, **kwargs):
+        return ["search", "roll", "todo", "write"]
+
+    # Patch all tool agents to return dummy AI messages with correct metadata
+    async def fake_web_search(state, **kwargs):
+        return [
+            AIMessage(
+                content="Search result",
+                name="web_search",
+                metadata={
+                    "message_id": "search1",
+                    "type": "ai",
+                    "persona": state.current_persona,
+                },
+            )
+        ]
+
+    async def fake_dice(state, **kwargs):
+        return [
+            AIMessage(
+                content="Dice result",
+                name="dice_roll",
+                metadata={
+                    "message_id": "dice1",
+                    "type": "ai",
+                    "persona": state.current_persona,
+                },
+            )
+        ]
+
+    async def fake_todo(state, **kwargs):
+        return [
+            AIMessage(
+                content="Todo updated",
+                name="todo",
+                metadata={
+                    "message_id": "todo1",
+                    "type": "ai",
+                    "persona": state.current_persona,
+                },
+            )
+        ]
+
+    async def fake_writer(state, **kwargs):
+        return [
+            AIMessage(
+                content="Story continues",
+                name="Game Master",
+                metadata={
+                    "message_id": "gm1",
+                    "type": "ai",
+                    "persona": state.current_persona,
+                },
+            )
+        ]
+
+    # Patch all relevant agents
+    monkeypatch.setattr(
+        "src.agents.persona_classifier_agent.persona_classifier_agent", fake_classifier
+    )
+    monkeypatch.setattr("src.workflows.director_agent", fake_director)
+    monkeypatch.setattr("src.agents.web_search_agent.web_search_agent", fake_web_search)
+    monkeypatch.setattr("src.agents.dice_agent.dice_agent", fake_dice)
+    monkeypatch.setattr("src.agents.todo_agent.manage_todo", fake_todo)
+    monkeypatch.setattr("src.agents.writer_agent._generate_story", fake_writer)
+
+    # Prepare dummy initial state with a user message
+    state = ChatState(
+        messages=[
+            HumanMessage(
+                content="Tell me about dragons and roll for attack",
+                name="Player",
+                metadata={"message_id": "u1"},
+            )
+        ],
+        thread_id="thread-multitool",
+        current_persona="default",
+    )
+
+    from src.oracle_workflow import oracle_workflow
+
+    # Run the workflow
+    result_state = await oracle_workflow.ainvoke(
+        {"messages": state.messages, "previous": state},
+        state,
+    )
+
+    # Collect all AI messages
+    ai_msgs = [m for m in result_state.messages if isinstance(m, AIMessage)]
+    names = [m.name for m in ai_msgs]
+
+    # Assert all tool outputs and final story are present
+    assert "web_search" in names
+    assert "dice_roll" in names
+    assert "todo" in names
+    assert any("Game Master" in m.name for m in ai_msgs)
+
+    # Assert all AI messages have correct metadata
+    for m in ai_msgs:
+        assert m.metadata.get("type") == "ai"
+        assert m.metadata.get("persona") == "secretary"

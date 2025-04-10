@@ -29,29 +29,9 @@ Next, proceed with **Phase 3**: Add more realistic multi-tool conversation tests
 
 ## Phase 3: Add More Realistic Multi-Tool Conversation Tests
 
-### Goal
-Simulate **complex player turns** involving **multiple tool invocations** and **persona switches**.
-
-### Context & Tips
-- Your current tests cover:
-  - Single tool calls
-  - Persona switching
-  - Slash commands
-- But **multi-hop** flows (e.g., classifier → director → search + dice + todo + writer) are less tested.
-- Adding these will increase confidence in complex conversation handling.
-
-### Tasks
-1. In `tests/integration/test_persona_system.py`, add a new async test:
-   - Simulate a user message that triggers:
-     - Classifier suggesting a persona switch
-     - Director returning multiple actions: e.g., `["search", "roll", "todo", "write"]`
-     - Each tool returns a dummy AI message with correct metadata
-     - Writer agent generates a final story segment
-2. Patch all relevant agents (`persona_classifier_agent`, `director_agent`, `web_search_agent`, `dice_agent`, `todo_agent`, `writer_agent`) to return dummy responses.
-3. After the workflow:
-   - Assert that **all tool outputs** and the **final story** are present in the state.
-   - Assert that **all AI messages** have `"type": "ai"` and correct `"persona"`.
-4. Add comments explaining the test simulates a realistic multi-tool turn.
+**Phase 3 completed:** Added integration test simulating a multi-tool turn with persona switch, multiple tool calls, and final story generation.  
+All tool outputs and metadata are verified.  
+Next, proceed with **Phase 4**: Improve persona switching logic and tests.
 
 ---
 
