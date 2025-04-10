@@ -21,8 +21,14 @@ build:
 	@echo "Building the Docker image..."
 	@docker-compose build
 
+smoke:
+	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest -v tests/smoke --cov=src --cov-report term-missing
+
+integration:
+	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest -v tests/integration --cov=src --cov-report term-missing
+
 test:
-	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest -v tests/ --cov=src --cov-report term-missing
+	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest -v tests/smoke tests/integration --cov=src --cov-report term-missing
 
 lint:
 	@echo "Linting the code..."
