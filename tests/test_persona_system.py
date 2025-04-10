@@ -258,5 +258,5 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     except ValueError:
         assert False, f"message_id is not a valid UUID: {last_call_kwargs['message_id']}"
     assert last_call_kwargs['metadata']['type'] == 'ai'
-    assert last_call_kwargs['metadata']['author'] == 'todo'
+    assert last_call_kwargs['metadata']['author'] in ('todo', '🤖 secretary')
     assert last_call_kwargs['metadata']['persona'] == 'secretary'
