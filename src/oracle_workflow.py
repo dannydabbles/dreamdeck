@@ -9,7 +9,7 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
-async def oracle_workflow(inputs: dict, state: ChatState) -> list[BaseMessage]:
+async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
         # Support legacy positional args: (messages, previous)
         if not isinstance(inputs, dict):
