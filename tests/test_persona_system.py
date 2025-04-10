@@ -120,7 +120,8 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
         pytest.fail("Dice agent should have been filtered out")
 
     async def fake_writer(state, **kwargs):
-        return [AIMessage(content="Therapy response", name="Therapist", metadata={"message_id": "w1"})]
+        # Return a simple dict to test serialization
+        return {"messages": [AIMessage(content="Therapy response", name="Therapist", metadata={"message_id": "w1"})]}
 
     # Patch the underlying functions
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
@@ -156,7 +157,13 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     else:
         raise TypeError(f"Expected ChatState, got {type(final_state_obj)}")
 
-    assert any(isinstance(m, AIMessage) and m.name == "Therapist" for m in result_messages), f"Expected Therapist message in {result_messages}"
+    # Check if the fake_writer output was merged into the state messages
+    therapist_msg_found = False
+    for msg in result_messages:
+        if isinstance(msg, AIMessage) and msg.name == "Therapist":
+            therapist_msg_found = True
+            break
+    assert therapist_msg_found, f"Expected Therapist message in {result_messages}"
 
 
 @pytest.mark.asyncio
@@ -175,10 +182,12 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
         return ["write"]
 
     async def fake_todo(state, **kwargs):
-        return [AIMessage(content="TODO list updated.", name="todo", metadata={"message_id": "t1"})]
+        # Return a simple dict to test serialization
+        return {"messages": [AIMessage(content="TODO list updated.", name="todo", metadata={"message_id": "t1"})]}
 
     async def fake_writer(state, **kwargs):
-        return [AIMessage(content="Default response.", name="default", metadata={"message_id": "w1"})]
+        # Return a simple dict to test serialization
+        return {"messages": [AIMessage(content="Default response.", name="default", metadata={"message_id": "w1"})]}
 
     # Patch underlying functions
     monkeypatch.setattr("src.event_handlers.persona_classifier_agent", fake_classifier)
@@ -229,6 +238,7 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
         raise TypeError(f"Expected ChatState, got {type(final_state_obj)}")
 
     # Assertions
+    # Check if the fake_todo output was merged into the state messages
     names = [m.name for m in result_messages if isinstance(m, AIMessage)]
     assert "todo" in names, f"Expected 'todo' in AI message names: {names}"
     assert "writer" not in names
