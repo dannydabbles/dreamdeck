@@ -66,4 +66,20 @@ import pytest
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_logging():
     yield
+    # Shutdown all logging handlers to avoid "I/O operation on closed file" errors
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        handler.close()
+        root_logger.removeHandler(handler)
+
+    # Also explicitly close your named logger's handlers
+    cl_logger = logging.getLogger("chainlit")
+    for handler in cl_logger.handlers[:]:
+        handler.close()
+        cl_logger.removeHandler(handler)
+
     logging.shutdown()
+import warnings
+
+def pytest_sessionfinish(session, exitstatus):
+    warnings.filterwarnings("ignore", message=".*Task was destroyed but it is pending.*")
