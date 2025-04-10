@@ -8,7 +8,7 @@ import chainlit as cl
 from tests.test_event_handlers import mock_cl_environment  # Ensure this line exists and is correct
 
 from src.event_handlers import on_message
-from src.agents.writer_agent import _generate_story, call_writer_agent  # Changed import
+from src.agents.writer_agent import _generate_story  # Re-import core function for patching
 from src.agents.director_agent import _direct_actions  # Changed import
 from src.workflows import _chat_workflow  # Changed import
 from src.agents.dice_agent import _dice_roll  # Added import
@@ -124,8 +124,8 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
     # Patch the function referenced in agents_map['roll'] (which is dice_roll from dice_agent)
     monkeypatch.setattr("src.agents.dice_agent.dice_roll", fake_dice)
-    # Patch the __call__ method on the _WriterAgentWrapper class
-    monkeypatch.setattr(writer_agent_module._WriterAgentWrapper, "__call__", fake_writer)
+    # Patch the core story generation function directly
+    monkeypatch.setattr("src.agents.writer_agent._generate_story", fake_writer)
 
     # Mock vector store get method if needed
     mock_vector_store = MagicMock()
@@ -163,8 +163,8 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     monkeypatch.setattr("src.workflows.director_agent", fake_director)
     # Patch the function referenced in agents_map['todo'] (which is manage_todo from todo_agent)
     monkeypatch.setattr("src.agents.todo_agent.manage_todo", fake_todo)
-    # Patch the __call__ method on the _WriterAgentWrapper class
-    monkeypatch.setattr(writer_agent_module._WriterAgentWrapper, "__call__", fake_writer)
+    # Patch the core story generation function directly
+    monkeypatch.setattr("src.agents.writer_agent._generate_story", fake_writer)
 
     # Mock vector store get method
     mock_vector_store = MagicMock()
