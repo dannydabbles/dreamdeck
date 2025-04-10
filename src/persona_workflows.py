@@ -20,7 +20,18 @@ cl_logger = logging.getLogger("chainlit")
 
 async def storyteller_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await _generate_story(state)
+        story_messages = await _generate_story(state)
+
+        # Patch: ensure all AIMessage outputs have consistent metadata for downstream processing and tests
+        if isinstance(story_messages, list):
+            for msg in story_messages:
+                if isinstance(msg, AIMessage):
+                    if msg.metadata is None:
+                        msg.metadata = {}
+                    msg.metadata["type"] = "ai"
+                    msg.metadata["persona"] = state.current_persona
+
+        return story_messages
     except Exception as e:
         cl_logger.error(f"storyteller_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -29,7 +40,18 @@ async def storyteller_workflow(inputs: dict, state: ChatState, *, config=None) -
 
 async def therapist_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await _generate_story(state)
+        story_messages = await _generate_story(state)
+
+        # Patch: ensure all AIMessage outputs have consistent metadata for downstream processing and tests
+        if isinstance(story_messages, list):
+            for msg in story_messages:
+                if isinstance(msg, AIMessage):
+                    if msg.metadata is None:
+                        msg.metadata = {}
+                    msg.metadata["type"] = "ai"
+                    msg.metadata["persona"] = state.current_persona
+
+        return story_messages
     except Exception as e:
         cl_logger.error(f"therapist_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -89,7 +111,18 @@ async def secretary_workflow(inputs: dict, state: ChatState, *, config=None) -> 
 
 async def coder_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await _generate_story(state)
+        story_messages = await _generate_story(state)
+
+        # Patch: ensure all AIMessage outputs have consistent metadata for downstream processing and tests
+        if isinstance(story_messages, list):
+            for msg in story_messages:
+                if isinstance(msg, AIMessage):
+                    if msg.metadata is None:
+                        msg.metadata = {}
+                    msg.metadata["type"] = "ai"
+                    msg.metadata["persona"] = state.current_persona
+
+        return story_messages
     except Exception as e:
         cl_logger.error(f"coder_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -98,7 +131,18 @@ async def coder_workflow(inputs: dict, state: ChatState, *, config=None) -> list
 
 async def friend_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await _generate_story(state)
+        story_messages = await _generate_story(state)
+
+        # Patch: ensure all AIMessage outputs have consistent metadata for downstream processing and tests
+        if isinstance(story_messages, list):
+            for msg in story_messages:
+                if isinstance(msg, AIMessage):
+                    if msg.metadata is None:
+                        msg.metadata = {}
+                    msg.metadata["type"] = "ai"
+                    msg.metadata["persona"] = state.current_persona
+
+        return story_messages
     except Exception as e:
         cl_logger.error(f"friend_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -107,7 +151,18 @@ async def friend_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
 
 async def lorekeeper_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await knowledge_agent(state, knowledge_type="lore")
+        knowledge_messages = await knowledge_agent(state, knowledge_type="lore")
+
+        # Patch: ensure all AIMessage outputs have consistent metadata for downstream processing and tests
+        if isinstance(knowledge_messages, list):
+            for msg in knowledge_messages:
+                if isinstance(msg, AIMessage):
+                    if msg.metadata is None:
+                        msg.metadata = {}
+                    msg.metadata["type"] = "ai"
+                    msg.metadata["persona"] = state.current_persona
+
+        return knowledge_messages
     except Exception as e:
         cl_logger.error(f"lorekeeper_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -116,7 +171,18 @@ async def lorekeeper_workflow(inputs: dict, state: ChatState, *, config=None) ->
 
 async def dungeon_master_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await _generate_story(state)
+        story_messages = await _generate_story(state)
+
+        # Patch: ensure all AIMessage outputs have consistent metadata for downstream processing and tests
+        if isinstance(story_messages, list):
+            for msg in story_messages:
+                if isinstance(msg, AIMessage):
+                    if msg.metadata is None:
+                        msg.metadata = {}
+                    msg.metadata["type"] = "ai"
+                    msg.metadata["persona"] = state.current_persona
+
+        return story_messages
     except Exception as e:
         cl_logger.error(f"dungeon_master_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -125,7 +191,18 @@ async def dungeon_master_workflow(inputs: dict, state: ChatState, *, config=None
 
 async def default_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await _generate_story(state)
+        story_messages = await _generate_story(state)
+
+        # Patch: ensure all AIMessage outputs have consistent metadata for downstream processing and tests
+        if isinstance(story_messages, list):
+            for msg in story_messages:
+                if isinstance(msg, AIMessage):
+                    if msg.metadata is None:
+                        msg.metadata = {}
+                    msg.metadata["type"] = "ai"
+                    msg.metadata["persona"] = state.current_persona
+
+        return story_messages
     except Exception as e:
         cl_logger.error(f"default_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")

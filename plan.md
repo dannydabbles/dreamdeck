@@ -8,28 +8,9 @@ Each phase is designed to be a reasonable unit of work for an LLM to complete in
 
 ## Phase 1: Improve Persona Metadata Consistency
 
-### Goal
-Ensure **all AI-generated messages** in persona workflows **always** include metadata fields:
-- `"type": "ai"`
-- `"persona": <current_persona>`
-
-This will improve downstream vector store indexing, persona tracking, and test reliability.
-
-### Context & Tips
-- Your `src/persona_workflows.py` already **patches** metadata for the **secretary** persona.
-- Other persona workflows (storyteller, therapist, coder, friend, lorekeeper, dungeon master, default) **do not** enforce this metadata.
-- Some AI messages may lack metadata or have incomplete metadata.
-- Tests sometimes fail or become fragile if metadata is missing or inconsistent.
-
-### Tasks
-1. **In each persona workflow** (`storyteller_workflow`, `therapist_workflow`, etc.):
-   - After calling `_generate_story()` or `knowledge_agent()`, **iterate over the returned list**.
-   - For each `AIMessage`:
-     - If `metadata` is `None`, set it to an empty dict.
-     - Set `metadata["type"] = "ai"`.
-     - Set `metadata["persona"] = state.current_persona`.
-2. **Return the updated list** as the workflow output.
-3. **Add comments** explaining this patching is to ensure consistent metadata for downstream processing and tests.
+**Phase 1 completed:** All persona workflows now enforce `"type": "ai"` and `"persona"` metadata on AI messages.  
+This improves downstream vector store indexing and test reliability.  
+Next, proceed with **Phase 2**: vector store `.put()` metadata consistency.
 
 ---
 
