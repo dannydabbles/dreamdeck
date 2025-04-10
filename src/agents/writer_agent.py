@@ -23,6 +23,11 @@ import chainlit as cl
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
+class _WriterAgentWrapper:
+    pass
+
+writer_agent = _WriterAgentWrapper()
+
 
 @cl.step(name="Writer Agent: Generate Story", type="tool")
 async def _generate_story(state: ChatState) -> list[BaseMessage]:
@@ -119,9 +124,10 @@ async def generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
     return await _generate_story(state)
 
 
-writer_agent = generate_story  # Expose the function as writer_agent
+# Expose the @task-decorated function as a separate callable
+generate_story_task = generate_story
 
-
-async def call_writer_agent(state: ChatState) -> list[BaseMessage]:
+# Expose internal function for monkeypatching in tests
+writer_agent._generate_story = _generate_story
     """Call the writer agent outside of LangGraph workflows (e.g., slash commands)."""
     return await _generate_story(state)

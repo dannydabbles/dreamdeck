@@ -22,14 +22,13 @@ from src.models import ChatState
 
 import chainlit as cl
 
-# Exported agent alias for patching
+# Initialize logging
+cl_logger = logging.getLogger("chainlit")
+
 class _DiceAgentWrapper:
     pass
 
 dice_agent = _DiceAgentWrapper()
-
-# Initialize logging
-cl_logger = logging.getLogger("chainlit")
 
 
 @cl.step(name="Dice Agent: Roll Dice", type="tool")
@@ -169,7 +168,7 @@ async def dice_roll(state: ChatState, callbacks: Optional[list] = None) -> list[
 # Export the function as dice_roll_agent
 dice_roll_agent = dice_roll
 
-# Also assign dice_agent._dice_roll for patching in tests
+# Expose internal function for monkeypatching in tests
 dice_agent._dice_roll = _dice_roll
 
 
@@ -197,5 +196,3 @@ def parse_dice_input(input_str: str) -> List[Tuple[int, int]]:
 
 # Expose internal function for monkeypatching in tests
 _dice_roll = _dice_roll
-
-dice_agent = _dice_roll  # assign the raw function, not the @task partial
