@@ -141,9 +141,10 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
         "messages": dummy_state.messages,
         "current_persona": dummy_state.current_persona,  # Ensure persona is passed explicitly
     }
-    final_state_dict = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
+    final_state = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
 
-    result_messages = final_state_dict.get("messages", [])
+    # final_state is a ChatState, not a dict
+    result_messages = getattr(final_state, "messages", [])
     assert any(isinstance(m, AIMessage) and m.name == "Therapist" for m in result_messages), f"Expected Therapist message in {result_messages}"
 
 
@@ -201,10 +202,11 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
         "messages": dummy_state.messages,
         "current_persona": "secretary",  # Explicitly set persona for this invocation
     }
-    final_state_dict = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
+    final_state = await chat_workflow_app.ainvoke(input_data, config=workflow_config)
 
-    result_messages = final_state_dict.get("messages", [])
-    final_persona = final_state_dict.get("current_persona")
+    # final_state is a ChatState, not a dict
+    result_messages = getattr(final_state, "messages", [])
+    final_persona = getattr(final_state, "current_persona", None)
 
     # Assertions
     names = [m.name for m in result_messages if isinstance(m, AIMessage)]

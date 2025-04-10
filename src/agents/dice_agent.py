@@ -164,7 +164,14 @@ async def _dice_roll(state: ChatState, callbacks: Optional[list] = None) -> List
 
 @task
 async def dice_roll(state: ChatState, callbacks: Optional[list] = None) -> list[BaseMessage]:
-    return await _dice_roll(state, callbacks=callbacks)
+    # If this is a Future (due to patching), await it
+    if asyncio.isfuture(state):
+        state = await state
+    result = await _dice_roll(state, callbacks=callbacks)
+    # If the result is a Future (due to patching), await it
+    if asyncio.isfuture(result):
+        result = await result
+    return result
 
 
 # Export the function as dice_roll_agent
