@@ -22,9 +22,6 @@ from src.models import ChatState
 import chainlit as cl
 import sys
 
-# Make 'cl' accessible as an attribute of this module for monkeypatching in tests
-sys.modules[__name__].cl = cl
-
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
