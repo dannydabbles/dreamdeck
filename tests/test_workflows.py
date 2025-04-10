@@ -54,7 +54,8 @@ async def test_chat_workflow_memory_updates(mock_chat_state):
         ]
 
         updated_state_obj = await _chat_workflow(
-            {"messages": initial_state.messages, "previous": initial_state}
+            {"messages": initial_state.messages},
+            initial_state,
         )
 
         # The oracle_workflow returns a list of messages, or a ChatState
@@ -102,7 +103,8 @@ async def test_storyboard_triggered_after_gm(monkeypatch):
         mock_director.return_value = ["write"]
 
         updated_state_obj = await _chat_workflow(
-            {"messages": dummy_state.messages, "previous": dummy_state}
+            {"messages": dummy_state.messages},
+            dummy_state,
         )
 
         updated_state = updated_state_obj
@@ -153,7 +155,8 @@ async def test_multi_hop_orchestration(monkeypatch):
         ]
 
         updated_state_obj = await _chat_workflow(
-            {"messages": state.messages, "previous": state}
+            {"messages": state.messages},
+            state,
         )
 
         updated_state = updated_state_obj
@@ -177,7 +180,8 @@ async def test_workflow_error_fallback(monkeypatch):
     ), patch("src.workflows.cl.user_session.get", return_value=None):
 
         updated_state_obj = await _chat_workflow(
-            {"messages": state.messages, "previous": state}
+            {"messages": state.messages},
+            state,
         )
 
         updated_state = updated_state_obj

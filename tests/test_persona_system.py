@@ -275,7 +275,7 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     )
     input_data = {"messages": dummy_state.messages, "previous": previous_state}
     final_state_obj = await chat_workflow_app.ainvoke(
-        input_data, config=workflow_config
+        input_data, previous_state, config=workflow_config
     )
 
     if isinstance(final_state_obj, ChatState):
@@ -382,7 +382,7 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     )
     input_data = {"messages": dummy_state.messages, "previous": previous_state}
     final_state_obj = await chat_workflow_app.ainvoke(
-        input_data, config=workflow_config
+        input_data, previous_state, config=workflow_config
     )
 
     if isinstance(final_state_obj, ChatState):

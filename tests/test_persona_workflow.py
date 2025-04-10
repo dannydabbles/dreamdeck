@@ -80,8 +80,8 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
 
     # Run the workflow
     new_state = await workflows_module._chat_workflow(
-        messages=[],
-        previous=state,
+        {"messages": []},
+        state,
     )
 
     # The initial director returns ["roll", {"action": "knowledge", "type": "lore"}, "todo", "write"]
