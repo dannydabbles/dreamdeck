@@ -97,7 +97,7 @@ async def test_writer_agent_selects_persona_prompt(monkeypatch, mock_cl_environm
     mock_config = MagicMock()
     mock_config.loaded_prompts = {
         "default_writer_prompt": "Default prompt text",
-        "secretary_writer_prompt": "Secretary prompt text {{ recent_chat_history }}" # Example key
+        "secretary_writer_prompt": "Secretary prompt text {{ recent_chat_history }}"  # Example key
     }
     # Simulate the nested structure for agent personas config
     mock_writer_agent_config = MagicMock()
@@ -108,24 +108,23 @@ async def test_writer_agent_selects_persona_prompt(monkeypatch, mock_cl_environm
     mock_agents_config.writer_agent = mock_writer_agent_config
     mock_config.agents = mock_agents_config
     # Add other necessary config attributes if _generate_story uses them directly
-    mock_config.WRITER_AGENT_STREAMING = True # Example: Add necessary attributes
+    mock_config.WRITER_AGENT_STREAMING = True  # Example: Add necessary attributes
     mock_config.WRITER_AGENT_VERBOSE = False
     mock_config.LLM_TIMEOUT = 300
     mock_config.WRITER_AGENT_BASE_URL = "http://mock.url"
     mock_config.WRITER_AGENT_TEMPERATURE = 0.7
     mock_config.WRITER_AGENT_MAX_TOKENS = 1000
 
-
     mock_template_instance = MagicMock()
-    mock_template_instance.render = MagicMock(return_value="Rendered Secretary Prompt") # Mocked render output
+    mock_template_instance.render = MagicMock(return_value="Rendered Secretary Prompt")  # Mocked render output
     mock_template_class = MagicMock(return_value=mock_template_instance)
 
-    # Patch the config and Template used within the writer_agent module
-    monkeypatch.setattr("src.agents.writer_agent.config", mock_config)
-    monkeypatch.setattr("src.agents.writer_agent.Template", mock_template_class)
+    # Patch the config, Template, and ChatOpenAI used within the writer_agent module
+    with patch("src.agents.writer_agent.config", mock_config), \
+         patch("src.agents.writer_agent.Template", mock_template_class), \
+         patch("src.agents.writer_agent.ChatOpenAI") as MockChatOpenAI:
 
-    # Patch ChatOpenAI within the writer_agent module
-    with patch("src.agents.writer_agent.ChatOpenAI") as MockChatOpenAI:
+        # Configure the mock LLM instance
         mock_llm_instance = MockChatOpenAI.return_value
         mock_llm_instance.astream = fake_stream
 
@@ -141,7 +140,7 @@ async def test_writer_agent_selects_persona_prompt(monkeypatch, mock_cl_environm
         # 2. Check that render was called with context derived from the state
         mock_template_instance.render.assert_called_once()
         render_kwargs = mock_template_instance.render.call_args.kwargs
-        assert "recent_chat_history" in render_kwargs # Check context keys
+        assert "recent_chat_history" in render_kwargs  # Check context keys
         assert "memories" in render_kwargs
         assert "tool_results" in render_kwargs
         assert "user_preferences" in render_kwargs
