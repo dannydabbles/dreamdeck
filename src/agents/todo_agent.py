@@ -153,10 +153,22 @@ async def _manage_todo(state: ChatState) -> list[AIMessage]:
         )
         await cl_msg.send()
 
+        # Return an AIMessage with persona icon and name matching writer_agent style
+        persona_icon = {
+            "Therapist": "🧠",
+            "Secretary": "🗒️",
+            "Coder": "💻",
+            "Friend": "🤝",
+            "Lorekeeper": "📚",
+            "Dungeon Master": "🎲",
+            "Storyteller GM": "🎭",
+            "Default": "🤖",
+        }.get(getattr(state, "current_persona", "Default"), "🤖")
+
         return [
             AIMessage(
                 content=f"Updated TODO list:\n{updated_markdown}",
-                name="todo",
+                name=f"{persona_icon} {getattr(state, 'current_persona', 'Default')}",
                 metadata={"message_id": cl_msg.id},
             )
         ]
