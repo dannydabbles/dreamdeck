@@ -89,3 +89,6 @@ async def _classify_persona(state: ChatState) -> dict:
 @task
 async def persona_classifier_agent(state: ChatState, **kwargs) -> dict:
     return await _classify_persona(state)
+
+# Expose internal function for patching in tests
+persona_classifier_agent._classify_persona = _classify_persona

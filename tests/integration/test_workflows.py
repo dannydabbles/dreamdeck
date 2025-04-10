@@ -24,6 +24,9 @@ async def test_oracle_workflow_memory_updates(mock_chat_state):
         "src.oracle_workflow.persona_classifier_agent",
         AsyncMock(return_value={"persona": "default"}),
     ), patch(
+        "src.oracle_workflow.director_agent",
+        AsyncMock(return_value=["write"]),
+    ), patch(
         "src.oracle_workflow.cl.user_session.get", new_callable=MagicMock
     ) as mock_user_session_get:
 
@@ -87,6 +90,7 @@ async def test_oracle_workflow_classifier_switch(monkeypatch):
 
     import src.oracle_workflow as owf
     monkeypatch.setattr(owf, "persona_classifier_agent", fake_classifier)
+    monkeypatch.setattr(owf, "director_agent", AsyncMock(return_value=["write"]))
     monkeypatch.setitem(
         owf.persona_workflows,
         "therapist",
@@ -157,6 +161,7 @@ async def test_oracle_workflow_multi_hop(monkeypatch):
         return state.messages[-2:]
 
     import src.oracle_workflow as owf
+    monkeypatch.setattr(owf, "director_agent", AsyncMock(return_value=["write"]))
     monkeypatch.setitem(owf.persona_workflows, "storyteller_gm", fake_storyteller)
 
     state = ChatState(

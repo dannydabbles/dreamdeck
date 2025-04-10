@@ -557,7 +557,6 @@ async def test_declined_persona_suppresses_reprompt(monkeypatch, mock_cl_environ
     async def fake_classifier(state):
         return {"persona": "therapist", "reason": "User mentioned feelings"}
 
-    monkeypatch.setattr("src.agents.persona_classifier_agent._classify_persona", fake_classifier)
     monkeypatch.setattr("src.agents.persona_classifier_agent.persona_classifier_agent", fake_classifier)
 
     # Patch chat_workflow to just return state
@@ -590,7 +589,6 @@ async def test_classifier_error_fallback(monkeypatch, mock_cl_environment):
     async def broken_classifier(state):
         raise RuntimeError("Classifier failed")
 
-    monkeypatch.setattr("src.agents.persona_classifier_agent._classify_persona", broken_classifier)
     monkeypatch.setattr("src.agents.persona_classifier_agent.persona_classifier_agent", broken_classifier)
 
     # Patch chat_workflow to just return state
