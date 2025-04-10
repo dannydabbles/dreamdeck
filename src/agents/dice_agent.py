@@ -22,6 +22,9 @@ from src.models import ChatState
 
 import chainlit as cl
 
+# Exported agent alias for patching
+dice_agent = None  # Will be assigned after function definition
+
 # Initialize logging
 cl_logger = logging.getLogger("chainlit")
 
