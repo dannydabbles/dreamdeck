@@ -1,7 +1,8 @@
 from src.models import ChatState
 from langchain_core.messages import BaseMessage, AIMessage
 from src.agents.writer_agent import writer_agent
-from src.agents.todo_agent import manage_todo
+from src.agents.writer_agent import _generate_story
+from src.agents.todo_agent import _manage_todo
 from src.agents.knowledge_agent import knowledge_agent
 from src.storage import (
     get_persona_daily_dir,
@@ -19,7 +20,7 @@ cl_logger = logging.getLogger("chainlit")
 
 async def storyteller_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await writer_agent(state)
+        return await _generate_story(state)
     except Exception as e:
         cl_logger.error(f"storyteller_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -28,7 +29,7 @@ async def storyteller_workflow(inputs: dict, state: ChatState, *, config=None) -
 
 async def therapist_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await writer_agent(state)
+        return await _generate_story(state)
     except Exception as e:
         cl_logger.error(f"therapist_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -44,12 +45,12 @@ async def secretary_workflow(inputs: dict, state: ChatState, *, config=None) -> 
             todo_content = load_text_file(todo_path)
             state.metadata["todo"] = todo_content
 
-        await manage_todo(state)
+        await _manage_todo(state)
 
         if "todo" in state.metadata:
             save_text_file(todo_path, state.metadata["todo"])
 
-        return await writer_agent(state)
+        return await _generate_story(state)
     except Exception as e:
         cl_logger.error(f"secretary_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -58,7 +59,7 @@ async def secretary_workflow(inputs: dict, state: ChatState, *, config=None) -> 
 
 async def coder_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await writer_agent(state)
+        return await _generate_story(state)
     except Exception as e:
         cl_logger.error(f"coder_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -67,7 +68,7 @@ async def coder_workflow(inputs: dict, state: ChatState, *, config=None) -> list
 
 async def friend_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await writer_agent(state)
+        return await _generate_story(state)
     except Exception as e:
         cl_logger.error(f"friend_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -85,7 +86,7 @@ async def lorekeeper_workflow(inputs: dict, state: ChatState, *, config=None) ->
 
 async def dungeon_master_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await writer_agent(state)
+        return await _generate_story(state)
     except Exception as e:
         cl_logger.error(f"dungeon_master_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -94,7 +95,7 @@ async def dungeon_master_workflow(inputs: dict, state: ChatState, *, config=None
 
 async def default_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
     try:
-        return await writer_agent(state)
+        return await _generate_story(state)
     except Exception as e:
         cl_logger.error(f"default_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
