@@ -6,6 +6,9 @@ import base64
 import httpx
 from typing import List, Optional
 
+# Number of turns to suppress re-suggesting a declined persona
+PERSONA_SUPPRESSION_TURNS = 3
+
 # Expose persona_classifier_agent for tests
 from src.agents.persona_classifier_agent import persona_classifier_agent
 
@@ -430,6 +433,10 @@ async def on_message(message: cl.Message):
         elif user_reply in ["no", "n"]:
             cl_logger.info(f"User declined persona switch to: {pending_persona}")
             await cl.Message(content=f"❌ Keeping current persona.").send()
+            # Suppress re-suggesting this persona for next N turns
+            suppressed = cl.user_session.get("suppressed_personas", {})
+            suppressed[pending_persona] = PERSONA_SUPPRESSION_TURNS
+            cl.user_session.set("suppressed_personas", suppressed)
         else:
             cl_logger.info(
                 f"User response '{user_reply}' not recognized for persona switch confirmation."
@@ -440,6 +447,7 @@ async def on_message(message: cl.Message):
             return  # Wait for valid reply next time
         # Clear pending switch flag
         cl.user_session.set("pending_persona_switch", None)
+        # Save updated state (if needed)
         cl.user_session.set("state", state)
         return  # Skip normal message processing
 
@@ -532,11 +540,34 @@ async def on_message(message: cl.Message):
         try:
             from src.agents.persona_classifier_agent import persona_classifier_agent
 
-            suggestion = await persona_classifier_agent(state)
-            cl.user_session.set("suggested_persona", suggestion)
+            try:
+                suggestion = await persona_classifier_agent(state)
+                cl.user_session.set("suggested_persona", suggestion)
+            except Exception as e:
+                cl_logger.error(f"Persona classifier error: {e}")
+                # If classifier fails, fallback to current persona and do not prompt user.
+                suggestion = {
+                    "persona": cl.user_session.get("current_persona", "default"),
+                    "reason": "classifier error",
+                }
+                cl.user_session.set("suggested_persona", suggestion)
 
             current_persona = cl.user_session.get("current_persona", "default").lower()
             suggested_persona = suggestion.get("persona", "").lower()
+
+            # Check suppression list to avoid nagging user repeatedly
+            suppressed = cl.user_session.get("suppressed_personas", {})
+            if suggested_persona in suppressed and suppressed[suggested_persona] > 0:
+                cl_logger.info(f"Suppressing persona switch prompt for '{suggested_persona}' ({suppressed[suggested_persona]} turns left)")
+                # Decrement counter and update
+                suppressed[suggested_persona] -= 1
+                if suppressed[suggested_persona] <= 0:
+                    suppressed.pop(suggested_persona)
+                cl.user_session.set("suppressed_personas", suppressed)
+                # If the user recently declined switching to this persona, suppress re-prompting for a few turns.
+                # This avoids nagging the user repeatedly with the same suggestion.
+                # Skip prompting user
+                suggested_persona = current_persona  # treat as no change
 
             auto_switch_enabled = cl.user_session.get("auto_persona_switch", True)
 

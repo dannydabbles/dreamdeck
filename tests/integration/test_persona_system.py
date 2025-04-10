@@ -540,3 +540,91 @@ async def test_multi_tool_persona_workflow(monkeypatch, mock_cl_environment):
     for m in ai_msgs:
         assert m.metadata.get("type") == "ai"
         assert m.metadata.get("persona") == "secretary"
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+from src.models import ChatState
+import chainlit as cl
+
+@pytest.mark.asyncio
+async def test_declined_persona_suppresses_reprompt(monkeypatch, mock_cl_environment):
+    # Simulate user declined 'therapist' suggestion
+    cl.user_session.set("suppressed_personas", {"therapist": 2})
+    cl.user_session.set("current_persona", "default")
+
+    dummy_state = ChatState(messages=[], thread_id="thread1", current_persona="default")
+
+    # Patch classifier to always suggest 'therapist'
+    async def fake_classifier(state):
+        return {"persona": "therapist", "reason": "User mentioned feelings"}
+
+    monkeypatch.setattr("src.agents.persona_classifier_agent._classify_persona", fake_classifier)
+    monkeypatch.setattr("src.agents.persona_classifier_agent.persona_classifier_agent", fake_classifier)
+
+    # Patch chat_workflow to just return state
+    from src.event_handlers import chat_workflow
+    monkeypatch.setattr(chat_workflow, "ainvoke", AsyncMock(return_value=dummy_state))
+
+    # Patch cl.Message.send to avoid actual sending
+    monkeypatch.setattr("chainlit.Message.send", AsyncMock())
+
+    # Simulate incoming message
+    from src.event_handlers import on_message
+    msg = cl.Message(content="I feel sad", author="Player")
+    await on_message(msg)
+
+    # After message, suppression counter should decrement
+    suppressed = cl.user_session.get("suppressed_personas", {})
+    assert suppressed.get("therapist", 0) == 1  # decremented
+
+    # And no pending switch prompt should be set
+    assert cl.user_session.get("pending_persona_switch") is None
+
+
+@pytest.mark.asyncio
+async def test_classifier_error_fallback(monkeypatch, mock_cl_environment):
+    cl.user_session.set("current_persona", "default")
+
+    dummy_state = ChatState(messages=[], thread_id="thread1", current_persona="default")
+
+    # Patch classifier to raise error
+    async def broken_classifier(state):
+        raise RuntimeError("Classifier failed")
+
+    monkeypatch.setattr("src.agents.persona_classifier_agent._classify_persona", broken_classifier)
+    monkeypatch.setattr("src.agents.persona_classifier_agent.persona_classifier_agent", broken_classifier)
+
+    # Patch chat_workflow to just return state
+    from src.event_handlers import chat_workflow
+    monkeypatch.setattr(chat_workflow, "ainvoke", AsyncMock(return_value=dummy_state))
+
+    # Patch cl.Message.send to avoid actual sending
+    monkeypatch.setattr("chainlit.Message.send", AsyncMock())
+
+    # Simulate incoming message
+    from src.event_handlers import on_message
+    msg = cl.Message(content="Hello", author="Player")
+    await on_message(msg)
+
+    # Should fallback to current persona, no pending switch
+    assert cl.user_session.get("pending_persona_switch") is None
+    # Suggested persona should be current persona
+    suggestion = cl.user_session.get("suggested_persona")
+    assert suggestion["persona"] == "default"
+
+
+@pytest.mark.asyncio
+async def test_forcible_persona_switch(monkeypatch, mock_cl_environment):
+    from src.commands import command_persona
+
+    dummy_state = ChatState(messages=[], thread_id="thread1", current_persona="default")
+    cl.user_session.set("state", dummy_state)
+
+    # Patch cl.Message.send to avoid actual sending
+    monkeypatch.setattr("chainlit.Message.send", AsyncMock())
+
+    await command_persona("Therapist")
+
+    # Should update session and state persona immediately
+    assert cl.user_session.get("current_persona") == "Therapist"
+    state = cl.user_session.get("state")
+    assert state.current_persona == "Therapist"

@@ -37,27 +37,10 @@ Next, proceed with **Phase 4**: Improve persona switching logic and tests.
 
 ## Phase 4: Improve Persona Switching Logic and Tests
 
-### Goal
-Make persona switching **more robust** and **better tested**.
+**Phase 4 completed:**  
+Persona switching now suppresses repeated prompts after user declines, gracefully falls back on classifier errors, and is covered by new tests for these cases and for forcible persona switching.
 
-### Context & Tips
-- Currently, persona switching is prompted after classifier runs.
-- User can accept or decline.
-- Sometimes, persona is forcibly switched via slash command.
-- Edge cases (e.g., user declines, or classifier errors) need better coverage.
-
-### Tasks
-1. In `src/event_handlers.py`:
-   - When user **declines** a suggested switch, **store** a flag to **suppress re-suggesting** the same persona for the next N turns.
-   - When classifier **errors**, **fallback** to current persona without prompting.
-2. In `tests/integration/test_persona_system.py`:
-   - Add tests for:
-     - User declining a switch, then classifier suggesting same persona again (should **not** prompt again immediately).
-     - Classifier error fallback.
-     - Forcible switch via `/persona` command.
-3. Add comments explaining the logic.
-
----
+Next, proceed with **Phase 5**: Documentation and Developer Notes.
 
 ## Phase 5: Documentation and Developer Notes
 
