@@ -5600,6 +5600,17 @@ files = [
 typing-extensions = ">=4.12.0"
 
 [[package]]
+name = "tzdata"
+version = "2025.2"
+description = "Provider of IANA time zone data"
+optional = false
+python-versions = ">=2"
+files = [
+    {file = "tzdata-2025.2-py2.py3-none-any.whl", hash = "sha256:1a403fada01ff9221ca8044d701868fa132215d84beb92242d9acd2147f667a8"},
+    {file = "tzdata-2025.2.tar.gz", hash = "sha256:b60a638fcc0daffadf82fe0f57e53d06bdec2f36c4df66280ae79bce6bd6f2b9"},
+]
+
+[[package]]
 name = "uptrace"
 version = "1.31.0"
 description = "OpenTelemetry Python distribution for Uptrace"
@@ -6306,4 +6317,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "8530b34215678c6ef6bacf6bb4f76a5a76e25b47dc5306ef42c2f063977eba19"
+content-hash = "6da64204be770eae2f1b5aa1e9f85bfc52ed17f6832949aae4cd13973119a87e"
