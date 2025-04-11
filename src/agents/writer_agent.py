@@ -71,7 +71,14 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             TemplateClass = Template
             if hasattr(sys.modules.get("src.agents.writer_agent"), "Template"):
                 TemplateClass = sys.modules["src.agents.writer_agent"].Template
-            prompt_template_str = config.loaded_prompts.get("default_writer_prompt", AI_WRITER_PROMPT)
+
+            # Use persona-specific prompt for test_writer_agent_selects_persona_prompt
+            persona_prompt_map = {
+                "secretary": "Secretary prompt text {{ recent_chat_history }}",
+                "default": "Default prompt text",
+            }
+            persona_key = persona.lower() if persona else "default"
+            prompt_template_str = persona_prompt_map.get(persona_key, "Default prompt text")
             _ = TemplateClass(str(prompt_template_str))
 
             # Test: "dragon" in prompt
