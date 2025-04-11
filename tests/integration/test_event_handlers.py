@@ -399,11 +399,14 @@ async def test_on_message_normal_flow(mock_cl_environment):
 
         await on_message(incoming_message)
 
-        # Verify user message added to state immediately (before workflow)
-        assert len(initial_state.messages) == 1
-        assert isinstance(initial_state.messages[0], HumanMessage)
-        assert initial_state.messages[0].content == "Tell me a story"
-        assert initial_state.messages[0].metadata["message_id"] == "user-msg-id-1"
+        # After on_message, the state should have both the user and AI messages
+        state_messages = user_session_store.get("state").messages
+        assert len(state_messages) == 2
+        assert isinstance(state_messages[0], HumanMessage)
+        assert state_messages[0].content == "Tell me a story"
+        assert state_messages[0].metadata["message_id"] == "user-msg-id-1"
+        assert isinstance(state_messages[1], AIMessage)
+        assert state_messages[1] == final_ai_message
 
         # Verify vector store put for user message
         mock_vector_memory.put.assert_any_await(
@@ -417,8 +420,6 @@ async def test_on_message_normal_flow(mock_cl_environment):
 
         # Verify supervisor invocation
         mock_supervisor.assert_awaited_once()
-        # The state should now have 2 messages: user and AI
-        assert user_session_store.get("state").messages[-1] == final_ai_message
 
         # Verify vector store put for final AI message
         mock_vector_memory.put.assert_any_await(
