@@ -88,41 +88,23 @@ This document is a step-by-step roadmap for refactoring Dreamdeck to use a hiera
 
 ---
 
-## **Phase 4: Refactor Persona Agents**
+## **Phase 4: Refactor Persona Agents** ✅ *Completed*
 
 **Goal:** Implement each persona agent as an LLM-backed agent using langgraph-supervisor.
 
-**Tasks:**
-- For each persona agent:
-  - Refactor as an agent with a persona-specific Jinja2 prompt.
-  - The agent should be able to call tools via the supervisor’s handoff mechanism.
-  - Remove any custom workflow logic (e.g. persona_workflows.py).
-- Update or create tests for each persona agent.
+**Status:**  
+✅ All persona agents (Storyteller GM, Therapist, Secretary, Coder, Friend, Lorekeeper, Dungeon Master, Default) are now implemented as stateless, LLM-backed async functions or callable classes using persona-specific Jinja2 prompts.
+✅ Each agent uses the correct prompt key from config and is compatible with the langgraph-supervisor orchestration.
+✅ Persona agents can call tools via the supervisor’s handoff mechanism.
+✅ No custom workflow logic remains; all persona logic is prompt-driven.
+✅ Tests for persona agent prompt selection and invocation are present and pass.
 
-**Tips:**
-
-- **Agent Design Pattern:**  
-  Each persona agent is an async function or callable class that takes in the conversation state and returns a list of messages (usually a single AIMessage).  
-  Example:
-  ```python
-  from langchain_core.messages import AIMessage
-  from langgraph.func import task
-
-  @task
-  async def persona_agent(state, **kwargs):
-      # Use a persona-specific prompt
-      prompt = f"You are a {state.current_persona}. Respond to the user."
-      response = await llm.ainvoke([("system", prompt)])
-      return [AIMessage(content=response.content, name=state.current_persona)]
-  ```
-- **Persona Prompts:**  
-  Each agent should use a Jinja2 prompt template specific to its persona, filled with recent chat, memories, tool results, and user preferences.
-
-- **Tool Calls:**  
-  Persona agents can call tools by returning a special "handoff" message or by using a supervisor routing mechanism (see Phase 5).
-
-- **No Global State:**  
-  Agents should only manage their own prompt/context, not global state.
+**Helpful notes for next phases:**  
+- Persona agents are now stateless and prompt-driven, ready for supervisor orchestration.
+- The `writer_agent` exposes a registry of persona agents for supervisor handoff.
+- Proceed to Phase 5: Implement the supervisor agent to orchestrate persona agents and tools.
+- Ensure the supervisor manages message history, persona switching, and tool handoff as per the langgraph-supervisor pattern.
+- Continue to keep tests updated as you refactor the supervisor and workflow.
 
 ---
 

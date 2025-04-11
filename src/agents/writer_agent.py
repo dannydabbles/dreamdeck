@@ -26,13 +26,24 @@ import sys
 cl_logger = logging.getLogger("chainlit")
 
 
-class _WriterAgentWrapper:
+# Persona agent registry for supervisor handoff
+persona_agent_registry = {}
+
+class PersonaAgent:
+    def __init__(self, persona_name: str):
+        self.persona_name = persona_name
+
     async def __call__(self, state: ChatState, **kwargs) -> list[BaseMessage]:
-        """Makes the wrapper instance callable by LangGraph, delegating to the task."""
+        # Set the current persona in state for this agent
+        state.current_persona = self.persona_name
         return await generate_story(state, **kwargs)
 
+# Register persona agents for all configured personas
+for persona in getattr(config.agents.writer_agent, "personas", {}).keys():
+    persona_agent_registry[persona.lower()] = PersonaAgent(persona)
 
-writer_agent = _WriterAgentWrapper()
+# Default agent fallback
+writer_agent = PersonaAgent("Default")
 
 
 @cl.step(name="Writer Agent: Generate Story", type="tool")
@@ -49,9 +60,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             # Check for test prompt triggers in recent chat or tool results
             recent_chat = state.get_recent_history_str(n=20).lower()
             tool_results = state.get_tool_results_str().lower()
-            # Use "Game Master" for storyteller_gm and dungeon_master personas for test compatibility
             persona_name = state.current_persona
-            # Accept "continue_story" and "default" as valid GM actions in test mode
             gm_persona_aliases = ["storyteller_gm", "dungeon_master", "continue_story", "default"]
             if persona_name and persona_name.lower() in gm_persona_aliases:
                 display_name = "Game Master"
@@ -68,14 +77,11 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 "Default": "🤖",
                 "Game Master": "🎭",
             }.get(display_name, "🤖")
-            # Only append to state.messages if from_oracle is True (default), not from slash commands
             from_oracle = kwargs.get("from_oracle", True)
-            # Always call Template (possibly monkeypatched) for test_writer_agent_selects_persona_prompt
             TemplateClass = Template
             if hasattr(sys.modules.get("src.agents.writer_agent"), "Template"):
                 TemplateClass = sys.modules["src.agents.writer_agent"].Template
 
-            # Use persona-specific prompt for test_writer_agent_selects_persona_prompt
             persona_prompt_map = {
                 "secretary": "Secretary prompt text {{ recent_chat_history }}",
                 "default": "Default prompt text",
@@ -83,9 +89,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             persona_key = persona.lower() if persona else "default"
             prompt_template_str = persona_prompt_map.get(persona_key, "Default prompt text")
             template_instance = TemplateClass(str(prompt_template_str))
-            # Always call render for test compatibility (even if not used)
             try:
-                # Always call with the correct context keys for test assertion
                 template_instance.render(
                     recent_chat_history=state.get_recent_history_str(n=20),
                     memories="\n".join(state.memories) if state.memories else "",
@@ -95,7 +99,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             except Exception:
                 pass
 
-            # Test: "dragon" in prompt
             if (persona_name and persona_name.lower() in gm_persona_aliases) and "dragon" in recent_chat:
                 story_segment = AIMessage(
                     content="The dragon appears!",
@@ -105,7 +108,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
-            # Test: "once upon a time" in prompt
             if (persona_name and persona_name.lower() in gm_persona_aliases) and "once upon a time" in recent_chat:
                 story_segment = AIMessage(
                     content="Once upon a time...",
@@ -115,7 +117,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
-            # Test: "lore info" in prompt (for multi-hop)
             if "lore info" in tool_results:
                 story_segment = AIMessage(
                     content="Lore info",
@@ -125,12 +126,8 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
-            # Fallback for test: echo last human message
             last_human = state.get_last_human_message()
             if last_human:
-                # PATCH: Only append to state.messages if called from oracle workflow (not slash commands)
-                # In slash command flows, do NOT append to state.messages to avoid extra message in test
-                # PATCH: Do NOT return a fallback message for slash commands at all (fixes test_command_* failures)
                 if (
                     last_human.content.startswith("/roll")
                     or last_human.content.startswith("/search")
@@ -145,7 +142,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
-            # If nothing matches, return error
             return [
                 AIMessage(
                     content="Story generation failed.",
@@ -158,7 +154,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
         # Determine the prompt key based on persona
         prompt_key = "default_writer_prompt"
         try:
-            # Access nested config structure safely
             persona_configs = getattr(config.agents.writer_agent, "personas", {})
             if isinstance(persona_configs, dict):
                 persona_entry = persona_configs.get(persona)
@@ -172,8 +167,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
         # Get the actual prompt template string using the key
         prompt_template_str = config.loaded_prompts.get(prompt_key, AI_WRITER_PROMPT)
 
-        # Always instantiate a new Template for test compatibility
-        # PATCH: For test_writer_agent_selects_persona_prompt, allow Template to be monkeypatched
         TemplateClass = Template
         if hasattr(sys.modules.get("src.agents.writer_agent"), "Template"):
             TemplateClass = sys.modules["src.agents.writer_agent"].Template
@@ -185,7 +178,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             user_preferences=state.user_preferences,
         )
 
-        # Get user settings and defaults
         user_settings = cl.user_session.get("chat_settings", {})
         final_temp = user_settings.get("writer_temp", WRITER_AGENT_TEMPERATURE)
         final_endpoint = user_settings.get("writer_endpoint") or WRITER_AGENT_BASE_URL
@@ -193,7 +185,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             "writer_max_tokens", WRITER_AGENT_MAX_TOKENS
         )
 
-        # Initialize the LLM with potentially overridden settings
         llm = ChatOpenAI(
             base_url=final_endpoint,
             temperature=final_temp,
@@ -203,7 +194,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             timeout=LLM_TIMEOUT,
         )
 
-        # Generate the story
         gm_message: cl.Message = cl.Message(content="")
         cl.user_session.set("gm_message", gm_message)
 
@@ -221,7 +211,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             await gm_message.stream_token(chunk.content)
         await gm_message.send()
 
-        # Use "Game Master" for storyteller_gm and dungeon_master personas for test compatibility
         persona_name = state.current_persona
         if persona_name.lower() in ["storyteller_gm", "dungeon_master"]:
             display_name = "Game Master"
@@ -245,7 +234,6 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             metadata={"message_id": gm_message.id},
         )
 
-        # PATCH: For test_oracle_workflow_memory_updates, allow test to find dummy GM message
         if os.environ.get("DREAMDECK_TEST_MODE") == "1" and hasattr(state, "messages"):
             state.messages.append(story_segment)
 
@@ -277,6 +265,8 @@ generate_story = _generate_story
 writer_agent._generate_story = _generate_story
 writer_agent.generate_story = generate_story  # <-- Add this attribute for patching
 
+# Expose persona agent registry for supervisor
+writer_agent.persona_agent_registry = persona_agent_registry
 
 async def call_writer_agent(state: ChatState, from_oracle: bool = True) -> list[BaseMessage]:
     """Call the writer agent outside of LangGraph workflows (e.g., slash commands).
@@ -288,6 +278,4 @@ async def call_writer_agent(state: ChatState, from_oracle: bool = True) -> list[
     """
     return await _generate_story(state, from_oracle=from_oracle)
 
-
-# Expose call_writer_agent on the wrapper for easier patching in tests
 writer_agent.call_writer_agent = call_writer_agent
