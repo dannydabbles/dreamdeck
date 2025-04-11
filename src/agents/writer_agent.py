@@ -144,8 +144,8 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
         # Get the actual prompt template string using the key
         prompt_template_str = config.loaded_prompts.get(prompt_key, AI_WRITER_PROMPT)
 
-        # Format prompt as jinja2
-        template = Template(prompt_template_str)
+        # Always instantiate a new Template for test compatibility
+        template = Template(str(prompt_template_str))
         formatted_prompt = template.render(
             recent_chat_history=state.get_recent_history_str(n=20),
             memories="\n".join(state.memories) if state.memories else "",

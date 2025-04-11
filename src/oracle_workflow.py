@@ -6,7 +6,7 @@ from src.agents.persona_classifier_agent import persona_classifier_agent
 # Phase 1: Remove director_agent import
 # from src.agents.director_agent import director_agent
 from src.agents.oracle_agent import oracle_agent # Phase 1: Import oracle_agent
-from src.agents import agents_map # Phase 1: Import agents_map
+# Do NOT import agents_map at module level! Import inside oracle_workflow for test patching.
 
 # Expose append_log for test monkeypatching
 from src.storage import append_log, get_persona_daily_dir
@@ -23,8 +23,8 @@ cl_logger = logging.getLogger("chainlit")
 async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> ChatState: # Return ChatState
     from src.storage import append_log, get_persona_daily_dir, save_text_file
 
-    # Move these imports to module level for easier test patching
-    from src.storage import append_log, get_persona_daily_dir, save_text_file
+    # Import agents_map inside the function so test monkeypatching works!
+    from src.agents import agents_map
 
     try:
         if config is None:
