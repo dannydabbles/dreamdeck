@@ -62,8 +62,7 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     mock_user_session.get = mock_get
     mock_user_session.set = mock_set
     monkeypatch.setattr(cl, "user_session", mock_user_session)
-    # Also patch specific agent imports if they use it directly
-    monkeypatch.setattr("src.agents.writer_agent.cl.user_session", mock_user_session, raising=False)
+    # Patch specific agent imports if they use it directly
     monkeypatch.setattr("src.agents.todo_agent.cl.user_session", mock_user_session, raising=False)
     monkeypatch.setattr("src.agents.dice_agent.cl_user_session", mock_user_session, raising=False)
     monkeypatch.setattr("src.agents.persona_classifier_agent.cl.user_session", mock_user_session, raising=False)
@@ -90,12 +89,18 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
         context_token = context_var.set(mock_context_instance)
     except (ImportError, LookupError):
         monkeypatch.setattr(cl, "context", mock_context_instance)
-        monkeypatch.setattr("src.agents.writer_agent.cl.context", mock_context_instance, raising=False)
         monkeypatch.setattr("src.agents.todo_agent.cl.context", mock_context_instance, raising=False)
         monkeypatch.setattr("src.event_handlers.cl.context", mock_context_instance, raising=False)
 
+    # Patch the entire 'cl' module inside src.agents.writer_agent
+    import types
+    mock_cl_module = MagicMock()
+    mock_cl_module.user_session = mock_user_session
+    mock_cl_module.Message = mock_message_cls
+    mock_cl_module.context = mock_context_instance
+    monkeypatch.setattr("src.agents.writer_agent", "cl", mock_cl_module, raising=False)
+
     # --- Agent-Specific Message Mocking (Safeguard) ---
-    monkeypatch.setattr("src.agents.writer_agent.cl.Message", mock_message_cls, raising=False)
     monkeypatch.setattr("src.agents.todo_agent.CLMessage", mock_message_cls, raising=False)
     monkeypatch.setattr("src.agents.dice_agent.CLMessage", mock_message_cls, raising=False)
     monkeypatch.setattr("src.agents.web_search_agent.cl.Message", mock_message_cls, raising=False)
