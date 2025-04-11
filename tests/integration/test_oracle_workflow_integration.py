@@ -21,15 +21,15 @@ def initial_chat_state():
 @pytest.fixture(autouse=True)
 def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     import src.agents.persona_classifier_agent as pca_module  # Use alias
-    import src.agents.director_agent  # Add this import
-    import src.agents.knowledge_agent
-    import src.agents.writer_agent
-    import src.agents.todo_agent
-    import src.agents.dice_agent
-    import src.event_handlers
-    import src.agents.web_search_agent
-    import src.agents.report_agent
-    import src.agents.storyboard_editor_agent
+    import src.agents.director_agent as director_module
+    import src.agents.knowledge_agent as knowledge_module
+    import src.agents.writer_agent as writer_module
+    import src.agents.todo_agent as todo_module
+    import src.agents.dice_agent as dice_module
+    import src.event_handlers as event_handlers_module
+    import src.agents.web_search_agent as web_search_module
+    import src.agents.report_agent as report_module
+    import src.agents.storyboard_editor_agent as storyboard_module
     import src.oracle_workflow as oracle_workflow_module
 
     session_state = initial_chat_state.model_copy(deep=True)
@@ -67,17 +67,18 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     mock_user_session.get = mock_get
     mock_user_session.set = mock_set
     monkeypatch.setattr(cl, "user_session", mock_user_session)
+    # Patch cl object within each module that uses `import chainlit as cl`
     monkeypatch.setattr(oracle_workflow_module.cl, "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(src.agents.todo_agent.cl, "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(src.agents.dice_agent, "cl_user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(src.event_handlers, "cl_user_session", mock_user_session, raising=False)
-    monkeypatch.setattr("src.agents.persona_classifier_agent.cl", "user_session", mock_user_session, raising=False) # Patch cl within the module file
-    # Add/ensure patches for other agents using cl.user_session
-    monkeypatch.setattr("src.agents.writer_agent.cl", "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr("src.agents.knowledge_agent.cl", "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr("src.agents.director_agent.cl", "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr("src.agents.report_agent.cl", "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr("src.agents.storyboard_editor_agent.cl", "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(pca_module.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(director_module.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(knowledge_module.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(writer_module.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(todo_module.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(report_module.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(storyboard_module.cl, "user_session", mock_user_session, raising=False)
+    # Patch modules that use `from chainlit import user_session as cl_user_session`
+    monkeypatch.setattr(dice_module, "cl_user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(event_handlers_module, "cl_user_session", mock_user_session, raising=False)
 
     mock_message_instance = AsyncMock(spec=cl.Message)
     mock_message_instance.id = f"mock_cl_msg_{uuid.uuid4()}"
@@ -86,12 +87,12 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     mock_message_instance.update = AsyncMock()
     mock_message_cls = MagicMock(return_value=mock_message_instance)
     monkeypatch.setattr(cl, "Message", mock_message_cls)
-    monkeypatch.setattr(src.agents.todo_agent, "CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr(src.agents.dice_agent, "CLMessage", mock_message_cls, raising=False)
+    monkeypatch.setattr(todo_module, "CLMessage", mock_message_cls, raising=False)
+    monkeypatch.setattr(dice_module, "CLMessage", mock_message_cls, raising=False)
     monkeypatch.setattr("src.agents.web_search_agent.CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr(src.agents.report_agent, "CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr(src.agents.storyboard_editor_agent, "CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr(src.agents.writer_agent, "cl", MagicMock(Message=mock_message_cls, user_session=mock_user_session), raising=False)
+    monkeypatch.setattr(report_module, "CLMessage", mock_message_cls, raising=False)
+    monkeypatch.setattr(storyboard_module, "CLMessage", mock_message_cls, raising=False)
+    monkeypatch.setattr(writer_module, "cl", MagicMock(Message=mock_message_cls, user_session=mock_user_session), raising=False)
 
     monkeypatch.setattr(oracle_workflow_module, "append_log", lambda *args, **kwargs: None)
     monkeypatch.setattr(oracle_workflow_module, "save_text_file", lambda *args, **kwargs: None)
