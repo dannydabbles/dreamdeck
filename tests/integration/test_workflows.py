@@ -23,14 +23,13 @@ async def test_oracle_workflow_memory_updates(mock_chat_state):
     ), patch(
         "src.oracle_workflow.persona_classifier_agent",
         AsyncMock(return_value={"persona": "default"}),
-    # Patch Oracle agent instead of Director
-    ), patch( # Patch oracle_agent within the oracle_workflow module
+    ), patch(
         "src.oracle_workflow.oracle_agent",
-        AsyncMock(return_value="default"), # Oracle decides to call default persona workflow
-    ), patch( # Patch agents_map within the oracle_workflow module
+        AsyncMock(return_value="default"),
+    ), patch(
         "src.oracle_workflow.agents_map",
-        {"default": AsyncMock(return_value=[dummy_gm_msg])} # Map 'default' action to the mocked workflow
-    ), patch( # Patch cl.user_session.get within the oracle_workflow module
+        {"default": AsyncMock(return_value=[dummy_gm_msg])}
+    ), patch(
         "src.oracle_workflow.cl.user_session.get", new_callable=MagicMock
     ) as mock_user_session_get:
 
@@ -47,8 +46,8 @@ async def test_oracle_workflow_memory_updates(mock_chat_state):
 
         result_state = await oracle_workflow.ainvoke(
             {"messages": initial_state.messages, "previous": initial_state},
-            initial_state, # Pass state object as second arg
-            config={"configurable": {"thread_id": initial_state.thread_id}} # Pass config
+            initial_state,  # Pass state object as second arg
+            config={"configurable": {"thread_id": initial_state.thread_id}},
         )
 
         assert isinstance(result_state, ChatState), f"Expected ChatState, got {type(result_state)}"
