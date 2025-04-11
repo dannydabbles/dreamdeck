@@ -88,4 +88,5 @@ async def _knowledge_agent(
 ) -> list[BaseMessage]:
     return await _knowledge(state, knowledge_type, **kwargs)
 
-knowledge_agent = _knowledge_agent
+# Patch: expose the undecorated function for test monkeypatching
+knowledge_agent = _knowledge

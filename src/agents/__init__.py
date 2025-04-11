@@ -6,7 +6,7 @@ from .web_search_agent import web_search_agent
 from .dice_agent import dice_roll
 from .writer_agent import writer_agent
 from .todo_agent import manage_todo
-from .knowledge_agent import knowledge_agent
+from .knowledge_agent import knowledge_agent as knowledge_agent_func
 from .report_agent import report_agent
 
 __all__ = [
@@ -27,6 +27,7 @@ agents_map = {
     "write": writer_agent,
     "continue_story": writer_agent,
     "report": report_agent,
+    "knowledge": knowledge_agent_func,  # Patch: expose as function, not partial
 }
 
 import sys as _sys
