@@ -3,20 +3,20 @@ Exports all agent entrypoints for use in commands and workflows.
 """
 
 from .web_search_agent import web_search_agent
-from .dice_agent import dice_roll  # Import the callable task
+from .dice_agent import dice_roll
 from .writer_agent import writer_agent
 from .director_agent import director_agent
-from .todo_agent import manage_todo  # Import the callable task
+from .todo_agent import manage_todo
 from .knowledge_agent import knowledge_agent
 from .persona_classifier_agent import persona_classifier_agent
 from .report_agent import report_agent
 
 __all__ = [
     "web_search_agent",
-    "dice_agent",
+    "dice_roll",
     "writer_agent",
     "director_agent",
-    "todo_agent",
+    "manage_todo",
     "knowledge_agent",
     "persona_classifier_agent",
     "report_agent",
@@ -33,11 +33,8 @@ agents_map = {
     "report": report_agent,
 }
 
-# Make agents_map accessible as an attribute of src.agents module
 import sys as _sys
 
 _sys.modules[__name__].agents_map = agents_map
-
-# Also expose director_agent and persona_classifier_agent on src.agents module for patching
 _sys.modules[__name__].director_agent = director_agent
 _sys.modules[__name__].persona_classifier_agent = persona_classifier_agent
