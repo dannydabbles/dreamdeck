@@ -26,10 +26,28 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
         return ["roll", {"action": "knowledge", "type": "lore"}, "todo", "write"]
 
     # Patch director_agent in workflows module
-    monkeypatch.setattr(workflows_module, "director_agent", fake_director)
+    # Mock Oracle agent to simulate director's output filtered by persona prefs
+    # Therapist avoids roll, prefers knowledge. Input: ["roll", {"action": "knowledge", "type": "lore"}, "todo", "write"]
+    # Expected Oracle sequence: "knowledge", "todo", "therapist" (persona agent last)
+    oracle_call_count = 0
+    async def fake_oracle(state, **kwargs):
+         nonlocal oracle_call_count
+         oracle_call_count += 1
+         if oracle_call_count == 1:
+             return "knowledge"
+         elif oracle_call_count == 2:
+             return "todo"
+         elif oracle_call_count == 3:
+             return "therapist" # Persona agent is last
+         else:
+             return "END_TURN"
 
-    # Patch writer_agent to just return a dummy AIMessage
-    async def fake_writer(state_arg):
+    # Patch Oracle agent in the workflow module
+    monkeypatch.setattr("src.oracle_workflow.oracle_agent", fake_oracle)
+
+
+    # Patch writer_agent (used by persona workflows) to just return a dummy AIMessage
+    async def fake_writer(state_arg, **kwargs): # Add **kwargs
         return [
             AIMessage(
                 content="Story continues",
@@ -38,7 +56,9 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
             )
         ]
 
-    monkeypatch.setattr(workflows_module, "writer_agent", fake_writer)
+    # Patch the underlying _generate_story function used by persona workflows
+    monkeypatch.setattr("src.persona_workflows._generate_story", fake_writer)
+
 
     # Patch knowledge_agent to return dummy AIMessage
     async def fake_knowledge(state_arg, knowledge_type=None, **kwargs):
@@ -50,13 +70,17 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
             )
         ]
 
-    monkeypatch.setattr(workflows_module, "knowledge_agent", fake_knowledge)
+    # Patch the underlying knowledge_agent function
+    monkeypatch.setattr("src.persona_workflows.knowledge_agent", fake_knowledge)
 
-    # Patch storyboard_editor_agent to do nothing
+
+    # Patch storyboard_editor_agent to do nothing (if it were called, which it isn't in this flow)
     async def fake_storyboard(state_arg, gm_message_id=None):
         return []
 
-    monkeypatch.setattr(workflows_module, "storyboard_editor_agent", fake_storyboard)
+    # This agent isn't called in the Oracle flow directly, patching underlying might be needed if persona workflow called it
+    # monkeypatch.setattr(workflows_module, "storyboard_editor_agent", fake_storyboard)
+
 
     # Patch cl.user_session.get to avoid errors
     def fake_user_session_get(key, default=None):

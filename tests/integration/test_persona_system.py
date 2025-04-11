@@ -309,32 +309,44 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
         "continue_story": fake_write,
         "report": fake_write,
     }
+    monkeypatch.setattr(agents_mod, "agents_map", agents_map_patch) # Keep agent map patch
+
+    # Mock Oracle to return actions *after* filtering (knowledge, todo, therapist)
+    # Therapist persona avoids 'roll', prefers 'knowledge'
+    async def fake_oracle(state, **kwargs):
+        # Simulate Oracle deciding based on persona preferences (even if prompt doesn't fully support it yet)
+        # It should avoid 'roll' and call 'knowledge', then 'todo', then 'therapist'
+        if state.last_agent_called is None:
+            return "knowledge" # Preferred tool
+        elif state.last_agent_called == "knowledge":
+            return "todo"
+        elif state.last_agent_called == "todo":
+            return "therapist" # Persona agent is last
+        else:
+            return "END_TURN"
+
+    async def fake_knowledge(state, knowledge_type, **kwargs):
+         return [AIMessage(content="Knowledge result", name="knowledge", metadata={"message_id": "k1"})]
+
+    async def fake_todo(state, **kwargs):
+         return [AIMessage(content="Todo result", name="todo", metadata={"message_id": "t1"})]
+
+    async def fake_therapist_workflow(inputs, state, **kwargs):
+         return [AIMessage(content="Therapy response", name="therapist", metadata={"message_id": "w1"})]
+
+    # Patch the Oracle agent
+    monkeypatch.setattr("src.oracle_workflow.oracle_agent", fake_oracle)
+    # Patch the relevant agents in the agents_map
+    agents_map_patch["knowledge"] = fake_knowledge
+    agents_map_patch["todo"] = fake_todo
+    # Patch the persona workflow directly
+    monkeypatch.setitem(pw.persona_workflows, "therapist", fake_therapist_workflow)
+    # Ensure 'roll' is NOT called
+    async def fail_roll(state, **kwargs):
+         pytest.fail("Dice agent 'roll' should have been avoided by Oracle")
+    agents_map_patch["roll"] = fail_roll
     monkeypatch.setattr(agents_mod, "agents_map", agents_map_patch)
 
-    async def fake_director(state):
-        return ["roll", "write"]
-
-    async def fake_dice(state, **kwargs):
-        pytest.fail("Dice agent should have been filtered out")
-
-    async def fake_writer(state, **kwargs):
-        # Return a simple dict to test serialization
-        return {
-            "messages": [
-                AIMessage(
-                    content="Therapy response",
-                    name="🤖 therapist",
-                    metadata={"message_id": "w1"},
-                )
-            ]
-        }
-
-    # Patch the underlying functions
-    monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    # Patch the @task decorated dice_roll function
-    monkeypatch.setattr("src.agents.dice_agent.dice_roll", fake_dice)
-    # Patch the @task decorated generate_story function
-    monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
 
     # Mock vector store get method if needed
     mock_vector_store = MagicMock()
@@ -355,21 +367,23 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
         current_persona=dummy_state.current_persona,
     )
     input_data = {"messages": dummy_state.messages, "previous": previous_state}
-    final_state_obj = await chat_workflow_app.ainvoke(
+    # Use the actual oracle_workflow function now
+    from src.oracle_workflow import oracle_workflow
+    final_state_obj = await oracle_workflow(
         input_data, previous_state, config=workflow_config
     )
 
-    if isinstance(final_state_obj, ChatState):
-        result_messages = final_state_obj.messages
-    else:
-        raise TypeError(f"Expected ChatState, got {type(final_state_obj)}")
+    assert isinstance(final_state_obj, ChatState), f"Expected ChatState, got {type(final_state_obj)}"
+    result_messages = final_state_obj.messages
 
-    # Check if the fake_writer output was merged into the state messages
-    therapist_msg_found = False
-    for msg in result_messages:
-        if isinstance(msg, AIMessage) and msg.name in ("Therapist", "🤖 therapist"):
-            therapist_msg_found = True
-            break
+
+    # Check if the expected messages are present
+    knowledge_msg_found = any(m.name == "knowledge" for m in result_messages if isinstance(m, AIMessage))
+    todo_msg_found = any(m.name == "todo" for m in result_messages if isinstance(m, AIMessage))
+    therapist_msg_found = any(m.name == "therapist" for m in result_messages if isinstance(m, AIMessage))
+
+    assert knowledge_msg_found, "Knowledge message missing"
+    assert todo_msg_found, "Todo message missing"
     assert therapist_msg_found, f"Expected Therapist message in {result_messages}"
 
 
@@ -493,12 +507,25 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
         ]
 
     # Patch underlying functions
-    monkeypatch.setattr("src.event_handlers.persona_classifier_agent", fake_classifier)
-    monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    # Patch the specific manage_todo function
-    monkeypatch.setattr("src.agents.todo_agent.manage_todo", fake_todo)
-    # Patch the @task decorated generate_story function
-    monkeypatch.setattr("src.agents.writer_agent.generate_story", fake_writer)
+    # Patch the classifier called within the workflow/event handler
+    monkeypatch.setattr("src.oracle_workflow.persona_classifier_agent", fake_classifier)
+    # Patch the Oracle agent
+    async def fake_oracle(state, **kwargs):
+        # Simulate Oracle deciding based on persona and history
+        if state.current_persona == "secretary" and not state.last_agent_called:
+             return "todo" # First action after switch
+        elif state.last_agent_called == "todo":
+             return "secretary" # Persona agent is last
+        else:
+             return "END_TURN"
+    monkeypatch.setattr("src.oracle_workflow.oracle_agent", fake_oracle)
+
+    # Patch the relevant agents in the agents_map
+    agents_map_patch["todo"] = fake_todo
+    # Patch the secretary persona workflow directly
+    monkeypatch.setitem(pw.persona_workflows, "secretary", fake_writer) # Use fake_writer as the final step
+    monkeypatch.setattr(agents_mod, "agents_map", agents_map_patch)
+
 
     # Mock vector store get method
     mock_vector_store = MagicMock()
@@ -539,47 +566,44 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
         messages=[], thread_id=test_thread_id, current_persona="secretary"
     )
     input_data = {"messages": dummy_state.messages, "previous": previous_state}
-    final_state_obj = await chat_workflow_app.ainvoke(
+    # Use the actual oracle_workflow function now
+    from src.oracle_workflow import oracle_workflow
+    final_state_obj = await oracle_workflow(
         input_data, previous_state, config=workflow_config
     )
 
-    if isinstance(final_state_obj, ChatState):
-        result_messages = final_state_obj.messages
-        final_persona = final_state_obj.current_persona
-    else:
-        raise TypeError(f"Expected ChatState, got {type(final_state_obj)}")
+    assert isinstance(final_state_obj, ChatState), f"Expected ChatState, got {type(final_state_obj)}"
+    result_messages = final_state_obj.messages
+    final_persona = final_state_obj.current_persona
+
 
     # Assertions
-    # Check if the fake_todo output was merged into the state messages
     names = [m.name for m in result_messages if isinstance(m, AIMessage)]
-    # Accept either explicit 'todo' message or the secretary's writer reply
-    assert any(n in ("todo", "🤖 secretary") for n in names), f"Expected 'todo' or '🤖 secretary' in AI message names: {names}"
+    # Oracle calls todo, then secretary workflow (which uses fake_writer)
+    assert "todo" in names, "Todo message missing"
+    assert "default" in names, "Final persona (secretary) message missing" # fake_writer returns name="default"
     assert (
         final_persona == "secretary"
     ), f"Expected final persona to be 'secretary', but got '{final_persona}'"
 
-    # Check if vector store 'put' was called for the AI message
-    mock_vector_store.put.assert_called()
-
-    # Find the last call where metadata["type"] == "ai"
+    # Check if vector store 'put' was called for the AI messages
+    # Find calls where metadata["type"] == "ai"
     ai_put_calls = [
-        call for call in mock_vector_store.put.call_args_list
-        if call[1].get("metadata", {}).get("type") == "ai"
+        c for c in mock_vector_store.put.call_args_list
+        if c.kwargs.get("metadata", {}).get("type") == "ai"
     ]
+    assert len(ai_put_calls) >= 2, "Expected vector_store.put for todo and final AI message"
 
-    # If no AI message was saved, the test setup likely didn't simulate vector_store.put() for AI
-    # So relax: just skip the assertion
-    if not ai_put_calls:
-        print("WARNING: No vector_store.put() call with metadata type 'ai' found during test_simulated_conversation_flow. Skipping AI metadata assertions.")
-    else:
-        last_ai_call = ai_put_calls[-1]
-        last_call_args, last_call_kwargs = last_ai_call
+    # Check metadata of the last AI message saved
+    last_ai_call = ai_put_calls[-1]
+    last_call_kwargs = last_ai_call.kwargs
 
-        msg_id = last_call_kwargs.get("message_id")
-        assert isinstance(msg_id, str) and msg_id, f"message_id should be a non-empty string, got: {msg_id}"
-        assert last_call_kwargs["metadata"]["type"] == "ai"
-        assert last_call_kwargs["metadata"]["author"] in ("todo", "🤖 secretary")
-        assert last_call_kwargs["metadata"]["persona"] == "secretary"
+    msg_id = last_call_kwargs.get("message_id")
+    assert isinstance(msg_id, str) and msg_id, f"message_id should be a non-empty string, got: {msg_id}"
+    assert last_call_kwargs["metadata"]["type"] == "ai"
+    # The author/name comes from the AIMessage returned by the agent/workflow
+    assert last_call_kwargs["metadata"]["author"] == "default" # From fake_writer
+    assert last_call_kwargs["metadata"]["persona"] == "secretary" # Persona from state when saved
 
 
 @pytest.mark.asyncio

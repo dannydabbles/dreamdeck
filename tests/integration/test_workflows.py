@@ -23,9 +23,10 @@ async def test_oracle_workflow_memory_updates(mock_chat_state):
     ), patch(
         "src.oracle_workflow.persona_classifier_agent",
         AsyncMock(return_value={"persona": "default"}),
+    # Patch Oracle agent instead of Director
     ), patch(
-        "src.oracle_workflow.director_agent",
-        AsyncMock(return_value=["write"]),
+        "src.oracle_workflow.oracle_agent",
+        AsyncMock(return_value="default"), # Oracle decides to call default persona workflow
     ), patch(
         "src.oracle_workflow.cl.user_session.get", new_callable=MagicMock
     ) as mock_user_session_get:
@@ -85,40 +86,36 @@ async def test_oracle_workflow_dispatches_to_persona(monkeypatch):
     for key in pw.persona_workflows:
         monkeypatch.setitem(pw.persona_workflows, key, dummy_workflow)
 
-    monkeypatch.setitem(pw.persona_workflows, "secretary", fake_secretary)
+    monkeypatch.setitem(pw.persona_workflows, "secretary", fake_secretary) # Keep this
 
-    # Patch the entire src.agents.agents_map to dummy tools to avoid real LLM calls
-    import src.agents as agents_mod
-    dummy_tool = AsyncMock(return_value=[])
-    agents_map_patch = {
-        "roll": dummy_tool,
-        "search": dummy_tool,
-        "todo": dummy_tool,
-        "write": dummy_tool,
-        "continue_story": dummy_tool,
-        "report": dummy_tool,
-    }
-    monkeypatch.setattr(agents_mod, "agents_map", agents_map_patch)
-
-    # Patch src.agents.persona_classifier_agent to always return secretary
+    # Patch the classifier in the oracle_workflow module
     async def fake_classifier(state, **kwargs):
-        return {"persona": "secretary", "reason": "test"}
+         return {"persona": "secretary", "reason": "test"}
+    monkeypatch.setattr("src.oracle_workflow.persona_classifier_agent", fake_classifier)
 
-    monkeypatch.setattr(agents_mod, "persona_classifier_agent", fake_classifier)
+    # Patch the oracle agent to call the secretary workflow
+    async def fake_oracle(state, **kwargs):
+         return "secretary" # Oracle decides to call the persona workflow
+    monkeypatch.setattr("src.oracle_workflow.oracle_agent", fake_oracle)
 
-    # Patch src.agents.director_agent to return empty list so no tools run
-    async def fake_director(state, **kwargs):
-        return []
+    # Patch the agents_map within oracle_workflow to include the patched secretary
+    # No need to patch other tools if Oracle directly calls secretary
+    import src.agents as agents_mod
+    agents_map_patch = agents_mod.agents_map.copy() # Start with real map
+    agents_map_patch["secretary"] = fake_secretary # Override secretary
+    monkeypatch.setattr("src.oracle_workflow.agents_map", agents_map_patch)
 
-    monkeypatch.setattr(agents_mod, "director_agent", fake_director)
 
-    state = ChatState(messages=[], thread_id="t", current_persona="secretary")
-    await oracle_workflow.ainvoke(
+    state = ChatState(messages=[], thread_id="t", current_persona="default") # Start as default
+    # Run the workflow - it should classify, then oracle calls secretary
+    final_state = await oracle_workflow.ainvoke(
         {"messages": [], "previous": state},
         state,
+         config={"configurable": {"thread_id": "t"}}
     )
 
-    assert called.get("secretary")
+    assert called.get("secretary"), "fake_secretary workflow was not called"
+    assert final_state.current_persona == "secretary", "Final state persona should be secretary"
 
 
 @pytest.mark.asyncio
@@ -167,16 +164,28 @@ async def test_oracle_workflow_error_handling(monkeypatch):
     import src.oracle_workflow as owf
     monkeypatch.setitem(owf.persona_workflows, "default", broken_workflow)
 
+    # Patch classifier and oracle
+    monkeypatch.setattr("src.oracle_workflow.persona_classifier_agent", AsyncMock(return_value={"persona": "default"}))
+    monkeypatch.setattr("src.oracle_workflow.oracle_agent", AsyncMock(return_value="default")) # Oracle calls the broken workflow
+
+    # Patch agents_map in oracle_workflow module
+    agents_map_patch = owf.agents_map.copy()
+    agents_map_patch["default"] = broken_workflow
+    monkeypatch.setattr("src.oracle_workflow.agents_map", agents_map_patch)
+
+
     state = ChatState(messages=[], thread_id="t", current_persona="default")
     result_state = await oracle_workflow.ainvoke(
         {"messages": [], "previous": state},
         state,
+         config={"configurable": {"thread_id": "t"}}
     )
 
-    # Should append an error message
+    assert isinstance(result_state, ChatState), "Workflow did not return ChatState"
+    # Should append an error message from the Oracle loop's error handling
     assert any(
-        m.name == "error" or "error" in m.content.lower() for m in result_state.messages
-    )
+        m.name == "error" for m in result_state.messages
+    ), "Error message not found in state"
 
 
 import src.persona_workflows as pw

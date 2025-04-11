@@ -123,12 +123,14 @@ async def test_oracle_single_step_persona_agent(initial_chat_state, mock_cl_envi
     current_state.messages.append(user_msg)
     initial_message_count = len(current_state.messages)
 
+    # Patch the oracle_agent function within the oracle_workflow module
+    mock_oracle_agent = AsyncMock(return_value=current_state.current_persona)
     monkeypatch.setattr(
-        "src.oracle_workflow._oracle_decision_node",
-        AsyncMock(return_value=current_state.current_persona)
+        "src.oracle_workflow.oracle_agent",
+        mock_oracle_agent
     )
 
-    mock_persona_agent_output = [AIMessage(content="A grand story unfolds!", name=current_state.current_persona, metadata={"message_id": "agent_msg_1"})]
+    mock_persona_agent_output = [AIMessage(content="A grand story unfolds!", name=current_state.current_persona, metadata={"message_id": "agent_msg_1", "agent": current_state.current_persona, "persona": current_state.current_persona})]
     mock_persona_agent = AsyncMock(return_value=mock_persona_agent_output)
     monkeypatch.setitem(
         src.oracle_workflow.agents_map,
@@ -141,14 +143,16 @@ async def test_oracle_single_step_persona_agent(initial_chat_state, mock_cl_envi
     final_state = await oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
 
     assert isinstance(final_state, ChatState)
-    src.oracle_workflow._oracle_decision_node.assert_called_once()
+    mock_oracle_agent.assert_called_once() # Check if oracle_agent was called
     mock_persona_agent.assert_called_once()
     assert len(final_state.messages) == initial_message_count + 1
     last_message = final_state.messages[-1]
     assert isinstance(last_message, AIMessage)
     assert last_message.content == "A grand story unfolds!"
     assert last_message.name == current_state.current_persona
-    assert last_message.metadata.get("invoked_agent") == current_state.current_persona
+    # Check metadata added by the oracle loop
+    assert last_message.metadata.get("agent") == current_state.current_persona
+    assert last_message.metadata.get("persona") == current_state.current_persona
 
 @pytest.mark.asyncio
 async def test_oracle_multi_step_tool_then_persona(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
@@ -158,18 +162,18 @@ async def test_oracle_multi_step_tool_then_persona(initial_chat_state, mock_cl_e
     current_state.messages.append(user_msg)
     initial_message_count = len(current_state.messages)
 
-    oracle_decisions = ["search", current_state.current_persona, "END_TURN"]
-    mock_decision_node = AsyncMock(side_effect=oracle_decisions)
+    oracle_decisions = ["search", current_state.current_persona] # Oracle decides sequence
+    mock_oracle_agent = AsyncMock(side_effect=oracle_decisions)
     monkeypatch.setattr(
-        "src.oracle_workflow._oracle_decision_node",
-        mock_decision_node
+        "src.oracle_workflow.oracle_agent",
+        mock_oracle_agent
     )
 
-    mock_search_output = [AIMessage(content="Found info about dragons.", name="search_tool", metadata={"message_id": "search_msg_1"})]
+    mock_search_output = [AIMessage(content="Found info about dragons.", name="search_tool", metadata={"message_id": "search_msg_1", "agent": "search", "persona": current_state.current_persona})]
     mock_search_agent = AsyncMock(return_value=mock_search_output)
     monkeypatch.setitem(src.oracle_workflow.agents_map, "search", mock_search_agent)
 
-    mock_persona_agent_output = [AIMessage(content="Okay, here's a story about dragons...", name=current_state.current_persona, metadata={"message_id": "agent_msg_1"})]
+    mock_persona_agent_output = [AIMessage(content="Okay, here's a story about dragons...", name=current_state.current_persona, metadata={"message_id": "agent_msg_1", "agent": current_state.current_persona, "persona": current_state.current_persona})]
     mock_persona_agent = AsyncMock(return_value=mock_persona_agent_output)
     monkeypatch.setitem(src.oracle_workflow.agents_map, current_state.current_persona, mock_persona_agent)
 
@@ -178,7 +182,7 @@ async def test_oracle_multi_step_tool_then_persona(initial_chat_state, mock_cl_e
     final_state = await oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
 
     assert isinstance(final_state, ChatState)
-    assert mock_decision_node.call_count == 2
+    assert mock_oracle_agent.call_count == 2 # Called for search, then for persona agent
     mock_search_agent.assert_called_once()
     mock_persona_agent.assert_called_once()
 
@@ -188,12 +192,17 @@ async def test_oracle_multi_step_tool_then_persona(initial_chat_state, mock_cl_e
 
     assert isinstance(search_message, AIMessage)
     assert search_message.content == "Found info about dragons."
-    assert search_message.metadata.get("invoked_agent") == "search"
+    # Check metadata added by the oracle loop
+    assert search_message.metadata.get("agent") == "search"
+    assert search_message.metadata.get("persona") == current_state.current_persona
+
 
     assert isinstance(persona_message, AIMessage)
     assert persona_message.content == "Okay, here's a story about dragons..."
     assert persona_message.name == current_state.current_persona
-    assert persona_message.metadata.get("invoked_agent") == current_state.current_persona
+    # Check metadata added by the oracle loop
+    assert persona_message.metadata.get("agent") == current_state.current_persona
+    assert persona_message.metadata.get("persona") == current_state.current_persona
 
 @pytest.mark.asyncio
 async def test_oracle_max_iterations_reached(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
@@ -203,19 +212,18 @@ async def test_oracle_max_iterations_reached(initial_chat_state, mock_cl_environ
     current_state.messages.append(user_msg)
     initial_message_count = len(current_state.messages)
 
-    MAX_ITER = 2
-    monkeypatch.setattr("src.oracle_workflow.MAX_ORACLE_ITERATIONS", MAX_ITER)
+    # Use the actual config value for max iterations
+    from src.config import MAX_CHAIN_LENGTH as MAX_ITER
 
-    mock_decision_node = AsyncMock(return_value="search")
-    monkeypatch.setattr("src.oracle_workflow._oracle_decision_node", mock_decision_node)
+    mock_oracle_agent = AsyncMock(return_value="search") # Oracle keeps saying search
+    monkeypatch.setattr("src.oracle_workflow.oracle_agent", mock_oracle_agent)
 
-    # Fix: Use a list comprehension to generate unique mock_search_output for each iteration
+    # Mock search agent to return unique messages
     mock_search_outputs = [
-        AIMessage(content="Still searching...", name="search_tool", metadata={"message_id": f"search_msg_{i}"})
+        [AIMessage(content=f"Still searching... {i+1}", name="search_tool", metadata={"message_id": f"search_msg_{i+1}", "agent": "search", "persona": current_state.current_persona})]
         for i in range(MAX_ITER)
     ]
-    # The mock agent should return a different output each time it's called
-    mock_search_agent = AsyncMock(side_effect=[[msg] for msg in mock_search_outputs])
+    mock_search_agent = AsyncMock(side_effect=mock_search_outputs)
     monkeypatch.setitem(src.oracle_workflow.agents_map, "search", mock_search_agent)
 
     inputs = {"messages": current_state.messages, "previous": current_state, "state": current_state}
@@ -223,9 +231,14 @@ async def test_oracle_max_iterations_reached(initial_chat_state, mock_cl_environ
     final_state = await oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
 
     assert isinstance(final_state, ChatState)
-    assert mock_decision_node.call_count == MAX_ITER
+    # Oracle is called MAX_ITER times, then loop breaks
+    assert mock_oracle_agent.call_count == MAX_ITER
     assert mock_search_agent.call_count == MAX_ITER
-    assert len(final_state.messages) == initial_message_count + MAX_ITER
+    # Should have initial messages + MAX_ITER search results + 1 max iteration system message
+    assert len(final_state.messages) == initial_message_count + MAX_ITER + 1
+    # Check for the max iteration message
+    assert final_state.messages[-1].name == "system"
+    assert "maximum processing steps" in final_state.messages[-1].content
 
 @pytest.mark.asyncio
 async def test_oracle_persona_classification_updates_state(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
@@ -238,10 +251,11 @@ async def test_oracle_persona_classification_updates_state(initial_chat_state, m
     mock_classifier = AsyncMock(return_value={"persona": "therapist", "reason": "User mentioned feelings"})
     monkeypatch.setattr("src.oracle_workflow.persona_classifier_agent", mock_classifier)
 
-    mock_decision_node = AsyncMock(return_value="therapist")
-    monkeypatch.setattr("src.oracle_workflow._oracle_decision_node", mock_decision_node)
+    # Oracle should be called *after* classification updates the state
+    mock_oracle_agent = AsyncMock(return_value="therapist")
+    monkeypatch.setattr("src.oracle_workflow.oracle_agent", mock_oracle_agent)
 
-    mock_therapist_output = [AIMessage(content="Let's talk about that.", name="therapist", metadata={"message_id": "therapist_msg_1"})]
+    mock_therapist_output = [AIMessage(content="Let's talk about that.", name="therapist", metadata={"message_id": "therapist_msg_1", "agent": "therapist", "persona": "therapist"})]
     mock_therapist_agent = AsyncMock(return_value=mock_therapist_output)
     monkeypatch.setitem(src.oracle_workflow.agents_map, "therapist", mock_therapist_agent)
 
@@ -251,17 +265,19 @@ async def test_oracle_persona_classification_updates_state(initial_chat_state, m
 
     assert isinstance(final_state, ChatState)
     mock_classifier.assert_called_once()
-    mock_decision_node.assert_called_once()
+    mock_oracle_agent.assert_called_once() # Oracle is called once
     mock_therapist_agent.assert_called_once()
 
-    decision_call_args, decision_call_kwargs = mock_decision_node.call_args
-    state_passed_to_decision = decision_call_args[0]
-    assert isinstance(state_passed_to_decision, ChatState)
-    assert state_passed_to_decision.current_persona == "therapist"
+    # Check that the state passed to the Oracle agent had the updated persona
+    oracle_call_args, oracle_call_kwargs = mock_oracle_agent.call_args
+    state_passed_to_oracle = oracle_call_args[0]
+    assert isinstance(state_passed_to_oracle, ChatState)
+    assert state_passed_to_oracle.current_persona == "therapist"
 
     assert final_state.current_persona == "therapist"
     last_message = final_state.messages[-1]
     assert isinstance(last_message, AIMessage)
     assert last_message.name == "therapist"
-    assert last_message.metadata.get("invoked_agent") == "therapist"
+    # Check metadata added by the oracle loop
+    assert last_message.metadata.get("agent") == "therapist"
     assert last_message.metadata.get("persona") == "therapist"
