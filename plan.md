@@ -55,19 +55,17 @@ Each phase is designed to be a reasonable unit of work.
 
 ---
 
-## Phase 3: Refine State Management for Oracle
+## Phase 3: Refine State Management for Oracle [COMPLETED]
 
 **Goal:** Ensure the Oracle receives necessary intermediate results from within the *same turn*.
 
-**Tasks:**
-1.  **Modify `src/models.py` (`ChatState`):**
-    *   Add `tool_results_this_turn: List[BaseMessage] = Field(default_factory=list)`.
-2.  **Update `src/oracle_workflow.py`:**
-    *   Clear `state.tool_results_this_turn` before the loop.
-    *   Append successful *tool* agent outputs to `state.tool_results_this_turn` inside the loop.
-3.  **Update `src/prompts/oracle_decision_prompt.j2`:**
-    *   Add `tool_results_this_turn` to the context.
-    *   Update rules/examples explaining its use.
+**Status:** Implemented.
+*   `src/oracle_workflow.py` now clears `state.tool_results_this_turn` before the decision loop and appends results from non-persona agents within the loop.
+*   `src/prompts/oracle_decision_prompt.j2` now includes `tool_results_this_turn` in its context and rules.
+
+**Notes for Next Phase:**
+*   Phase 4 will integrate the persona classifier *before* the Oracle loop starts.
+*   Ensure tests in Phase 5 specifically check that `tool_results_this_turn` influences the Oracle's decisions correctly in multi-step scenarios.
 
 ---
 

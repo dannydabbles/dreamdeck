@@ -84,9 +84,8 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
 
             # Phase 1: Start Oracle decision loop
             iterations = 0
-            # Phase 3 Placeholder: Clear tool results for this turn
-            if hasattr(state, "tool_results_this_turn"):
-                state.tool_results_this_turn = []
+            # Phase 3: Clear tool results for this turn
+            state.tool_results_this_turn = []
 
             while iterations < MAX_CHAIN_LENGTH:
                 iterations += 1
