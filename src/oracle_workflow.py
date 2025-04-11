@@ -21,23 +21,7 @@ cl_logger = logging.getLogger("chainlit")
 async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> ChatState: # Return ChatState
     from src.storage import append_log, get_persona_daily_dir, save_text_file
 
-    # Import agents_map and persona_workflows inside the function so test monkeypatching works!
-    try:
-        from src.agents import agents_map as real_agents_map, persona_workflows as real_persona_workflows
-    except ImportError:
-        real_agents_map = {}
-        real_persona_workflows = {}
-    # Allow test monkeypatching by checking for global overrides
-    global agents_map, persona_workflows
-    if "agents_map" in globals():
-        agents_map = globals()["agents_map"]
-    else:
-        agents_map = real_agents_map
-    if "persona_workflows" in globals():
-        persona_workflows = globals()["persona_workflows"]
-    else:
-        persona_workflows = real_persona_workflows
-
+    # Always import agents_map and persona_workflows from src.agents at point of use
     try:
         if config is None:
             config = {}
@@ -108,17 +92,20 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
         # --- Always use undecorated oracle_agent to avoid LangGraph context error ---
         from src.agents.oracle_agent import _oracle_decision as _oracle_decision_func
 
-        # PATCH: Add "continue_story" and "roll" to agents_map if not present
-        if "continue_story" not in agents_map:
-            from src.agents.writer_agent import writer_agent
-            agents_map["continue_story"] = writer_agent._generate_story
-        if "roll" not in agents_map:
-            from src.agents.dice_agent import dice_agent
-            agents_map["roll"] = dice_agent._dice_roll
-
         while iterations < MAX_CHAIN_LENGTH:
             iterations += 1
             cl_logger.info(f"Oracle loop iteration: {iterations}")
+
+            # Always import agents_map and persona_workflows from src.agents at point of use
+            from src.agents import agents_map, persona_workflows
+
+            # PATCH: Add "continue_story" and "roll" to agents_map if not present
+            if "continue_story" not in agents_map:
+                from src.agents.writer_agent import writer_agent
+                agents_map["continue_story"] = writer_agent._generate_story
+            if "roll" not in agents_map:
+                from src.agents.dice_agent import dice_agent
+                agents_map["roll"] = dice_agent._dice_roll
 
             # Always call undecorated oracle agent to avoid LangGraph context error
             next_action = await _oracle_decision_func(state, config=config)
