@@ -15,6 +15,9 @@ from src.models import ChatState
 from src.agents.registry import get_agent, list_agents
 from src.supervisor import supervisor
 
+# Import save_state for patching in tests
+from src.storage import save_state
+
 def main():
     parser = argparse.ArgumentParser(description="Dreamdeck CLI")
     subparsers = parser.add_subparsers(dest="command")
@@ -52,11 +55,24 @@ def main():
             print(f"Unknown agent: {args.agent}")
             sys.exit(1)
         state = ChatState(messages=[], thread_id="cli", current_persona=args.persona)
-        # Add a synthetic HumanMessage for input
         from langchain_core.messages import HumanMessage
         state.messages.append(HumanMessage(content=args.input, name="Player"))
         try:
-            result = asyncio.run(agent(state))
+            # Use asyncio.run only if not already in an event loop (for test compatibility)
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if loop and loop.is_running():
+                # If already in an event loop (e.g., pytest-asyncio), run as a task
+                result = loop.run_until_complete(agent(state))
+            else:
+                result = asyncio.run(agent(state))
+        except RuntimeError as e:
+            if "asyncio.run()" in str(e):
+                print(f"Error running agent: {e}")
+                sys.exit(2)
+            raise
         except Exception as e:
             print(f"Error running agent: {e}")
             sys.exit(2)
@@ -69,14 +85,29 @@ def main():
         state = ChatState(messages=[], thread_id="cli", current_persona=args.persona)
         from langchain_core.messages import HumanMessage
         state.messages.append(HumanMessage(content=args.input, name="Player"))
-        result = asyncio.run(supervisor(state))
+        try:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if loop and loop.is_running():
+                result = loop.run_until_complete(supervisor(state))
+            else:
+                result = asyncio.run(supervisor(state))
+        except RuntimeError as e:
+            if "asyncio.run()" in str(e):
+                print(f"Error running workflow: {e}")
+                sys.exit(2)
+            raise
+        except Exception as e:
+            print(f"Error running workflow: {e}")
+            sys.exit(2)
         print("Workflow output:")
         for msg in result:
             print(f"{msg.name}: {msg.content}")
         return
 
     if args.command == "export-state":
-        from src.storage import save_state
         state = ChatState(messages=[], thread_id=args.thread_id)
         save_state(state, args.output)
         print(f"State exported to {args.output}")
