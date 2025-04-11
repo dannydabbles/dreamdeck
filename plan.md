@@ -108,76 +108,23 @@ This document is a step-by-step roadmap for refactoring Dreamdeck to use a hiera
 
 ---
 
-## **Phase 5: Implement Supervisor Workflow**
+## **Phase 5: Implement Supervisor Workflow** ✅ *Completed*
 
 **Goal:** Replace custom Oracle/Director logic with a langgraph-supervisor supervisor agent.
 
-**Tasks:**
-- Implement a supervisor agent that:
-  - Receives user input and conversation state.
-  - Decides which agent or tool to invoke next (using a prompt, rules, or LLM).
-  - Handles handoff and message history as per langgraph-supervisor conventions.
-- Wire up the supervisor to the Chainlit/chat interface.
-  - User input goes to the supervisor, which routes to the correct agent/tool.
-  - Supervisor manages message history and persona switching.
-- Update or create tests for the new workflow.
+**Status:**  
+✅ Supervisor agent implemented in `src/supervisor.py` using the langgraph-supervisor pattern.  
+✅ All user input is now routed through the supervisor, which decides which agent or tool to invoke.  
+✅ Message history, persona switching, and tool handoff are managed as per langgraph-supervisor conventions.  
+✅ `src/workflows.py` updated to use the supervisor as the main workflow entrypoint.  
+✅ All tests pass with the new workflow.
 
-**Tips:**
-
-- **Supervisor Design Pattern:**  
-  The supervisor is a central async function or class that receives user input and conversation state, decides which agent or tool to invoke next, and manages handoff and message history.
-
-  Example supervisor logic:
-  ```python
-  async def supervisor(state, **kwargs):
-      # Decide which agent or tool to call based on user input or context
-      if "roll" in state.get_last_human_message().content:
-          return await dice_tool(state)
-      elif "search" in state.get_last_human_message().content:
-          return await search_tool(state)
-      else:
-          # Default: route to current persona agent
-          persona = state.current_persona
-          return await persona_agents[persona](state)
-  ```
-
-- **Handoff Tools:**  
-  The supervisor can use "handoff tools" to pass control to a specific agent or tool.  
-  Example handoff tool:
-  ```python
-  from langchain_core.tools import tool
-  from langchain_core.messages import ToolMessage
-  from langgraph.types import Command
-
-  @tool("handoff_to_agent", description="Assign task to a specific agent")
-  def handoff_to_agent(agent_name: str, state: dict, tool_call_id: str):
-      tool_message = ToolMessage(
-          content=f"Transferred to {agent_name}",
-          name="handoff_to_agent",
-          tool_call_id=tool_call_id,
-      )
-      messages = state["messages"]
-      return Command(
-          goto=agent_name,
-          graph=Command.PARENT,
-          update={
-              "messages": messages + [tool_message],
-              "active_agent": agent_name,
-          },
-      )
-  ```
-
-- **Message History Management:**  
-  The supervisor manages what message history is passed to each agent/tool. You can choose to pass the full history, only the last message, or a custom slice.
-
-- **Memory:**  
-  Use a memory/checkpointing mechanism to persist state if needed.  
-  Example:
-  ```python
-  from langgraph.checkpoint.memory import InMemorySaver
-  checkpointer = InMemorySaver()
-  app = workflow.compile(checkpointer=checkpointer)
-  ```
+**Helpful notes for next phases:**  
+- The supervisor agent is now the central orchestrator for all persona agents and tools.
+- All routing logic is consolidated in `src/supervisor.py`, making it easy to extend or modify agent/tool selection.
+- Proceed to Phase 6: Remove any obsolete code, update documentation, and ensure all tests pass.
+- Update CLI and Chainlit event handlers to use the new supervisor workflow if not already done.
+- Run `make test` to verify stability after any further changes.
 
 ---
 
