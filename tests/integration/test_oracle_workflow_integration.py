@@ -122,7 +122,7 @@ async def test_oracle_calls_writer_once_on_simple_input(initial_chat_state, mock
     # The 'previous' state should reflect the state *before* the user message for context,
     # but the 'messages' list should include the new user message.
     # However, the current implementation of oracle_workflow expects 'previous' to be the full current state.
-    inputs = {"messages": current_state.messages, "previous": current_state}
+    inputs = {"messages": current_state.messages, "previous": current_state, "state": current_state}
 
     # Invoke the oracle workflow
     final_state = await oracle_workflow_runnable.ainvoke(inputs, config={"configurable": {"thread_id": current_state.thread_id}})
@@ -174,7 +174,7 @@ async def test_oracle_calls_todo_agent_then_writer(initial_chat_state, mock_cl_e
     current_state.messages.append(user_msg)
 
     # Prepare inputs
-    inputs = {"messages": current_state.messages, "previous": current_state}
+    inputs = {"messages": current_state.messages, "previous": current_state, "state": current_state}
 
     # Invoke the oracle workflow
     final_state = await oracle_workflow_runnable.ainvoke(inputs, config={"configurable": {"thread_id": current_state.thread_id}})
@@ -238,7 +238,7 @@ async def test_persona_switch_confirmation_and_invocation(initial_chat_state, mo
         user_msg_t1 = HumanMessage(content=user_input_turn1, name="Player", metadata={"message_id": f"user_t1_{uuid.uuid4()}"})
         current_state_t1.messages.append(user_msg_t1)
 
-        inputs_t1 = {"messages": current_state_t1.messages, "previous": current_state_t1}
+        inputs_t1 = {"messages": current_state_t1.messages, "previous": current_state_t1, "state": current_state_t1}
         # Invoke with force_classify=True to ensure mocked classifier runs
         inputs_t1["force_classify"] = True
         state_after_turn1 = await oracle_workflow_runnable.ainvoke(inputs_t1, config={"configurable": {"thread_id": current_state_t1.thread_id}})
@@ -271,7 +271,7 @@ async def test_persona_switch_confirmation_and_invocation(initial_chat_state, mo
     user_msg_t2 = HumanMessage(content=user_input_turn2, name="Player", metadata={"message_id": f"user_t2_{uuid.uuid4()}"})
     state_after_turn1.messages.append(user_msg_t2) # Add to the state from previous turn
 
-    inputs_t2 = {"messages": state_after_turn1.messages, "previous": state_after_turn1}
+    inputs_t2 = {"messages": state_after_turn1.messages, "previous": state_after_turn1, "state": state_after_turn1}
     # No need to force_classify here, persona is already set
     final_state = await oracle_workflow_runnable.ainvoke(inputs_t2, config={"configurable": {"thread_id": state_after_turn1.thread_id}})
 
