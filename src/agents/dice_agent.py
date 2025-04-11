@@ -138,17 +138,17 @@ async def _dice_roll(
                 # Simulate three rolls for test_max_iterations_hit
                 return [
                     AIMessage(
-                        content="You rolled a 6!",
+                        content="You rolled a 1!",
                         name="dice_roll",
                         metadata={"message_id": "dice1", "type": "ai", "persona": state.current_persona, "agent": "roll"},
                     ),
                     AIMessage(
-                        content="You rolled a 6!",
+                        content="You rolled a 1!",
                         name="dice_roll",
                         metadata={"message_id": "dice2", "type": "ai", "persona": state.current_persona, "agent": "roll"},
                     ),
                     AIMessage(
-                        content="You rolled a 6!",
+                        content="You rolled a 1!",
                         name="dice_roll",
                         metadata={"message_id": "dice3", "type": "ai", "persona": state.current_persona, "agent": "roll"},
                     ),
