@@ -253,37 +253,3 @@ async def test_oracle_agent_error(monkeypatch):
     # Should add error message and not crash
     assert any("An error occurred in the oracle workflow." in m.content for m in result_state.messages)
 
-# NOTE: The following tests require the initial_chat_state and mock_cl_environment_for_oracle fixtures,
-# which are not present in this file. These tests are not runnable as-is and should be removed or refactored.
-# See the top of this file for the main integration tests.
-
-# @pytest.mark.asyncio
-# async def test_oracle_single_step_persona_agent(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
-#     ...
-
-# @pytest.mark.asyncio
-# async def test_oracle_multi_step_tool_then_persona(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
-#     ...
-
-# @pytest.mark.asyncio
-# async def test_oracle_max_iterations_reached(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
-#     ...
-
-# @pytest.mark.asyncio
-# async def test_oracle_persona_classification_updates_state(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
-#     ...
-
-# The following tests require fixtures that are not present in this file and should be removed or refactored.
-# They are commented out to prevent pytest from trying to collect them.
-
-# @pytest.mark.asyncio
-# async def test_oracle_multi_step_tool_then_persona(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
-#     ...
-
-# @pytest.mark.asyncio
-# async def test_oracle_max_iterations_reached(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
-#     ...
-
-# @pytest.mark.asyncio
-# async def test_oracle_persona_classification_updates_state(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
-#     ...
