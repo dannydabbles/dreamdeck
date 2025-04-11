@@ -59,35 +59,13 @@ async def therapist_workflow(inputs: dict, state: ChatState, *, config=None) -> 
 
 
 async def secretary_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
+    """Generates the final response for the Secretary persona."""
     try:
-        today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-        persona_dir = get_persona_daily_dir(state.current_persona, today)
-        todo_path = persona_dir / "todo.md"
-        if todo_path.exists():
-            todo_content = load_text_file(todo_path)
-            state.metadata["todo"] = todo_content
-
-        todo_messages = await _manage_todo(state)
-
-        # Patch: ensure all AIMessage outputs from _manage_todo have correct metadata
-        if isinstance(todo_messages, list):
-            for msg in todo_messages:
-                if isinstance(msg, AIMessage):
-                    if msg.metadata is None:
-                        msg.metadata = {}
-                    msg.metadata["type"] = "ai"
-                    msg.metadata["persona"] = state.current_persona
-
-        # Add todo_messages to state.messages
-        if todo_messages:
-            state.messages.extend(todo_messages)
-
-        if "todo" in state.metadata:
-            save_text_file(todo_path, state.metadata["todo"])
-
+        # The Oracle loop handles calling the 'todo' agent if needed.
+        # This workflow now only generates the final narrative/summary response.
         story_messages = await _generate_story(state)
 
-        # Patch: ensure all AIMessage outputs from _generate_story have correct metadata
+        # Patch: ensure all AIMessage outputs have consistent metadata
         if isinstance(story_messages, list):
             for msg in story_messages:
                 if isinstance(msg, AIMessage):
@@ -96,13 +74,7 @@ async def secretary_workflow(inputs: dict, state: ChatState, *, config=None) -> 
                     msg.metadata["type"] = "ai"
                     msg.metadata["persona"] = state.current_persona
 
-        # Add story_messages to state.messages
-        if story_messages:
-            state.messages.extend(story_messages)
-
-        # Return combined list for downstream
         return story_messages
-
     except Exception as e:
         cl_logger.error(f"secretary_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
@@ -150,19 +122,22 @@ async def friend_workflow(inputs: dict, state: ChatState, *, config=None) -> lis
 
 
 async def lorekeeper_workflow(inputs: dict, state: ChatState, *, config=None) -> list[BaseMessage]:
+    """Generates the final response for the Lorekeeper persona."""
     try:
-        knowledge_messages = await knowledge_agent(state, knowledge_type="lore")
+        # The Oracle loop handles calling the 'knowledge' agent if needed.
+        # This workflow now only generates the final narrative/summary response.
+        story_messages = await _generate_story(state)
 
-        # Patch: ensure all AIMessage outputs have consistent metadata for downstream processing and tests
-        if isinstance(knowledge_messages, list):
-            for msg in knowledge_messages:
+        # Patch: ensure all AIMessage outputs have consistent metadata
+        if isinstance(story_messages, list):
+            for msg in story_messages:
                 if isinstance(msg, AIMessage):
                     if msg.metadata is None:
                         msg.metadata = {}
                     msg.metadata["type"] = "ai"
                     msg.metadata["persona"] = state.current_persona
 
-        return knowledge_messages
+        return story_messages
     except Exception as e:
         cl_logger.error(f"lorekeeper_workflow failed: {e}", exc_info=True)
         append_log(state.current_persona, f"Error: {str(e)}")
