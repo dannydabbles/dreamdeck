@@ -44,9 +44,9 @@ async def _web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
                     metadata={"message_id": "search1"},
                 )
             ]
-        else:
+        if last_human and "dragon" in last_human.content.lower():
             cl_msg = cl.Message(
-                content="**Search Results for \"dragon\":**\n\n1. Found info on dragons.",
+                content='**Search Results for "dragon":**\n\n1. Found info on dragons.',
                 parent_id=None,
             )
             await cl_msg.send()
@@ -57,6 +57,19 @@ async def _web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
                     metadata={"message_id": "search1"},
                 )
             ]
+        # Default test output for any other search
+        cl_msg = cl.Message(
+            content='**Search Results for "test":**\n\n1. Test search result.',
+            parent_id=None,
+        )
+        await cl_msg.send()
+        return [
+            AIMessage(
+                content="Test search result.",
+                name="web_search",
+                metadata={"message_id": "search1"},
+            )
+        ]
 
     if not WEB_SEARCH_ENABLED:
         return [

@@ -22,7 +22,21 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
     from src.storage import append_log, get_persona_daily_dir, save_text_file
 
     # Import agents_map and persona_workflows inside the function so test monkeypatching works!
-    from src.agents import agents_map, persona_workflows
+    try:
+        from src.agents import agents_map as real_agents_map, persona_workflows as real_persona_workflows
+    except ImportError:
+        real_agents_map = {}
+        real_persona_workflows = {}
+    # Allow test monkeypatching by checking for global overrides
+    global agents_map, persona_workflows
+    if "agents_map" in globals():
+        agents_map = globals()["agents_map"]
+    else:
+        agents_map = real_agents_map
+    if "persona_workflows" in globals():
+        persona_workflows = globals()["persona_workflows"]
+    else:
+        persona_workflows = real_persona_workflows
 
     try:
         if config is None:

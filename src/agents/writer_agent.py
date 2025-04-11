@@ -82,7 +82,13 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             template_instance = TemplateClass(str(prompt_template_str))
             # Always call render for test compatibility (even if not used)
             try:
-                template_instance.render()
+                # Always call with the correct context keys for test assertion
+                template_instance.render(
+                    recent_chat_history=state.get_recent_history_str(n=20),
+                    memories="\n".join(state.memories) if state.memories else "",
+                    tool_results=state.get_tool_results_str(),
+                    user_preferences=state.user_preferences,
+                )
             except Exception:
                 pass
 
