@@ -23,7 +23,12 @@ async def _oracle_decision(state: ChatState, **kwargs) -> str:
         str: The name of the agent to call next, or "END_TURN".
     """
     try:
-        template = Template(config.loaded_prompts["oracle_decision_prompt"])
+        # Defensive: fallback to a default prompt if missing
+        prompt_template_str = config.loaded_prompts.get(
+            "oracle_decision_prompt",
+            "<goal>You are the Oracle. Output a JSON: {\"next_action\": \"END_TURN\"}</goal>"
+        )
+        template = Template(prompt_template_str)
 
         # Get available agent names from the map
         available_agents = list(agents_map.keys())

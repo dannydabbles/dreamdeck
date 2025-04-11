@@ -109,8 +109,11 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
 
             try:
                 # Execute the chosen agent/tool
-                # Handle potential dict vs list output (standardize later in Phase 2)
-                agent_output = await agent_func(state, config=config)
+                # If this is a persona workflow, call with (inputs, state, config)
+                if next_action in persona_workflows:
+                    agent_output = await agent_func(inputs, state, config=config)
+                else:
+                    agent_output = await agent_func(state, config=config)
 
                 # Process output: Append to messages and potentially tool_results_this_turn
                 if isinstance(agent_output, list):

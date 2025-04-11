@@ -18,6 +18,7 @@ prompts:
   dice_processing_prompt: "dice_processing_prompt.j2"
   ai_writer_prompt: "ai_writer_prompt.j2"
   storyboard_generation_prompt: "storyboard_generation_prompt.j2"
+  oracle_decision_prompt: "oracle_decision_prompt.j2"
   storyteller_gm_prompt: "ai_writer_prompt_storyteller.j2" # New prompt for Storyteller GM
   director_prompt: "director_prompt.j2"
   character_prompt: "character_prompt.j2"
