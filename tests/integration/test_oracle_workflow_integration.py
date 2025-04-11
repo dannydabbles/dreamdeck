@@ -5,6 +5,7 @@ from src.models import ChatState, HumanMessage, AIMessage, ToolMessage
 from src.oracle_workflow import oracle_workflow
 from src.config import START_MESSAGE
 import chainlit as cl
+import src.oracle_workflow  # <-- Add this import for src.oracle_workflow
 
 @pytest.fixture
 def initial_chat_state():
@@ -207,8 +208,13 @@ async def test_oracle_max_iterations_reached(initial_chat_state, mock_cl_environ
     mock_decision_node = AsyncMock(return_value="search")
     monkeypatch.setattr("src.oracle_workflow._oracle_decision_node", mock_decision_node)
 
-    mock_search_output = [AIMessage(content="Still searching...", name="search_tool", metadata={"message_id": f"search_msg_{i}"})]
-    mock_search_agent = AsyncMock(return_value=mock_search_output)
+    # Fix: Use a list comprehension to generate unique mock_search_output for each iteration
+    mock_search_outputs = [
+        AIMessage(content="Still searching...", name="search_tool", metadata={"message_id": f"search_msg_{i}"})
+        for i in range(MAX_ITER)
+    ]
+    # The mock agent should return a different output each time it's called
+    mock_search_agent = AsyncMock(side_effect=[[msg] for msg in mock_search_outputs])
     monkeypatch.setitem(src.oracle_workflow.agents_map, "search", mock_search_agent)
 
     inputs = {"messages": current_state.messages, "previous": current_state, "state": current_state}
