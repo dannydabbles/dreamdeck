@@ -70,6 +70,8 @@ async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list
                 cl.user_session.set("current_persona", state.current_persona)
             except Exception:
                 pass
+            # Also update the inputs dict so downstream tools see the new persona
+            inputs["previous"] = state
             # Defensive: update ChatState attribute explicitly
             if hasattr(state, "__dict__"):
                 state.__dict__["current_persona"] = suggested_persona
