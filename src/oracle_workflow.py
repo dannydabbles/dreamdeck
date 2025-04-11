@@ -133,9 +133,13 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
                 if next_action == "knowledge":
                     knowledge_type = getattr(state, "knowledge_type", None) or inputs.get("knowledge_type", "lore")
                     result = agent_func(state, knowledge_type=knowledge_type, config=config)
-                # Special handling for "continue_story" (alias for writer agent)
+                # Special handling for "continue_story" (alias for writer agent or persona workflow)
                 elif next_action == "continue_story":
-                    result = agent_func(state, config=config)
+                    # Always call with (inputs, state, config) for persona workflows
+                    try:
+                        result = agent_func(inputs, state, config=config)
+                    except TypeError:
+                        result = agent_func(state, config=config)
                 # Special handling for "roll" (alias for dice agent)
                 elif next_action == "roll":
                     result = agent_func(state, config=config)

@@ -6,6 +6,7 @@ from .agents.storyboard_editor_agent import storyboard_editor_agent
 from .agents.knowledge_agent import knowledge_agent
 
 # Agent dispatch map for Oracle workflow
+from src.persona_workflows import storyteller_workflow
 agents_map = {
     "roll": dice_roll_agent,
     "dice_roll": dice_roll_agent,
@@ -13,7 +14,8 @@ agents_map = {
     "director": director_agent,
     "writer": writer_agent,
     "storyboard_editor": storyboard_editor_agent,
-    "continue_story": writer_agent,  # Map continue_story to writer_agent
+    # PATCH: Map continue_story to storyteller_workflow (persona workflow signature)
+    "continue_story": storyteller_workflow,
     "knowledge": knowledge_agent,    # Map knowledge to knowledge_agent
     # Add more mappings as needed
 }
