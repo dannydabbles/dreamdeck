@@ -93,9 +93,9 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     monkeypatch.setattr("src.agents.todo_agent.cl", cl)
     monkeypatch.setattr("src.agents.todo_agent.os.path.exists", lambda *args: False) # Assume file doesn't exist initially
     monkeypatch.setattr("src.agents.todo_agent.os.makedirs", lambda *args, **kwargs: None)
-    # Mock open carefully if needed, or rely on path.exists mock
+    # Mock open globally instead of inside src.agents.todo_agent
     mock_open = MagicMock()
-    monkeypatch.setattr("src.agents.todo_agent.open", mock_open)
+    monkeypatch.setattr("builtins.open", mock_open)
 
 
     return mock_session # Return the mock session
