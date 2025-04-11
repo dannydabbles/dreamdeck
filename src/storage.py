@@ -5,6 +5,8 @@ from datetime import datetime
 import zoneinfo
 from src.models import ChatState
 
+PACIFIC = zoneinfo.ZoneInfo("America/Los_Angeles")
+
 def save_state(state: ChatState, path: str):
     """Save ChatState to a JSON file."""
     path_obj = Path(path)
@@ -24,7 +26,7 @@ def load_state(path: str) -> ChatState:
 
 def get_pacific_now():
     """Get the current datetime in US/Pacific timezone."""
-    return datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
+    return datetime.now(PACIFIC)
 
 def get_shared_daily_dir(date: str = None) -> Path:
     """Return the shared daily directory path."""

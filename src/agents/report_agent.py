@@ -1,6 +1,7 @@
 from src.config import config, cl_logger
 import os
 import datetime
+import zoneinfo
 import re
 from chainlit import Message as CLMessage
 import chainlit as cl
@@ -22,7 +23,8 @@ async def _generate_report(state: ChatState, **kwargs) -> list[AIMessage]:
     - The LLM cannot analyze or "see" the images, just their names.
     """
     try:
-        current_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+        pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
+        current_date = datetime.datetime.now(pacific).strftime("%Y-%m-%d")
         base_dir = config.todo_dir_path
 
         all_todos = []

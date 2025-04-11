@@ -1,6 +1,7 @@
 from src.config import config, cl_logger
 import os
 import datetime
+import zoneinfo
 import re
 from chainlit import Message as CLMessage
 import chainlit as cl
@@ -54,7 +55,8 @@ async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
         # Pass the *full* original user input (including slash command) to the prompt for clarity
 
         # Load current todo list from file (if exists)
-        current_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+        pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
+        current_date = datetime.datetime.now(pacific).strftime("%Y-%m-%d")
         persona = getattr(state, "current_persona", "Default")
         persona_safe = re.sub(r"[^\w\-_. ]", "_", persona)
         dir_path = os.path.join(TODO_DIR_PATH, persona_safe, current_date)

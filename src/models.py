@@ -15,25 +15,6 @@ import chainlit as cl
 class ChatState(BaseModel):
     """Represents the conversational state of a user interaction.
 
-    Attributes:
-        messages (List[BaseMessage]): Conversation history including user/system messages
-        is_last_step (bool): Indicates if this is terminal state (unused currently)
-        thread_id (str): Unique identifier for the conversation thread
-        metadata (dict): Arbitrary state data for plugins/extensions
-        current_message_id (Optional[str]): Reference to ongoing message (async ops)
-        error_count (int): Number of consecutive errors encountered
-        memories (List[str]): Extracted contextual info from prior messages
-        user_preferences (dict): User-specific settings like tone preference
-        thread_data (dict): Metadata about the conversation thread
-        current_persona (str): The active persona/profile name.
-        last_agent_called (Optional[str]): The last agent that successfully added a message.
-        background_tasks (List[asyncio.Task]): List of background asyncio tasks to track.
-
-    State Transitions:
-        - Messages are immutable - new states are created with .copy_with_updates()
-        - Memories are automatically populated from vector store queries
-    """
-
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     messages: List[BaseMessage] = Field(default_factory=list)

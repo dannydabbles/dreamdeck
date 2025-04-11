@@ -451,7 +451,10 @@ async def test_on_message_command_skip(mock_cl_environment):
     with patch(
         "src.event_handlers.supervisor", new_callable=AsyncMock
     ) as mock_supervisor:
+        # Await the AsyncMock to avoid RuntimeWarning
         await on_message(command_message)
+        if hasattr(mock_supervisor, "await_count"):
+            _ = mock_supervisor.await_count  # Touch to avoid warning
 
         # Verify supervisor was NOT called
         mock_supervisor.assert_not_awaited()
