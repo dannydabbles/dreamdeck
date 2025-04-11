@@ -15,12 +15,10 @@ TODO_DIR_PATH = config.todo_dir_path
 TODO_FILE_NAME = config.todo_file_name
 
 
-# Exported agent alias for patching
-class _TodoAgentWrapper:
-    pass
-
-
-todo_agent = _TodoAgentWrapper()
+# Refactored: todo_agent is now a stateless, LLM-backed function (task)
+@task
+async def todo_agent(state: ChatState, **kwargs) -> list[AIMessage]:
+    return await _manage_todo(state, **kwargs)
 
 
 @cl.step(name="Todo Agent", type="tool")

@@ -27,13 +27,10 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
-class _DiceAgentWrapper:
-    async def __call__(self, state: ChatState, **kwargs) -> List[BaseMessage]:
-        """Makes the wrapper instance callable by LangGraph, delegating to the task."""
-        return await dice_roll(state, **kwargs)
-
-
-dice_agent = _DiceAgentWrapper()
+# Refactored: dice_agent is now a stateless, LLM-backed function (task)
+@task
+async def dice_agent(state: ChatState, **kwargs) -> List[BaseMessage]:
+    return await _dice_roll(state, **kwargs)
 
 
 @cl.step(name="Dice Agent: Roll Dice", type="tool")
@@ -214,8 +211,8 @@ async def dice_roll(
     return result
 
 
-# Export the function as dice_roll_agent
-dice_roll_agent = dice_roll
+# Export the function as dice_roll_agent for compatibility
+dice_roll_agent = dice_agent
 
 # Expose internal function for monkeypatching in tests
 dice_agent._dice_roll = _dice_roll

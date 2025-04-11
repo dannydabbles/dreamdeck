@@ -121,6 +121,7 @@ async def _generate_report(state: ChatState, **kwargs) -> list[AIMessage]:
         ]
 
 
+# Refactored: report_agent is now a stateless, LLM-backed function (task)
 @task
 async def report_agent(state: ChatState, **kwargs) -> list[AIMessage]:
     return await _generate_report(state, **kwargs)

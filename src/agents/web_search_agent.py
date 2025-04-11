@@ -157,9 +157,7 @@ async def _web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
         ]
 
 
+# Refactored: web_search_agent is now a stateless, LLM-backed function (task)
 @task
-async def web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
+async def web_search_agent(state: ChatState, **kwargs) -> list[BaseMessage]:
     return await _web_search(state, **kwargs)
-
-
-web_search_agent = web_search

@@ -92,11 +92,10 @@ async def _knowledge(state: ChatState, knowledge_type: str, **kwargs) -> list[Ba
         ]
 
 
+# Refactored: knowledge_agent is now a stateless, LLM-backed function (task)
 @task
-async def _knowledge_agent(
-    state: ChatState, knowledge_type: str, **kwargs
-) -> list[BaseMessage]:
+async def knowledge_agent(state: ChatState, knowledge_type: str, **kwargs) -> list[BaseMessage]:
     return await _knowledge(state, knowledge_type, **kwargs)
 
 # Patch: expose the undecorated function for test monkeypatching
-knowledge_agent = _knowledge
+knowledge_agent._knowledge = _knowledge

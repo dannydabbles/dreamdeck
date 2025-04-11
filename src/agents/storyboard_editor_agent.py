@@ -136,6 +136,7 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
         cl_logger.error(f"Failed to process storyboard images: {str(e)}")
 
 
-storyboard_editor_agent = (
-    generate_storyboard  # Expose the function as storyboard_editor_agent
-)
+# Refactored: storyboard_editor_agent is now a stateless, LLM-backed function (task)
+@task
+async def storyboard_editor_agent(state: ChatState, gm_message_id: str, **kwargs) -> list[BaseMessage]:
+    return await _generate_storyboard(state, gm_message_id, **kwargs)

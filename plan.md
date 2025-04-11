@@ -70,43 +70,21 @@ This document is a step-by-step roadmap for refactoring Dreamdeck to use a hiera
 
 ---
 
-## **Phase 3: Refactor Tools as LLM-Backed Functions**
+## **Phase 3: Refactor Tools as LLM-Backed Functions** ✅ *Completed*
 
 **Goal:** Implement all tools as stateless, LLM-backed functions compatible with langgraph-supervisor.
 
-**Tasks:**
-- For each tool (roll, search, todo, etc.):
-  - Refactor as a function that takes in user input, chat history, and any needed context.
-  - The function should call an LLM (using a Jinja2 prompt) and return a summarized/contextualized output.
-  - Use the langgraph-supervisor tool interface.
-- Remove any persona or state management from tools.
-- Update or create tests for each tool.
+**Status:**  
+✅ All tool agents (roll, search, todo, report, knowledge, storyboard_editor, persona_classifier) have been refactored as stateless, async LLM-backed functions using the langgraph-supervisor tool interface.  
+✅ All persona or state management has been removed from tools.  
+✅ All tools now only process their input and return output.  
+✅ Tests for tools are in place and pass.
 
-**Tips:**
-
-- **Tool Design Pattern:**  
-  Each tool should be a stateless, async function that takes in user input, chat history, and any needed context, and returns a summarized/contextualized output.  
-  Example:
-  ```python
-  from langchain_core.messages import AIMessage
-  from langgraph.func import task
-
-  @task
-  async def my_tool(state, **kwargs):
-      # Compose prompt using state (chat history, user input, etc)
-      prompt = f"Summarize: {state.get_recent_history_str()}"
-      # Call LLM (use your preferred LLM interface)
-      response = await llm.ainvoke([("system", prompt)])
-      return [AIMessage(content=response.content, name="my_tool")]
-  ```
-- **Handoff Mechanism:**  
-  Tools can be called by agents or the supervisor. When a tool is called, its output is appended to the conversation state and can be used by subsequent agents.
-
-- **Statelessness:**  
-  Tools should not manage persona logic or global state. They should only process their input and return output.
-
-- **Testing:**  
-  Each tool should have isolated tests that check its output given a mock state.
+**Helpful notes for next phases:**  
+- All tools are now stateless and ready to be called by persona agents or the supervisor.
+- Proceed to Phase 4: Refactor persona agents as LLM-backed agents using persona-specific prompts.
+- Ensure that agents use the new stateless tools via the supervisor handoff mechanism.
+- Continue to keep tests updated as you refactor agents.
 
 ---
 

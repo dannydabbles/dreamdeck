@@ -131,6 +131,7 @@ async def _classify_persona(state: ChatState) -> dict:
         return {"persona": "default", "reason": "Classifier error"}
 
 
+# Refactored: persona_classifier_agent is now a stateless, LLM-backed function (task)
 @task
 async def persona_classifier_agent(state: ChatState, **kwargs) -> dict:
     return await _classify_persona(state)
