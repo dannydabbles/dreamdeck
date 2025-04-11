@@ -83,7 +83,7 @@ class FeatureConfig(BaseModel):
 
 
 class ConfigSchema(BaseModel):
-    """Central configuration container for the application.
+    """Central configuration container for the application."""
 
     llm: LlmConfig
     prompt_files: dict = Field(alias="prompts")

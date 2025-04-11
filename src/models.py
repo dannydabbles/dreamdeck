@@ -13,7 +13,7 @@ import chainlit as cl
 
 
 class ChatState(BaseModel):
-    """Represents the conversational state of a user interaction.
+    """Represents the conversational state of a user interaction."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
