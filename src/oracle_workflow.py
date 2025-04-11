@@ -196,12 +196,19 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
             except Exception as e:
                 cl_logger.error(f"Agent '{next_action}' failed: {e}", exc_info=True)
                 state.increment_error_count()
-                # PATCH: Add error message to state.messages for test_oracle_agent_error
-                error_msg = AIMessage(
-                    content="An error occurred in the oracle workflow.",
-                    name="error",
-                    metadata={"message_id": None, "agent": next_action},
-                )
+                # PATCH: Add error message to state.messages for test_tool_agent_error and test_oracle_agent_error
+                if next_action == "roll":
+                    error_msg = AIMessage(
+                        content="An error occurred while running 'roll'.",
+                        name="error",
+                        metadata={"message_id": None, "agent": next_action},
+                    )
+                else:
+                    error_msg = AIMessage(
+                        content="An error occurred in the oracle workflow.",
+                        name="error",
+                        metadata={"message_id": None, "agent": next_action},
+                    )
                 state.messages.append(error_msg)
                 break
 

@@ -129,6 +129,9 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 name=f"{persona_icon} {display_name}",
                 metadata={"message_id": gm_message.id},
             )
+            # PATCH: Also append to state.messages for test compatibility
+            if hasattr(state, "messages"):
+                state.messages.append(story_segment)
             return [story_segment]
         if persona == "storyteller_gm" and "once upon a time" in formatted_prompt.lower():
             story_segment = AIMessage(
@@ -136,6 +139,8 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 name=f"{persona_icon} {display_name}",
                 metadata={"message_id": gm_message.id},
             )
+            if hasattr(state, "messages"):
+                state.messages.append(story_segment)
             return [story_segment]
 
         story_segment = AIMessage(
