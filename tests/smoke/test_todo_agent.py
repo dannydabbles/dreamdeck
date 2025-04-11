@@ -31,7 +31,7 @@ async def test_manage_todo_creates_file(tmp_path):
         # Patch cl.user_session.get to avoid "Chainlit context not found"
         mock_cl_module.user_session.get.return_value = {}
 
-        mock_cl_msg_instance = MagicMock()
+        mock_cl_msg_instance = AsyncMock()
         mock_cl_msg_instance.send = AsyncMock(return_value=None)
         mock_cl_msg_instance.id = "todo-msg-id"
         mock_cl_msg_cls.return_value = mock_cl_msg_instance
