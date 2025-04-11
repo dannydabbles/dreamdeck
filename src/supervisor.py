@@ -9,6 +9,7 @@ from src.agents.writer_agent import writer_agent
 from langchain_core.messages import HumanMessage, AIMessage
 import logging
 import sys
+import os
 
 # Monkeypatch: Use a no-op task decorator in test environments to avoid langgraph context errors
 def _noop_decorator(func):
