@@ -1,4 +1,11 @@
 import pytest
+
+pytestmark = [
+    pytest.mark.filterwarnings("ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited"),
+    pytest.mark.filterwarnings("ignore:datetime.datetime.utcnow() is deprecated"),
+    pytest.mark.filterwarnings("ignore:Support for class-based `config` is deprecated"),
+]
+
 from unittest.mock import patch, AsyncMock, MagicMock, call
 from src.event_handlers import (
     on_chat_start,

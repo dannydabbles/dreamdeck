@@ -26,11 +26,12 @@ with open(CONFIG_FILE, "r") as f:
 
 class DiceConfig(BaseModel):
     """Pydantic model for dice configuration."""
-
+    model_config = ConfigDict(extra="forbid")
     sides: int = Field(default=20, description="Number of sides for dice rolls")
 
 
 class DecisionAgentConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     temperature: float
     max_tokens: int
     streaming: bool
@@ -39,6 +40,7 @@ class DecisionAgentConfig(BaseModel):
 
 
 class WriterAgentConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     temperature: float
     max_tokens: int
     base_url: Optional[str] = None
@@ -47,6 +49,7 @@ class WriterAgentConfig(BaseModel):
 
 
 class StoryboardEditorAgentConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     temperature: float
     max_tokens: int
     base_url: Optional[str] = None
@@ -55,16 +58,19 @@ class StoryboardEditorAgentConfig(BaseModel):
 
 
 class AgentsConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     decision_agent: DecisionAgentConfig
     writer_agent: WriterAgentConfig
     storyboard_editor_agent: StoryboardEditorAgentConfig
 
 
 class DefaultsConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     db_file: str = "chainlit.db"
 
 
 class LlmConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     temperature: float
     max_tokens: int
     model_name: str
@@ -77,6 +83,7 @@ class LlmConfig(BaseModel):
 
 
 class FeatureConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     dice_rolling: bool
     web_search: bool
     image_generation: bool
