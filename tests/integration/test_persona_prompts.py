@@ -66,12 +66,9 @@ async def test_writer_agent_prompt_selection(dummy_state, persona, expected_prom
     ), patch("src.agents.writer_agent.cl.Message") as mock_cl_msg:
 
         # Setup mock message streaming
-        async def dummy_stream_token(chunk):
-            return None
-        async def dummy_send():
-            return None
-        mock_cl_msg.return_value.stream_token = dummy_stream_token
-        mock_cl_msg.return_value.send = dummy_send
+        from unittest.mock import AsyncMock
+        mock_cl_msg.return_value.stream_token = AsyncMock(return_value=None)
+        mock_cl_msg.return_value.send = AsyncMock(return_value=None)
         mock_cl_msg.return_value.content = "Generated story"
         mock_cl_msg.return_value.id = "msgid"
 
@@ -120,9 +117,7 @@ async def test_todo_agent_prompt_selection(dummy_state, persona, expected_prompt
         "src.agents.todo_agent.os.path.exists", return_value=False
     ):
 
-        async def dummy_send(*args, **kwargs):
-            return None
-        mock_cl_msg.return_value.send = dummy_send
+        mock_cl_msg.return_value.send = AsyncMock(return_value=None)
         mock_cl_msg.return_value.id = "msgid"
 
         mock_llm.return_value.ainvoke.return_value.content = (
@@ -173,9 +168,7 @@ async def test_knowledge_agent_prompt_selection(
         "src.agents.knowledge_agent.cl.Message"
     ) as mock_cl_msg:
 
-        async def dummy_send(*args, **kwargs):
-            return None
-        mock_cl_msg.return_value.send = dummy_send
+        mock_cl_msg.return_value.send = AsyncMock(return_value=None)
         mock_cl_msg.return_value.id = "msgid"
 
         mock_llm.return_value.ainvoke.return_value.content = "Knowledge content"
