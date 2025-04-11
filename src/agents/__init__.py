@@ -8,7 +8,6 @@ from .writer_agent import writer_agent
 from .director_agent import director_agent
 from .todo_agent import manage_todo
 from .knowledge_agent import knowledge_agent
-from .persona_classifier_agent import persona_classifier_agent
 from .report_agent import report_agent
 
 __all__ = [
@@ -18,7 +17,6 @@ __all__ = [
     "director_agent",
     "manage_todo",
     "knowledge_agent",
-    "persona_classifier_agent",
     "report_agent",
 ]
 
