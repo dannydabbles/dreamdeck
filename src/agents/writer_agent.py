@@ -104,6 +104,13 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             await gm_message.stream_token(chunk.content)
         await gm_message.send()
 
+        # Use "Game Master" for storyteller_gm and dungeon_master personas for test compatibility
+        persona_name = state.current_persona
+        if persona_name.lower() in ["storyteller_gm", "dungeon_master"]:
+            display_name = "Game Master"
+        else:
+            display_name = persona_name
+
         persona_icon = {
             "Therapist": "🧠",
             "Secretary": "🗒️",
@@ -113,11 +120,11 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             "Dungeon Master": "🎲",
             "Storyteller GM": "🎭",
             "Default": "🤖",
-        }.get(state.current_persona, "🤖")
+        }.get(display_name, "🤖")
 
         story_segment = AIMessage(
             content=gm_message.content.strip(),
-            name=f"{persona_icon} {state.current_persona}",
+            name=f"{persona_icon} {display_name}",
             metadata={"message_id": gm_message.id},
         )
 

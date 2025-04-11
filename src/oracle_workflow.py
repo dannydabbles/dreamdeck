@@ -9,7 +9,7 @@ from src.agents.oracle_agent import oracle_agent # Phase 1: Import oracle_agent
 from src.agents import agents_map # Phase 1: Import agents_map
 
 # Expose append_log for test monkeypatching
-from src.storage import append_log
+from src.storage import append_log, get_persona_daily_dir
 from src.config import MAX_CHAIN_LENGTH # Phase 1: Import max iterations
 from langchain_core.runnables import RunnableLambda
 import logging
@@ -231,6 +231,9 @@ async def _ainvoke(*args, **kwargs):
 
 
 oracle_workflow.ainvoke = _ainvoke
+
+# Expose get_persona_daily_dir for monkeypatching in tests
+get_persona_daily_dir = get_persona_daily_dir
 
 
 class OracleWorkflowWrapper:

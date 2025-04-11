@@ -34,9 +34,11 @@ __all__ = [
 # Expose agents_map as a module attribute for patching
 agents_map = {
     "roll": dice_roll,
+    "dice_roll": dice_roll,
     "search": web_search_agent,
+    "web_search": web_search_agent,
     "todo": manage_todo,
-    # "knowledge" handled explicitly in workflow
+    "manage_todo": manage_todo,
     "write": writer_agent,
     "continue_story": writer_agent,
     "report": report_agent,
