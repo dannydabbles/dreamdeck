@@ -1,6 +1,8 @@
 # Dreamdeck Refactor Roadmap: Migrating to langgraph-supervisor
 
-This document is a step-by-step roadmap for refactoring Dreamdeck to use [langgraph-supervisor](https://github.com/langchain-ai/langgraph-supervisor-py) for hierarchical multi-agent orchestration. Each phase is designed to be a reasonable, self-contained chunk of work for a coding LLM. Follow the phases in order. Each phase includes all context, tips, and requirements needed for implementation.
+This document is a step-by-step roadmap for refactoring Dreamdeck to use a hierarchical multi-agent orchestration pattern inspired by langgraph-supervisor. Each phase is designed to be a reasonable, self-contained chunk of work for a coding LLM. Follow the phases in order. Each phase includes all context, tips, and requirements needed for implementation.
+
+**All necessary documentation, code snippets, and design patterns from langgraph-supervisor are included below. No external search or package documentation is required.**
 
 ---
 
@@ -79,8 +81,30 @@ This document is a step-by-step roadmap for refactoring Dreamdeck to use [langgr
 - Update or create tests for each tool.
 
 **Tips:**
-- See [langgraph-supervisor tool docs](https://github.com/langchain-ai/langgraph-supervisor-py#customizing-handoff-tools).
-- Each tool should be a pure function from input/context to output.
+
+- **Tool Design Pattern:**  
+  Each tool should be a stateless, async function that takes in user input, chat history, and any needed context, and returns a summarized/contextualized output.  
+  Example:
+  ```python
+  from langchain_core.messages import AIMessage
+  from langgraph.func import task
+
+  @task
+  async def my_tool(state, **kwargs):
+      # Compose prompt using state (chat history, user input, etc)
+      prompt = f"Summarize: {state.get_recent_history_str()}"
+      # Call LLM (use your preferred LLM interface)
+      response = await llm.ainvoke([("system", prompt)])
+      return [AIMessage(content=response.content, name="my_tool")]
+  ```
+- **Handoff Mechanism:**  
+  Tools can be called by agents or the supervisor. When a tool is called, its output is appended to the conversation state and can be used by subsequent agents.
+
+- **Statelessness:**  
+  Tools should not manage persona logic or global state. They should only process their input and return output.
+
+- **Testing:**  
+  Each tool should have isolated tests that check its output given a mock state.
 
 ---
 
@@ -96,8 +120,29 @@ This document is a step-by-step roadmap for refactoring Dreamdeck to use [langgr
 - Update or create tests for each persona agent.
 
 **Tips:**
-- Use the [langgraph-supervisor agent interface](https://github.com/langchain-ai/langgraph-supervisor-py#quickstart).
-- Each agent should only manage its own prompt/context, not global state.
+
+- **Agent Design Pattern:**  
+  Each persona agent is an async function or callable class that takes in the conversation state and returns a list of messages (usually a single AIMessage).  
+  Example:
+  ```python
+  from langchain_core.messages import AIMessage
+  from langgraph.func import task
+
+  @task
+  async def persona_agent(state, **kwargs):
+      # Use a persona-specific prompt
+      prompt = f"You are a {state.current_persona}. Respond to the user."
+      response = await llm.ainvoke([("system", prompt)])
+      return [AIMessage(content=response.content, name=state.current_persona)]
+  ```
+- **Persona Prompts:**  
+  Each agent should use a Jinja2 prompt template specific to its persona, filled with recent chat, memories, tool results, and user preferences.
+
+- **Tool Calls:**  
+  Persona agents can call tools by returning a special "handoff" message or by using a supervisor routing mechanism (see Phase 5).
+
+- **No Global State:**  
+  Agents should only manage their own prompt/context, not global state.
 
 ---
 
@@ -116,8 +161,61 @@ This document is a step-by-step roadmap for refactoring Dreamdeck to use [langgr
 - Update or create tests for the new workflow.
 
 **Tips:**
-- See [langgraph-supervisor quickstart](https://github.com/langchain-ai/langgraph-supervisor-py#quickstart).
-- Use supervisor’s built-in memory and message management.
+
+- **Supervisor Design Pattern:**  
+  The supervisor is a central async function or class that receives user input and conversation state, decides which agent or tool to invoke next, and manages handoff and message history.
+
+  Example supervisor logic:
+  ```python
+  async def supervisor(state, **kwargs):
+      # Decide which agent or tool to call based on user input or context
+      if "roll" in state.get_last_human_message().content:
+          return await dice_tool(state)
+      elif "search" in state.get_last_human_message().content:
+          return await search_tool(state)
+      else:
+          # Default: route to current persona agent
+          persona = state.current_persona
+          return await persona_agents[persona](state)
+  ```
+
+- **Handoff Tools:**  
+  The supervisor can use "handoff tools" to pass control to a specific agent or tool.  
+  Example handoff tool:
+  ```python
+  from langchain_core.tools import tool
+  from langchain_core.messages import ToolMessage
+  from langgraph.types import Command
+
+  @tool("handoff_to_agent", description="Assign task to a specific agent")
+  def handoff_to_agent(agent_name: str, state: dict, tool_call_id: str):
+      tool_message = ToolMessage(
+          content=f"Transferred to {agent_name}",
+          name="handoff_to_agent",
+          tool_call_id=tool_call_id,
+      )
+      messages = state["messages"]
+      return Command(
+          goto=agent_name,
+          graph=Command.PARENT,
+          update={
+              "messages": messages + [tool_message],
+              "active_agent": agent_name,
+          },
+      )
+  ```
+
+- **Message History Management:**  
+  The supervisor manages what message history is passed to each agent/tool. You can choose to pass the full history, only the last message, or a custom slice.
+
+- **Memory:**  
+  Use a memory/checkpointing mechanism to persist state if needed.  
+  Example:
+  ```python
+  from langgraph.checkpoint.memory import InMemorySaver
+  checkpointer = InMemorySaver()
+  app = workflow.compile(checkpointer=checkpointer)
+  ```
 
 ---
 
