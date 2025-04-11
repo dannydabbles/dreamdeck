@@ -198,9 +198,17 @@ class OracleWorkflowWrapper:
 chat_workflow = OracleWorkflowWrapper()
 
 
-async def _oracle_workflow_wrapper(*args, **kwargs):
-    config = kwargs.pop("config", None)
-    return await oracle_workflow(*args, **kwargs, config=config)
+async def _oracle_workflow_wrapper(inputs: dict, *, config=None):
+    """Wrapper to adapt oracle_workflow for RunnableLambda, ensuring correct argument passing."""
+    state = inputs.get("state")
+    if not isinstance(state, ChatState):
+        cl_logger.error(f"Oracle workflow wrapper called without a valid 'state' in inputs: {inputs}")
+        # You might want to return an error message or raise a more specific exception
+        # depending on how errors should propagate.
+        raise ValueError("Missing or invalid 'state' in input dictionary for oracle_workflow")
+
+    # Call the actual workflow with inputs dict and extracted state object
+    return await oracle_workflow(inputs, state, config=config)
 
 
 oracle_workflow_runnable = RunnableLambda(_oracle_workflow_wrapper)
