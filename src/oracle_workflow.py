@@ -93,12 +93,8 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
         # Phase 3: Clear tool results for this turn
         state.tool_results_this_turn = []
 
-        # --- PATCH: Use undecorated oracle_agent in tests to avoid LangGraph context error ---
+        # --- Always use undecorated oracle_agent to avoid LangGraph context error ---
         from src.agents.oracle_agent import _oracle_decision as _oracle_decision_func
-        use_undecorated_oracle = False
-        import os
-        if os.environ.get("DREAMDECK_TEST_MODE") == "1" or getattr(oracle_agent, "_force_undecorated", False):
-            use_undecorated_oracle = True
 
         # PATCH: Add "continue_story" and "roll" to agents_map if not present
         if "continue_story" not in agents_map:
@@ -112,11 +108,8 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
             iterations += 1
             cl_logger.info(f"Oracle loop iteration: {iterations}")
 
-            # Call Oracle agent to decide next action
-            if use_undecorated_oracle:
-                next_action = await _oracle_decision_func(state, config=config)
-            else:
-                next_action = await oracle_agent(state, config=config)
+            # Always call undecorated oracle agent to avoid LangGraph context error
+            next_action = await _oracle_decision_func(state, config=config)
             cl_logger.info(f"Oracle decided action: {next_action}")
 
             if next_action == "END_TURN":
