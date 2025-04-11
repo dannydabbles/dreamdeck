@@ -19,7 +19,8 @@ def initial_chat_state():
 
 @pytest.fixture(autouse=True)
 def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
-    import src.agents.persona_classifier_agent
+    import src.agents.persona_classifier_agent as pca_module  # Use alias
+    import src.agents.director_agent  # Add this import
     import src.agents.knowledge_agent
     import src.agents.writer_agent
     import src.agents.todo_agent
@@ -69,9 +70,13 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     monkeypatch.setattr(src.agents.todo_agent.cl, "user_session", mock_user_session, raising=False)
     monkeypatch.setattr(src.agents.dice_agent, "cl_user_session", mock_user_session, raising=False)
     monkeypatch.setattr(src.event_handlers, "cl_user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(src.agents.persona_classifier_agent.cl, "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(src.agents.knowledge_agent.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(pca_module.cl, "user_session", mock_user_session, raising=False)  # Use alias
+    # Add/ensure patches for other agents using cl.user_session
     monkeypatch.setattr(src.agents.writer_agent.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(src.agents.knowledge_agent.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(src.agents.director_agent.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(src.agents.report_agent.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(src.agents.storyboard_editor_agent.cl, "user_session", mock_user_session, raising=False)
 
     mock_message_instance = AsyncMock(spec=cl.Message)
     mock_message_instance.id = f"mock_cl_msg_{uuid.uuid4()}"
