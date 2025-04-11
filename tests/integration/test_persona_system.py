@@ -767,7 +767,7 @@ async def test_multi_tool_persona_workflow(monkeypatch, mock_cl_environment):
 
     # Run the workflow
     result_state = await oracle_workflow.ainvoke(
-        {"messages": state.messages, "previous": state},
+        {"messages": state.messages, "previous": state, "force_classify": True},
         state,
     )
 
