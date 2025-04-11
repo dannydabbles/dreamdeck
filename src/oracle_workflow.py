@@ -123,7 +123,7 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
                 break
 
             # Check if the chosen action is a persona agent (signaling end of tool chain)
-            is_persona_agent = next_action in persona_workflows
+            is_persona_agent = next_action in persona_workflows or next_action == "continue_story"
 
             try:
                 # Special handling for "knowledge" agent (needs knowledge_type)
@@ -234,6 +234,10 @@ oracle_workflow.ainvoke = _ainvoke
 
 # Expose get_persona_daily_dir for monkeypatching in tests
 get_persona_daily_dir = get_persona_daily_dir
+
+# Expose save_text_file for monkeypatching in tests
+from src.storage import save_text_file
+save_text_file = save_text_file
 
 
 class OracleWorkflowWrapper:
