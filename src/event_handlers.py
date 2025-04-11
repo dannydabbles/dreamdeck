@@ -612,38 +612,37 @@ async def on_message(message: cl.Message):
                         metadata={"type": "ai", "author": "Game Master", "persona": state.current_persona},
                     )
                     ai_messages = [fallback_msg]
-                if not os.environ.get("PYTEST_CURRENT_TEST"):
-                    if ai_messages:
-                        for msg in ai_messages:
-                            state.messages.append(msg)
-                            msg_id = msg.metadata.get("message_id") if msg.metadata else None
-                            if not msg_id:
-                                cl_logger.warning(
-                                    f"AIMessage missing message_id, skipping vector store save: {msg.content}"
-                                )
-                                continue
-
-                            # Defensive copy of metadata or empty dict
-                            meta = dict(msg.metadata) if msg.metadata else {}
-
-                            # --- PHASE 2 PATCH: Enforce consistent metadata ---
-                            # Always set type to 'ai'
-                            meta["type"] = "ai"
-
-                            # Always set author to message name
-                            meta["author"] = msg.name
-
-                            # Prefer persona from message metadata if present, else use current state persona
-                            if "persona" not in meta or not meta["persona"]:
-                                meta["persona"] = state.current_persona
-
-                            await vector_memory.put(
-                                content=msg.content,
-                                message_id=msg_id,
-                                metadata=meta,
+                if ai_messages:
+                    for msg in ai_messages:
+                        state.messages.append(msg)
+                        msg_id = msg.metadata.get("message_id") if msg.metadata else None
+                        if not msg_id:
+                            cl_logger.warning(
+                                f"AIMessage missing message_id, skipping vector store save: {msg.content}"
                             )
+                            continue
 
-                    cl.user_session.set("state", state)
+                        # Defensive copy of metadata or empty dict
+                        meta = dict(msg.metadata) if msg.metadata else {}
+
+                        # --- PHASE 2 PATCH: Enforce consistent metadata ---
+                        # Always set type to 'ai'
+                        meta["type"] = "ai"
+
+                        # Always set author to message name
+                        meta["author"] = msg.name
+
+                        # Prefer persona from message metadata if present, else use current state persona
+                        if "persona" not in meta or not meta["persona"]:
+                            meta["persona"] = state.current_persona
+
+                        await vector_memory.put(
+                            content=msg.content,
+                            message_id=msg_id,
+                            metadata=meta,
+                        )
+
+                cl.user_session.set("state", state)
             except Exception as e:
                 cl_logger.error(f"Supervisor failed: {e}", exc_info=True)
                 await cl.Message(
