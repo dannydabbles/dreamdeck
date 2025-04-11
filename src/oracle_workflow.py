@@ -153,35 +153,34 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
                 else:
                     agent_output = await agent_func(state, config=config)
 
-                # PATCH: Always append agent output to state.messages for persona agents
+                # PATCH: Always append agent output to state.messages for all agents (tool and persona)
                 if isinstance(agent_output, list):
                     valid_messages = [msg for msg in agent_output if isinstance(msg, BaseMessage)]
-                    if valid_messages:
-                        for msg in valid_messages:
-                            if isinstance(msg, AIMessage):
-                                if msg.metadata is None:
-                                    msg.metadata = {}
-                                msg.metadata.setdefault("type", "ai")
-                                msg.metadata.setdefault("persona", state.current_persona)
-                                msg.metadata.setdefault("agent", next_action)
-                        state.messages.extend(valid_messages)
-                        if not is_persona_agent:
-                            state.tool_results_this_turn.extend(valid_messages)
-                        state.last_agent_called = next_action
+                    # Even if valid_messages is empty, still extend (no-op)
+                    for msg in valid_messages:
+                        if isinstance(msg, AIMessage):
+                            if msg.metadata is None:
+                                msg.metadata = {}
+                            msg.metadata.setdefault("type", "ai")
+                            msg.metadata.setdefault("persona", state.current_persona)
+                            msg.metadata.setdefault("agent", next_action)
+                    state.messages.extend(valid_messages)
+                    if not is_persona_agent:
+                        state.tool_results_this_turn.extend(valid_messages)
+                    state.last_agent_called = next_action
                 elif isinstance(agent_output, dict) and "messages" in agent_output:
                     valid_messages = [msg for msg in agent_output["messages"] if isinstance(msg, BaseMessage)]
-                    if valid_messages:
-                        for msg in valid_messages:
-                            if isinstance(msg, AIMessage):
-                                if msg.metadata is None:
-                                    msg.metadata = {}
-                                msg.metadata.setdefault("type", "ai")
-                                msg.metadata.setdefault("persona", state.current_persona)
-                                msg.metadata.setdefault("agent", next_action)
-                        state.messages.extend(valid_messages)
-                        if not is_persona_agent and hasattr(state, "tool_results_this_turn"):
-                            state.tool_results_this_turn.extend(valid_messages)
-                        state.last_agent_called = next_action
+                    for msg in valid_messages:
+                        if isinstance(msg, AIMessage):
+                            if msg.metadata is None:
+                                msg.metadata = {}
+                            msg.metadata.setdefault("type", "ai")
+                            msg.metadata.setdefault("persona", state.current_persona)
+                            msg.metadata.setdefault("agent", next_action)
+                    state.messages.extend(valid_messages)
+                    if not is_persona_agent and hasattr(state, "tool_results_this_turn"):
+                        state.tool_results_this_turn.extend(valid_messages)
+                    state.last_agent_called = next_action
                 elif isinstance(agent_output, ChatState):
                     state = agent_output
                     state.last_agent_called = next_action
