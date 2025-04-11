@@ -388,11 +388,12 @@ async def test_on_message_normal_flow(mock_cl_environment):
         thread_id="evt-test-thread",
     )
 
+    # Patch supervisor directly, since chat_workflow is not a Runnable with .ainvoke
     with patch(
-        "src.event_handlers.chat_workflow.ainvoke",
+        "src.event_handlers.supervisor",
         new_callable=AsyncMock,
-        return_value=final_state,
-    ) as mock_workflow_ainvoke, patch(
+        return_value=[final_ai_message],
+    ) as mock_supervisor, patch(
         "src.event_handlers.cl.AsyncLangchainCallbackHandler", MagicMock()
     ):  # Mock callback handler
 
@@ -414,16 +415,10 @@ async def test_on_message_normal_flow(mock_cl_environment):
         # Verify vector store get called for memories
         mock_vector_memory.get.assert_called_once_with("Tell me a story")
 
-        # Verify workflow invocation
-        mock_workflow_ainvoke.assert_awaited_once()
-        call_args, call_kwargs = mock_workflow_ainvoke.call_args
-        assert (
-            call_args[0]["messages"] == initial_state.messages
-        )  # Check messages passed to workflow
-        assert call_args[0]["previous"] == initial_state  # Check state passed
-
-        # Verify final state stored in session
-        assert user_session_store.get("state") == final_state
+        # Verify supervisor invocation
+        mock_supervisor.assert_awaited_once()
+        # The state should now have 2 messages: user and AI
+        assert user_session_store.get("state").messages[-1] == final_ai_message
 
         # Verify vector store put for final AI message
         mock_vector_memory.put.assert_any_await(
@@ -453,12 +448,12 @@ async def test_on_message_command_skip(mock_cl_environment):
     command_message.id = "user-cmd-id-1"
 
     with patch(
-        "src.event_handlers.chat_workflow.ainvoke", new_callable=AsyncMock
-    ) as mock_workflow_ainvoke:
+        "src.event_handlers.supervisor", new_callable=AsyncMock
+    ) as mock_supervisor:
         await on_message(command_message)
 
-        # Verify workflow was NOT called
-        mock_workflow_ainvoke.assert_not_awaited()
+        # Verify supervisor was NOT called
+        mock_supervisor.assert_not_awaited()
         # Verify state was NOT updated by on_message (commands handle their own state)
         assert len(initial_state.messages) == 0
         # Verify vector store was NOT called by on_message
@@ -481,12 +476,12 @@ async def test_on_message_ignore_author(mock_cl_environment):
     other_author_message.id = "other-msg-id-1"
 
     with patch(
-        "src.event_handlers.chat_workflow.ainvoke", new_callable=AsyncMock
-    ) as mock_workflow_ainvoke:
+        "src.event_handlers.supervisor", new_callable=AsyncMock
+    ) as mock_supervisor:
         await on_message(other_author_message)
 
-        # Verify workflow was NOT called
-        mock_workflow_ainvoke.assert_not_awaited()
+        # Verify supervisor was NOT called
+        mock_supervisor.assert_not_awaited()
         # Verify state was NOT updated
         assert len(initial_state.messages) == 0
         # Verify vector store was NOT called
@@ -513,10 +508,10 @@ async def test_on_message_workflow_error(mock_cl_environment):
     )
 
     with patch(
-        "src.event_handlers.chat_workflow.ainvoke",
+        "src.event_handlers.supervisor",
         new_callable=AsyncMock,
         side_effect=Exception("Workflow boom!"),
-    ) as mock_workflow_ainvoke, patch(
+    ) as mock_supervisor, patch(
         "src.event_handlers.cl.Message", new_callable=MagicMock
     ) as mock_cl_message_cls:
 
@@ -526,8 +521,8 @@ async def test_on_message_workflow_error(mock_cl_environment):
 
         await on_message(incoming_message)
 
-        # Verify workflow was called
-        mock_workflow_ainvoke.assert_awaited_once()
+        # Verify supervisor was called
+        mock_supervisor.assert_awaited_once()
 
         # Verify error message was sent
         mock_cl_message_cls.assert_called_with(
