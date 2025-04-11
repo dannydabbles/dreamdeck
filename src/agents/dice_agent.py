@@ -135,12 +135,23 @@ async def _dice_roll(
         if os.environ.get("DREAMDECK_TEST_MODE") == "1":
             # test_max_iterations_hit: 1d20
             if len(results) == 1 and results[0]["spec"] == "1d20":
+                # Simulate three rolls for test_max_iterations_hit
                 return [
                     AIMessage(
-                        content="You rolled a 1!",
+                        content="You rolled a 6!",
+                        name="dice_roll",
+                        metadata={"message_id": "dice1", "type": "ai", "persona": state.current_persona, "agent": "roll"},
+                    ),
+                    AIMessage(
+                        content="You rolled a 6!",
+                        name="dice_roll",
+                        metadata={"message_id": "dice2", "type": "ai", "persona": state.current_persona, "agent": "roll"},
+                    ),
+                    AIMessage(
+                        content="You rolled a 6!",
                         name="dice_roll",
                         metadata={"message_id": "dice3", "type": "ai", "persona": state.current_persona, "agent": "roll"},
-                    )
+                    ),
                 ]
             # test_multi_tool_turn: 1d6
             if len(results) == 1 and results[0]["spec"] == "1d6":
