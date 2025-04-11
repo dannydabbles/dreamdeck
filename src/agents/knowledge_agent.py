@@ -83,7 +83,9 @@ async def _knowledge(state: ChatState, knowledge_type: str, **kwargs) -> list[Ba
 
 
 @task
-async def knowledge_agent(
+async def _knowledge_agent(
     state: ChatState, knowledge_type: str, **kwargs
 ) -> list[BaseMessage]:
     return await _knowledge(state, knowledge_type, **kwargs)
+
+knowledge_agent = _knowledge_agent
