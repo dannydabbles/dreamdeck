@@ -616,7 +616,7 @@ async def on_message(message: cl.Message):
 
             inputs = {"messages": state.messages, "previous": state}
             state = await chat_workflow.ainvoke(
-                inputs, config=RunnableConfig(callbacks=[cb], **thread_config)
+                inputs, state, config=RunnableConfig(callbacks=[cb], **thread_config)
             )
 
             # Save *all* new AI messages from the workflow to vector store
