@@ -65,9 +65,16 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     # Patch specific agent imports if they use it directly
     monkeypatch.setattr("src.agents.todo_agent.cl.user_session", mock_user_session, raising=False)
     monkeypatch.setattr("src.agents.dice_agent.cl_user_session", mock_user_session, raising=False)
-    monkeypatch.setattr("src.agents.persona_classifier_agent.cl.user_session", mock_user_session, raising=False)
     monkeypatch.setattr("src.agents.knowledge_agent.cl.user_session", mock_user_session, raising=False)
     monkeypatch.setattr("src.event_handlers.cl_user_session", mock_user_session, raising=False)
+
+    # Patch the entire 'cl' module inside src.agents.persona_classifier_agent
+    import types
+    mock_cl_module_pc = MagicMock()
+    mock_cl_module_pc.user_session = mock_user_session
+    mock_cl_module_pc.Message = MagicMock()
+    mock_cl_module_pc.context = MagicMock()
+    monkeypatch.setattr("src.agents.persona_classifier_agent", "cl", mock_cl_module_pc, raising=False)
 
     # Mock cl.Message methods to avoid actual UI updates
     mock_message_instance = AsyncMock(spec=cl.Message)
