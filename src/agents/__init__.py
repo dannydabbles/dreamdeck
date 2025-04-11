@@ -32,9 +32,11 @@ __all__ = [
 ]
 
 # Expose agents_map as a module attribute for patching
+from .dice_agent import _dice_roll
+
 agents_map = {
-    "roll": dice_roll,
-    "dice_roll": dice_roll,
+    "roll": _dice_roll,
+    "dice_roll": _dice_roll,
     "search": web_search_agent,
     "web_search": web_search_agent,
     "todo": manage_todo,
