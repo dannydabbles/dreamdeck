@@ -26,35 +26,47 @@ This document is a step-by-step roadmap for refactoring Dreamdeck to use a hiera
 
 ---
 
-## **Phase 2: Inventory and Define Agents & Tools**
+## **Phase 2: Inventory and Define Agents & Tools** ✅ *Completed*
 
 **Goal:** Clearly define which components are persona agents and which are tools.
 
-**Tasks:**
-- List all current "agents" and "tools" in the codebase.
-- For each, decide:
-  - Is it a **persona agent** (LLM with a persona prompt, e.g. Storyteller GM, Therapist, Secretary, etc.)?
-  - Is it a **tool** (atomic, stateless, LLM-backed function, e.g. roll, search, todo)?
-- Document the mapping in a table in this file for reference.
+**Status:**  
+✅ All current agents and tools have been inventoried and classified.  
+✅ Mapping table added below.  
+✅ Ready for Phase 3.
 
-**Example Table:**
+**Agent/Tool Inventory Table:**
 
-| Name            | Type    | Notes                                 |
-|-----------------|---------|---------------------------------------|
-| roll            | Tool    | LLM-backed dice roller                |
-| search          | Tool    | LLM-backed web search summarizer      |
-| todo            | Tool    | LLM-backed todo manager               |
-| writer/GM       | Agent   | Persona agent (Storyteller GM)        |
-| therapist       | Agent   | Persona agent                         |
-| secretary       | Agent   | Persona agent                         |
-| coder           | Agent   | Persona agent                         |
-| friend          | Agent   | Persona agent                         |
-| lorekeeper      | Agent   | Persona agent                         |
-| dungeon_master  | Agent   | Persona agent                         |
+| Name                | Type    | Notes                                                      |
+|---------------------|---------|------------------------------------------------------------|
+| roll                | Tool    | LLM-backed dice roller (`src/agents/dice_agent.py`)        |
+| search              | Tool    | LLM-backed web search summarizer (`src/agents/web_search_agent.py`) |
+| todo                | Tool    | LLM-backed todo manager (`src/agents/todo_agent.py`)       |
+| report              | Tool    | LLM-backed daily report generator (`src/agents/report_agent.py`) |
+| knowledge           | Tool    | LLM-backed knowledge/lore generator (`src/agents/knowledge_agent.py`) |
+| storyboard_editor   | Tool    | LLM-backed storyboard image prompt generator (`src/agents/storyboard_editor_agent.py`) |
+| writer/GM           | Agent   | Persona agent (Storyteller GM, `src/agents/writer_agent.py`) |
+| therapist           | Agent   | Persona agent (Therapist, `src/agents/writer_agent.py`)    |
+| secretary           | Agent   | Persona agent (Secretary, `src/agents/writer_agent.py`)    |
+| coder               | Agent   | Persona agent (Coder, `src/agents/writer_agent.py`)        |
+| friend              | Agent   | Persona agent (Friend, `src/agents/writer_agent.py`)       |
+| lorekeeper          | Agent   | Persona agent (Lorekeeper, `src/agents/writer_agent.py`)   |
+| dungeon_master      | Agent   | Persona agent (Dungeon Master, `src/agents/writer_agent.py`) |
+| default             | Agent   | Default persona agent (`src/agents/writer_agent.py`)       |
+| persona_classifier  | Tool    | LLM-backed persona classifier (`src/agents/persona_classifier_agent.py`) |
 
 **Tips:**
-- Tools should be stateless and not manage persona logic.
-- Persona agents should use Jinja2 prompts for their persona.
+- Tools are stateless, LLM-backed functions that do not manage persona logic.
+- Persona agents use Jinja2 prompts for their persona and are implemented as LLM-backed agents.
+- The mapping above will guide the refactoring in Phase 3 and 4.
+
+---
+
+**Helpful notes for next phases:**
+- All tools and agents are now clearly inventoried and classified.
+- Proceed to Phase 3: Refactor all tools as stateless, LLM-backed functions compatible with langgraph-supervisor.
+- Use the table above as a reference for which components to refactor as tools vs persona agents.
+- Ensure tests are updated or created for each tool and agent as you refactor.
 
 ---
 
