@@ -47,6 +47,8 @@ class ChatState(BaseModel):
     thread_data: dict = Field(default_factory=dict)
     current_persona: str = "Default"  # Default persona if none selected/resumed
     last_agent_called: Optional[str] = None  # Track last agent that added a message
+    tool_results_this_turn: List[BaseMessage] = Field(default_factory=list) # Phase 3: Track results within a turn
+    background_tasks: List[asyncio.Task] = Field(default_factory=list) # List of background asyncio tasks to track
 
     def increment_error_count(self) -> None:
         self.error_count += 1

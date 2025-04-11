@@ -21,31 +21,23 @@ Each phase is designed to be a reasonable unit of work.
 
 ---
 
-## Phase 1: Implement the Oracle Agent and Decision Loop
+## Phase 1: Implement the Oracle Agent and Decision Loop [COMPLETED]
 
 **Goal:** Create the core Oracle agent and refactor `oracle_workflow.py` to use an iterative decision loop driven by the Oracle.
 
-**Tasks:**
-1.  **Create `src/agents/oracle_agent.py`:**
-    *   Define an `_oracle_decision` async function using `src/prompts/oracle_decision_prompt.j2`.
-    *   Input: `ChatState`.
-    *   Logic: Format prompt (including available agents, persona, history, *tool results this turn* - see Phase 3), call LLM, parse JSON response (`{"next_action": "agent_name_or_END_TURN"}`), handle errors.
-    *   Output: The chosen action string.
-    *   Add `@task` decorator and expose the agent (e.g., `oracle_agent`).
-2.  **Refactor `src/oracle_workflow.py` (`oracle_workflow` function):**
-    *   Remove the call to `director_agent`.
-    *   Implement a `while` loop (max iterations: `MAX_CHAIN_LENGTH`).
-    *   **Inside the loop:**
-        *   Call `oracle_agent` with the current `state`.
-        *   Get `next_action`.
-        *   **Decision Logic:**
-            *   If `END_TURN` or max iterations: `break`.
-            *   If `next_action` is a *persona* agent: Call agent via `agents_map`, append response, `break`.
-            *   If `next_action` is a *tool* agent: Call agent via `agents_map`, append response to `state.messages` AND `state.tool_results_this_turn` (Phase 3), update `state`, `continue`.
-            *   Handle errors (unknown action, agent failure).
-    *   Return the final `state`.
-3.  **Update `src/agents/__init__.py`:**
-    *   Ensure `agents_map` includes entries for *all* agents (tools *and* personas) using the exact names expected by the Oracle prompt.
+**Status:** Implemented.
+*   Created `src/agents/oracle_agent.py` which uses `oracle_decision_prompt.j2`.
+*   Refactored `src/oracle_workflow.py` to use a `while` loop driven by `oracle_agent`.
+*   Removed `director_agent`.
+*   Updated `src/agents/__init__.py` to include persona agents in `agents_map`.
+*   Added `tool_results_this_turn` to `ChatState` as a placeholder for Phase 3.
+
+**Notes for Next Phase:**
+*   Phase 2 needs to simplify the persona workflows in `src/persona_workflows.py` as they are now only called at the end of the Oracle loop. They should primarily contain the final response generation logic (like `_generate_story`).
+*   Tool agents need review to ensure they *don't* call the writer agent themselves.
+*   The handling of agent output (list vs dict vs ChatState) in `oracle_workflow.py` needs standardization in Phase 2.
+*   Metadata patching (`type`, `persona`, `agent`) was added in the loop but needs review/refinement in Phase 2.
+*   The `oracle_decision_prompt.j2` currently has a placeholder for `tool_results_this_turn`; Phase 3 will fully integrate this.
 
 ---
 

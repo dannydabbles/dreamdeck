@@ -82,96 +82,110 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
                 state.__dict__["current_persona"] = suggested_persona
             append_log(state.current_persona, f"Oracle dispatched to persona workflow: {state.current_persona}")
 
-            # After classifier, update persona in all existing AI message metadata to match new persona
-            for msg in state.messages:
-                if isinstance(msg, AIMessage):
-                    if msg.metadata is None:
-                        msg.metadata = {}
-                    msg.metadata["persona"] = state.current_persona
+            # Phase 1: Start Oracle decision loop
+            iterations = 0
+            # Phase 3 Placeholder: Clear tool results for this turn
+            if hasattr(state, "tool_results_this_turn"):
+                state.tool_results_this_turn = []
 
-        persona_key = state.current_persona.lower().replace(" ", "_")
-        workflow_func = persona_workflows.get(persona_key)
+            while iterations < MAX_CHAIN_LENGTH:
+                iterations += 1
+                cl_logger.info(f"Oracle loop iteration: {iterations}")
 
-        if not workflow_func:
-            cl_logger.warning(
-                f"Oracle: Unknown persona '{persona_key}', falling back to default workflow"
-            )
-            workflow_func = persona_workflows.get("default")
+                # Call Oracle agent to decide next action
+                next_action = await oracle_agent(state, config=config)
+                cl_logger.info(f"Oracle decided action: {next_action}")
 
-        append_log(state.current_persona, f"Oracle dispatched to persona workflow: {state.current_persona}")
+                if next_action == "END_TURN":
+                    cl_logger.info("Oracle decided END_TURN.")
+                    break
 
-        # Run the director to get list of actions/tools
-        try:
-            actions = await director_agent(state, config=config)
-        except Exception as e:
-            cl_logger.error(f"Director agent failed: {e}")
-            actions = ["continue_story"]
+                # Get the agent function from the map
+                agent_func = agents_map.get(next_action)
 
-        from src.agents import agents_map
+                if not agent_func:
+                    cl_logger.error(f"Oracle chose unknown action: '{next_action}'. Ending turn.")
+                    break
 
-        # For each tool, run it and append its outputs
-        for action in actions:
-            tool_func = agents_map.get(action)
-            if tool_func:
+                # Check if the chosen action is a persona agent (signaling end of tool chain)
+                is_persona_agent = next_action in persona_workflows
+
                 try:
-                    tool_outputs = await tool_func(state, config=config)
-                    # Patch metadata persona and type to match updated state.current_persona
-                    if isinstance(tool_outputs, list):
-                        for msg in tool_outputs:
-                            if hasattr(msg, "metadata") and isinstance(msg.metadata, dict):
-                                msg.metadata.setdefault("persona", state.current_persona)
-                                msg.metadata.setdefault("type", "ai")
-                    elif isinstance(tool_outputs, dict) and "messages" in tool_outputs:
-                        for msg in tool_outputs["messages"]:
-                            if hasattr(msg, "metadata") and isinstance(msg.metadata, dict):
-                                msg.metadata.setdefault("persona", state.current_persona)
-                                msg.metadata.setdefault("type", "ai")
-                    # Append outputs to state
-                    if isinstance(tool_outputs, list):
-                        state.messages.extend(tool_outputs)
-                    elif isinstance(tool_outputs, dict) and "messages" in tool_outputs:
-                        state.messages.extend(tool_outputs["messages"])
+                    # Execute the chosen agent/tool
+                    # Handle potential dict vs list output (standardize later in Phase 2)
+                    agent_output = await agent_func(state, config=config)
+
+                    # Process output: Append to messages and potentially tool_results_this_turn
+                    if isinstance(agent_output, list):
+                        valid_messages = [msg for msg in agent_output if isinstance(msg, BaseMessage)]
+                        if valid_messages:
+                            # Patch metadata for consistency (Phase 2 refinement needed)
+                            for msg in valid_messages:
+                                if isinstance(msg, AIMessage):
+                                    if msg.metadata is None:
+                                        msg.metadata = {}
+                                    msg.metadata.setdefault("type", "ai")
+                                    msg.metadata.setdefault("persona", state.current_persona)
+                                    msg.metadata.setdefault("agent", next_action) # Track which agent generated it
+                            state.messages.extend(valid_messages)
+                            # Phase 3 Placeholder: Add tool results if not a persona agent
+                            if not is_persona_agent and hasattr(state, "tool_results_this_turn"):
+                                state.tool_results_this_turn.extend(valid_messages)
+                            state.last_agent_called = next_action # Track successful agent call
+                    elif isinstance(agent_output, dict) and "messages" in agent_output:
+                         # Handle dict output (legacy or specific tools)
+                         valid_messages = [msg for msg in agent_output["messages"] if isinstance(msg, BaseMessage)]
+                         if valid_messages:
+                            for msg in valid_messages:
+                                if isinstance(msg, AIMessage):
+                                    if msg.metadata is None:
+                                        msg.metadata = {}
+                                    msg.metadata.setdefault("type", "ai")
+                                    msg.metadata.setdefault("persona", state.current_persona)
+                                    msg.metadata.setdefault("agent", next_action)
+                            state.messages.extend(valid_messages)
+                            if not is_persona_agent and hasattr(state, "tool_results_this_turn"):
+                                state.tool_results_this_turn.extend(valid_messages)
+                            state.last_agent_called = next_action
+                    elif isinstance(agent_output, ChatState):
+                        # If agent returns full state, update state (less common)
+                        state = agent_output
+                        state.last_agent_called = next_action
+                    else:
+                        cl_logger.warning(f"Agent '{next_action}' returned unexpected output type: {type(agent_output)}")
+
+                    # If a persona agent was just called, end the turn
+                    if is_persona_agent:
+                        cl_logger.info(f"Persona agent '{next_action}' executed. Ending turn.")
+                        break
+
                 except Exception as e:
-                    cl_logger.error(f"Tool '{action}' failed: {e}")
+                    cl_logger.error(f"Agent '{next_action}' failed: {e}", exc_info=True)
+                    state.increment_error_count()
+                    # Add error message to state? Or just log? For now, log and break.
+                    error_msg = AIMessage(
+                        content=f"An error occurred while running '{next_action}'.",
+                        name="error",
+                        metadata={"message_id": None, "agent": next_action},
+                    )
+                    state.messages.append(error_msg)
+                    break # Stop processing on agent error
 
-        # After all tools, run the persona-specific writer agent
-        try:
-            response = await workflow_func(inputs, state, config=config)
-            # Patch metadata persona and type for final persona workflow outputs
-            if isinstance(response, list):
-                for msg in response:
-                    if hasattr(msg, "metadata") and isinstance(msg.metadata, dict):
-                        msg.metadata.setdefault("persona", state.current_persona)
-                        msg.metadata.setdefault("type", "ai")
-            elif isinstance(response, dict) and "messages" in response:
-                for msg in response["messages"]:
-                    if hasattr(msg, "metadata") and isinstance(msg.metadata, dict):
-                        msg.metadata.setdefault("persona", state.current_persona)
-                        msg.metadata.setdefault("type", "ai")
-        except Exception as e:
-            cl_logger.error(f"Persona workflow '{persona_key}' failed: {e}")
-            response = [
-                AIMessage(
-                    content="An error occurred in the oracle workflow.",
-                    name="error",
-                    metadata={"message_id": None},
+            if iterations >= MAX_CHAIN_LENGTH:
+                cl_logger.warning(f"Oracle reached max iterations ({MAX_CHAIN_LENGTH}). Ending turn.")
+                # Optionally add a message indicating max iterations reached
+                max_iter_msg = AIMessage(
+                    content="Reached maximum processing steps for this turn.",
+                    name="system",
+                    metadata={"message_id": None, "agent": "oracle"},
                 )
-            ]
+                state.messages.append(max_iter_msg)
 
-        # Defensive: handle dict response (legacy or tool output)
-        if isinstance(response, dict) and "messages" in response:
-            state.messages.extend(response["messages"])
-            return state
-        elif isinstance(response, list):
-            state.messages.extend(response)
-            return state
-        elif isinstance(response, ChatState):
-            return response
-        else:
+            # Return the final state after the loop finishes or breaks
             return state
 
     except Exception as e:
-        cl_logger.error(f"Oracle workflow failed: {e}")
+        cl_logger.error(f"Oracle workflow outer error: {e}", exc_info=True)
         from src.storage import append_log
         append_log(state.current_persona, f"Error: {str(e)}")
         error_msg = AIMessage(
