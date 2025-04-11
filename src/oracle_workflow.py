@@ -64,6 +64,11 @@ async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list
             suggested_persona = result.get("persona", "default")
             cl_logger.info(f"Oracle: Classifier suggests persona '{suggested_persona}'")
             state.current_persona = suggested_persona
+            try:
+                import chainlit as cl
+                cl.user_session.set("current_persona", state.current_persona)
+            except Exception:
+                pass
             append_log(state.current_persona, f"Oracle dispatched to persona workflow: {state.current_persona}")
 
         persona_key = state.current_persona.lower().replace(" ", "_")
