@@ -44,7 +44,8 @@ agents_map = {
     "todo": _manage_todo,
     "manage_todo": _manage_todo,
     "write": writer_agent._generate_story,
-    "continue_story": writer_agent._generate_story,
+    # PATCH: Map continue_story to the correct workflow function, not the tool
+    "continue_story": storyteller_workflow,
     "report": _generate_report,
     "knowledge": knowledge_agent_func,  # Patch: expose as function, not partial
     # Phase 1: Add persona agents to the map using their keys
