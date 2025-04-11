@@ -1,14 +1,10 @@
 import json
 from src.models import ChatState
 from langchain_core.messages import BaseMessage, AIMessage
-from src.persona_workflows import persona_workflows
 from src.agents.persona_classifier_agent import persona_classifier_agent
 # Phase 1: Remove director_agent import
 # from src.agents.director_agent import director_agent
 from src.agents.oracle_agent import oracle_agent # Phase 1: Import oracle_agent
-
-# Expose agents_map for test monkeypatching
-from src.agents import agents_map
 
 # Expose append_log for test monkeypatching
 from src.storage import append_log, get_persona_daily_dir
@@ -25,8 +21,8 @@ cl_logger = logging.getLogger("chainlit")
 async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> ChatState: # Return ChatState
     from src.storage import append_log, get_persona_daily_dir, save_text_file
 
-    # Import agents_map inside the function so test monkeypatching works!
-    from src.agents import agents_map
+    # Import agents_map and persona_workflows inside the function so test monkeypatching works!
+    from src.agents import agents_map, persona_workflows
 
     try:
         if config is None:
