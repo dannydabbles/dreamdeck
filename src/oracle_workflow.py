@@ -177,8 +177,21 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
                 elif isinstance(agent_output, ChatState):
                     state = agent_output
                     state.last_agent_called = next_action
-                else:
-                    cl_logger.warning(f"Agent '{next_action}' returned unexpected output type: {type(agent_output)}")
+                elif agent_output is not None:
+                    # PATCH: If agent_output is a single BaseMessage, append it
+                    if isinstance(agent_output, BaseMessage):
+                        if isinstance(agent_output, AIMessage):
+                            if agent_output.metadata is None:
+                                agent_output.metadata = {}
+                            agent_output.metadata.setdefault("type", "ai")
+                            agent_output.metadata.setdefault("persona", state.current_persona)
+                            agent_output.metadata.setdefault("agent", next_action)
+                        state.messages.append(agent_output)
+                        if not is_persona_agent and hasattr(state, "tool_results_this_turn"):
+                            state.tool_results_this_turn.append(agent_output)
+                        state.last_agent_called = next_action
+                    else:
+                        cl_logger.warning(f"Agent '{next_action}' returned unexpected output type: {type(agent_output)}")
 
                 # If a persona agent was just called, end the turn
                 if is_persona_agent:
