@@ -127,8 +127,8 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
                                     msg.metadata.setdefault("persona", state.current_persona)
                                     msg.metadata.setdefault("agent", next_action) # Track which agent generated it
                             state.messages.extend(valid_messages)
-                            # Phase 3 Placeholder: Add tool results if not a persona agent
-                            if not is_persona_agent and hasattr(state, "tool_results_this_turn"):
+                            # Phase 3: Add tool results if not a persona agent
+                            if not is_persona_agent:
                                 state.tool_results_this_turn.extend(valid_messages)
                             state.last_agent_called = next_action # Track successful agent call
                     elif isinstance(agent_output, dict) and "messages" in agent_output:
