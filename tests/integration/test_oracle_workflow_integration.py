@@ -23,12 +23,19 @@ async def test_simple_turn_tool_then_persona(monkeypatch):
         "src.agents.persona_classifier_agent._classify_persona",
         AsyncMock(return_value={"persona": "storyteller_gm", "reason": "test"}),
     )
+    # Patch the @task-decorated agent as well (for imports from src.agents)
+    monkeypatch.setattr(
+        "src.agents.persona_classifier_agent.persona_classifier_agent",
+        AsyncMock(return_value={"persona": "storyteller_gm", "reason": "test"}),
+    )
 
     # Patch oracle_agent to return "roll" then "storyteller_gm" then "END_TURN"
     oracle_decisions = ["roll", "storyteller_gm", "END_TURN"]
     async def fake_oracle_agent(state, **kwargs):
         return oracle_decisions.pop(0)
     monkeypatch.setattr("src.agents.oracle_agent.oracle_agent", fake_oracle_agent)
+    # Patch the @task-decorated agent as well (for imports from src.agents)
+    monkeypatch.setattr("src.agents.oracle_agent._oracle_decision", fake_oracle_agent)
 
     # Patch agents_map: roll returns a dice AIMessage, storyteller_gm returns a GM AIMessage
     fake_dice_msg = AIMessage(content="You rolled a 20!", name="dice_roll", metadata={"message_id": "dice1"})
