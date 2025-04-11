@@ -1,6 +1,6 @@
 import pytest
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock # Import MagicMock
 from langchain_core.messages import HumanMessage, AIMessage
 from src.models import ChatState
 import src.workflows as workflows_module
