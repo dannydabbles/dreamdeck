@@ -132,7 +132,9 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     # Use module objects or correct aliases
     monkeypatch.setattr(src.agents.todo_agent, "CLMessage", mock_message_cls, raising=False) # Note alias
     monkeypatch.setattr(src.agents.dice_agent, "CLMessage", mock_message_cls, raising=False) # Note alias
-    monkeypatch.setattr(src.agents.web_search_agent.cl, "Message", mock_message_cls, raising=False)
+    # src.agents.web_search_agent is a functools.partial, so cannot patch .cl inside it
+    # Instead, patch the CLMessage alias directly if used
+    monkeypatch.setattr("src.agents.web_search_agent.CLMessage", mock_message_cls, raising=False)
     monkeypatch.setattr(src.agents.report_agent, "CLMessage", mock_message_cls, raising=False) # Note alias
     monkeypatch.setattr(src.agents.storyboard_editor_agent, "CLMessage", mock_message_cls, raising=False) # Note alias
 
