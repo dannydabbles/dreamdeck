@@ -603,6 +603,15 @@ async def on_message(message: cl.Message):
             try:
                 ai_messages = await supervisor(state)
                 import os
+                # Always ensure at least one AIMessage is appended, even if supervisor returns nothing
+                if not ai_messages or len(ai_messages) == 0:
+                    from langchain_core.messages import AIMessage
+                    fallback_msg = AIMessage(
+                        content="Sorry, I couldn't process your request.",
+                        name="Game Master",
+                        metadata={"type": "ai", "author": "Game Master", "persona": state.current_persona},
+                    )
+                    ai_messages = [fallback_msg]
                 if not os.environ.get("PYTEST_CURRENT_TEST"):
                     if ai_messages:
                         for msg in ai_messages:
