@@ -1,4 +1,3 @@
-from src.agents.director_agent import director_agent
 from src.agents.writer_agent import writer_agent
 from src.agents.knowledge_agent import knowledge_agent
 from src.agents.storyboard_editor_agent import storyboard_editor_agent
