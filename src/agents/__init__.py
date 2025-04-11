@@ -34,6 +34,7 @@ __all__ = [
 # Expose agents_map as a module attribute for patching
 from .dice_agent import _dice_roll
 
+# Always use the undecorated (raw) functions for tool agents in agents_map
 agents_map = {
     "roll": _dice_roll,
     "dice_roll": _dice_roll,
@@ -41,8 +42,8 @@ agents_map = {
     "web_search": _web_search,
     "todo": _manage_todo,
     "manage_todo": _manage_todo,
-    "write": writer_agent,
-    "continue_story": writer_agent,
+    "write": writer_agent._generate_story,
+    "continue_story": writer_agent._generate_story,
     "report": _generate_report,
     "knowledge": knowledge_agent_func,  # Patch: expose as function, not partial
     # Phase 1: Add persona agents to the map using their keys
