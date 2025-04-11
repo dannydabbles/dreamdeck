@@ -60,8 +60,9 @@ Each phase is designed to be a reasonable unit of work.
 **Goal:** Ensure the Oracle receives necessary intermediate results from within the *same turn*.
 
 **Status:** Implemented.
-*   `src/oracle_workflow.py` now clears `state.tool_results_this_turn` before the decision loop and appends results from non-persona agents within the loop.
-*   `src/prompts/oracle_decision_prompt.j2` now includes `tool_results_this_turn` in its context and rules.
+*   `src/models.py` (`ChatState`): Added `tool_results_this_turn: List[BaseMessage]`.
+*   `src/oracle_workflow.py`: Clears `state.tool_results_this_turn` before the loop and appends successful *tool* agent outputs inside the loop.
+*   `src/prompts/oracle_decision_prompt.j2`: Added `tool_results_this_turn` to the context and updated rules.
 
 **Notes for Next Phase:**
 *   Phase 4 will integrate the persona classifier *before* the Oracle loop starts.
