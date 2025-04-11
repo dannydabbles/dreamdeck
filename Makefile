@@ -1,4 +1,4 @@
-.PHONY: install run start build test lint format restart stop log aider-sonnet aider backup restore
+.PHONY: install run start build test lint format restart stop log aider-sonnet aider backup restore cli
 
 # Need to specify bash in order for conda activate to work.
 SHELL=/bin/bash
@@ -80,6 +80,10 @@ aider-dual:
 aider:
 	@echo "Running aider with local llm..."
 	@aider --multiline --architect --o1-mini --openai-api-base http://192.168.1.111:5000/v1 --timeout 500 --model-settings-file .aider.model.settings.yml
+
+cli:
+	@echo "Running Dreamdeck CLI..."
+	@python3 -m src.cli
 
 backup:
 	mkdir -p backups; \
