@@ -97,9 +97,16 @@ async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list
             if tool_func:
                 try:
                     tool_outputs = await tool_func(state, config=config)
+                    # Patch metadata persona to match updated state.current_persona
                     if isinstance(tool_outputs, list):
+                        for msg in tool_outputs:
+                            if hasattr(msg, "metadata") and isinstance(msg.metadata, dict):
+                                msg.metadata.setdefault("persona", state.current_persona)
                         state.messages.extend(tool_outputs)
                     elif isinstance(tool_outputs, dict) and "messages" in tool_outputs:
+                        for msg in tool_outputs["messages"]:
+                            if hasattr(msg, "metadata") and isinstance(msg.metadata, dict):
+                                msg.metadata.setdefault("persona", state.current_persona)
                         state.messages.extend(tool_outputs["messages"])
                 except Exception as e:
                     cl_logger.error(f"Tool '{action}' failed: {e}")
