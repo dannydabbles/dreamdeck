@@ -1,8 +1,13 @@
+import json
 from src.models import ChatState
 from langchain_core.messages import BaseMessage, AIMessage
 from src.persona_workflows import persona_workflows
 from src.agents.persona_classifier_agent import persona_classifier_agent
-from src.agents.director_agent import director_agent  # ADD THIS IMPORT
+# Phase 1: Remove director_agent import
+# from src.agents.director_agent import director_agent
+from src.agents.oracle_agent import oracle_agent # Phase 1: Import oracle_agent
+from src.agents import agents_map # Phase 1: Import agents_map
+from src.config import MAX_CHAIN_LENGTH # Phase 1: Import max iterations
 from langchain_core.runnables import RunnableLambda
 import logging
 import datetime
@@ -12,7 +17,7 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 
-async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list[BaseMessage]:
+async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> ChatState: # Return ChatState
     from src.storage import append_log, get_persona_daily_dir, save_text_file
 
     try:
