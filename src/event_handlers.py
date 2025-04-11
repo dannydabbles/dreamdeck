@@ -599,61 +599,46 @@ async def on_message(message: cl.Message):
             ]
             cl_logger.info(f"Memories: {state.memories}")
 
-            thread_config = {
-                "configurable": {
-                    "thread_id": state.thread_id,
-                }
-            }
+            # Call the supervisor directly (not chat_workflow.ainvoke)
+            try:
+                ai_messages = await supervisor(state)
+                if ai_messages:
+                    for msg in ai_messages:
+                        state.messages.append(msg)
+                        msg_id = msg.metadata.get("message_id") if msg.metadata else None
+                        if not msg_id:
+                            cl_logger.warning(
+                                f"AIMessage missing message_id, skipping vector store save: {msg.content}"
+                            )
+                            continue
 
-            cb = cl.AsyncLangchainCallbackHandler(
-                to_ignore=[
-                    "ChannelRead",
-                    "RunnableLambda",
-                    "ChannelWrite",
-                    "__start__",
-                    "_execute",
-                ],
-            )
+                        # Defensive copy of metadata or empty dict
+                        meta = dict(msg.metadata) if msg.metadata else {}
 
-            inputs = {"messages": state.messages, "previous": state}
-            state = await chat_workflow.ainvoke(
-                inputs, state, config=RunnableConfig(callbacks=[cb], **thread_config)
-            )
+                        # --- PHASE 2 PATCH: Enforce consistent metadata ---
+                        # Always set type to 'ai'
+                        meta["type"] = "ai"
 
-            # Save *all* new AI messages from the workflow to vector store
-            for msg in state.messages:
-                if isinstance(msg, AIMessage):
-                    msg_id = msg.metadata.get("message_id") if msg.metadata else None
-                    if not msg_id:
-                        cl_logger.warning(
-                            f"AIMessage missing message_id, skipping vector store save: {msg.content}"
+                        # Always set author to message name
+                        meta["author"] = msg.name
+
+                        # Prefer persona from message metadata if present, else use current state persona
+                        if "persona" not in meta or not meta["persona"]:
+                            meta["persona"] = state.current_persona
+
+                        await vector_memory.put(
+                            content=msg.content,
+                            message_id=msg_id,
+                            metadata=meta,
                         )
-                        continue
 
-                    # Defensive copy of metadata or empty dict
-                    meta = dict(msg.metadata) if msg.metadata else {}
-
-                    # --- PHASE 2 PATCH: Enforce consistent metadata ---
-                    # Always set type to 'ai'
-                    meta["type"] = "ai"
-
-                    # Always set author to message name
-                    meta["author"] = msg.name
-
-                    # Prefer persona from message metadata if present, else use current state persona
-                    if "persona" not in meta or not meta["persona"]:
-                        meta["persona"] = state.current_persona
-
-                    # Comment: Consistent metadata improves vector search, persona tracking, and test reliability
-                    # See plan.md Phase 2
-
-                    await vector_memory.put(
-                        content=msg.content,
-                        message_id=msg_id,
-                        metadata=meta,
-                    )
-
-            cl.user_session.set("state", state)
+                cl.user_session.set("state", state)
+            except Exception as e:
+                cl_logger.error(f"Supervisor failed: {e}", exc_info=True)
+                await cl.Message(
+                    content="⚠️ An error occurred while generating the response. Please try again later.",
+                ).send()
+                return
 
         except Exception as e:
             cl_logger.error(f"Runnable stream failed: {e}", exc_info=True)
