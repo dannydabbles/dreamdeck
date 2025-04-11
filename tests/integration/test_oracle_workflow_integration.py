@@ -88,7 +88,6 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
 
     # Ensure writer agent uses the mocked cl.Message
     # This might require patching within the writer_agent module specifically
-    monkeypatch.setattr("src.agents.writer_agent.cl", cl)
 
     # Ensure todo agent uses the mocked cl.Message and storage
     monkeypatch.setattr("src.agents.todo_agent.cl", cl)
