@@ -245,4 +245,81 @@ This document is a step-by-step roadmap for refactoring Dreamdeck to use a hiera
 
 ---
 
+## **Useful langgraph-supervisor Patterns and Snippets**
+
+### **Supervisor/Agent/Tool Orchestration**
+
+- **Supervisor receives user input and state, decides which agent/tool to call.**
+- **Agents and tools are async functions or classes that take in state and return messages.**
+- **Handoff tools can be used to pass control between agents/tools.**
+
+### **Example: Creating a Supervisor with Agents and Tools**
+
+```python
+# Define tools
+async def roll_tool(state, **kwargs):
+    # ... (see Phase 3 tips above)
+    pass
+
+async def search_tool(state, **kwargs):
+    # ... (see Phase 3 tips above)
+    pass
+
+# Define persona agents
+async def storyteller_agent(state, **kwargs):
+    # ... (see Phase 4 tips above)
+    pass
+
+# Supervisor logic
+async def supervisor(state, **kwargs):
+    user_input = state.get_last_human_message().content
+    if "roll" in user_input:
+        return await roll_tool(state)
+    elif "search" in user_input:
+        return await search_tool(state)
+    else:
+        return await storyteller_agent(state)
+```
+
+### **Message History Management**
+
+- **Full history:** Pass all messages to the next agent/tool.
+- **Last message only:** Pass only the most recent message.
+- **Custom:** Pass a slice or filtered history as needed.
+
+### **Multi-level Hierarchies**
+
+- **You can create supervisors that manage other supervisors or teams of agents.**
+- **Each supervisor can be compiled as a workflow and used as a sub-agent.**
+
+### **Customizing Handoff Tools**
+
+- **You can create custom handoff tools to control how tasks are delegated between agents.**
+- **Handoff tools can include extra arguments, such as a task description or context.**
+
+```python
+from langchain_core.tools import tool
+from langchain_core.messages import ToolMessage
+from langgraph.types import Command
+
+@tool("handoff_to_agent", description="Assign task to a specific agent")
+def handoff_to_agent(agent_name: str, state: dict, tool_call_id: str):
+    tool_message = ToolMessage(
+        content=f"Transferred to {agent_name}",
+        name="handoff_to_agent",
+        tool_call_id=tool_call_id,
+    )
+    messages = state["messages"]
+    return Command(
+        goto=agent_name,
+        graph=Command.PARENT,
+        update={
+            "messages": messages + [tool_message],
+            "active_agent": agent_name,
+        },
+    )
+```
+
+---
+
 **Proceed phase by phase. After each phase, verify tests and code health before moving to the next.**
