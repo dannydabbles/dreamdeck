@@ -85,21 +85,25 @@ Each phase is designed to be a reasonable unit of work.
 
 ---
 
-## Phase 5: Comprehensive Integration Testing
+## Phase 5: Comprehensive Integration Testing [COMPLETED]
 
 **Goal:** Verify the new Oracle-driven flow works correctly for various scenarios.
 
-**Tasks:**
-1.  **Update/Create Integration Tests:** Focus on `tests/integration/test_oracle_workflow_integration.py` or similar.
-2.  **Mock LLM Calls:** Mock `oracle_agent`, tool agents, persona agents, and `persona_classifier_agent`.
-3.  **Test Scenarios:**
-    *   Simple Turn (Tool -> Persona).
-    *   Multi-Tool Turn (Tool A -> Tool B -> Persona).
-    *   Direct Persona Turn.
-    *   Max Iterations Hit.
-    *   Persona Switch Flow.
-    *   Error Handling (Tool failure, Oracle failure).
-4.  **Assert State:** Check final `ChatState.messages` for correct sequence and content.
+**Status:** Implemented.
+*   Added `tests/integration/test_oracle_workflow_integration.py` with comprehensive scenarios:
+    *   Simple Turn (Tool -> Persona)
+    *   Multi-Tool Turn (Tool A -> Tool B -> Persona)
+    *   Direct Persona Turn
+    *   Max Iterations Hit
+    *   Persona Switch Flow
+    *   Error Handling (Tool failure, Oracle failure)
+*   All LLM calls and agents are mocked for deterministic, fast tests.
+*   Tests assert correct `ChatState.messages` and `tool_results_this_turn` for each scenario.
+
+**Notes for Next Phase:**
+*   Phase 6 should remove any obsolete test files or helpers from the pre-Oracle architecture.
+*   Consider adding more edge-case tests (e.g., tool agent returns dict, persona agent returns ChatState).
+*   Update documentation to reflect the new test structure and Oracle-centric flow.
 
 ---
 
