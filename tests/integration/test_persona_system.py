@@ -393,16 +393,68 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
     for key in pw.persona_workflows:
         monkeypatch.setitem(pw.persona_workflows, key, dummy_workflow)
 
-    # Patch the entire src.agents.agents_map to dummy tools to avoid real LLM calls
     import src.agents as agents_mod
-    dummy_tool = AsyncMock(return_value=[])
+    from langchain_core.messages import AIMessage
+
+    async def fake_search(state, **kwargs):
+        return [
+            AIMessage(
+                content="Search result",
+                name="web_search",
+                metadata={
+                    "message_id": "search1",
+                    "type": "ai",
+                    "persona": state.current_persona,
+                },
+            )
+        ]
+
+    async def fake_roll(state, **kwargs):
+        return [
+            AIMessage(
+                content="Dice result",
+                name="dice_roll",
+                metadata={
+                    "message_id": "dice1",
+                    "type": "ai",
+                    "persona": state.current_persona,
+                },
+            )
+        ]
+
+    async def fake_todo(state, **kwargs):
+        return [
+            AIMessage(
+                content="Todo updated",
+                name="todo",
+                metadata={
+                    "message_id": "todo1",
+                    "type": "ai",
+                    "persona": state.current_persona,
+                },
+            )
+        ]
+
+    async def fake_write(state, **kwargs):
+        return [
+            AIMessage(
+                content="Story continues",
+                name="Game Master",
+                metadata={
+                    "message_id": "gm1",
+                    "type": "ai",
+                    "persona": state.current_persona,
+                },
+            )
+        ]
+
     agents_map_patch = {
-        "roll": dummy_tool,
-        "search": dummy_tool,
-        "todo": dummy_tool,
-        "write": dummy_tool,
-        "continue_story": dummy_tool,
-        "report": dummy_tool,
+        "roll": fake_roll,
+        "search": fake_search,
+        "todo": fake_todo,
+        "write": fake_write,
+        "continue_story": fake_write,
+        "report": fake_write,
     }
     monkeypatch.setattr(agents_mod, "agents_map", agents_map_patch)
 
