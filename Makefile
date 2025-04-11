@@ -28,7 +28,7 @@ integration:
 	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest -v tests/integration --cov=src --cov-report term-missing
 
 test:
-	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest -v tests/smoke tests/integration --cov=src --cov-report term-missing
+	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
 
 lint:
 	@echo "Linting the code..."
@@ -57,17 +57,17 @@ aider-sonnet:
 	@echo "Running aider with sonnet..."
 	@aider --multiline --architect --sonnet --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
 
-aider-quasar:
-	@echo "Running aider with quasar..."
-	@aider --multiline --architect --model openrouter/openrouter/quasar-alpha --editor-model openrouter/openrouter/quasar-alpha --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
+aider-optimus:
+	@echo "Running aider with optimus..."
+	@aider --multiline --architect --model openrouter/openrouter/optimus-alpha --editor-model openrouter/openrouter/optimus-alpha --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings --editor-edit-format editor-diff --edit-format diff
 
 aider-gemma-sonnet:
 	@echo "Running aider with gemma and sonnet..."
 	@aider --multiline --architect --model openrouter/google/gemini-2.5-pro-exp-03-25:free --editor-model sonnet --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
 
-aider-gemma-quasar:
-	@echo "Running aider with gemma and quasar..."
-	@aider --multiline --architect --model openrouter/google/gemini-2.5-pro-exp-03-25:free --editor-model openrouter/openrouter/quasar-alpha --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
+aider-gemma-optimus:
+	@echo "Running aider with gemma and optimus..."
+	@aider --multiline --architect --model openrouter/google/gemini-2.5-pro-exp-03-25:free --editor-model openrouter/openrouter/optimus-alpha --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings --editor-edit-format editor-diff --edit-format diff
 
 aider-gemma-qwen:
 	@echo "Running aider with gemma and qwen..."
