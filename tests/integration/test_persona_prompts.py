@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 from src.models import ChatState
 from src.config import config
 
