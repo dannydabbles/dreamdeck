@@ -70,15 +70,18 @@ Each phase is designed to be a reasonable unit of work.
 
 ---
 
-## Phase 4: Integrate Persona Classification
+## Phase 4: Integrate Persona Classification [COMPLETED]
 
 **Goal:** Decide how and when persona classification happens within the Oracle flow.
 
-**Tasks:**
-1.  **Modify `src/oracle_workflow.py`:**
-    *   Call `persona_classifier_agent` *once* at the beginning of the `oracle_workflow` function (before the loop).
-    *   Update `state.current_persona` based on the result (respecting suppression/confirmation logic if kept).
-    *   Ensure the `current_persona` is passed as context to the `oracle_agent`'s prompt.
+**Status:** Implemented.
+*   The persona classifier is now always called at the start of the `oracle_workflow` function, before the Oracle loop.
+*   The result is used to update `state.current_persona` and the session.
+*   The Oracle agent then uses this persona as context for its prompt.
+
+**Notes for Next Phase:**
+*   Phase 5 should ensure that integration tests cover scenarios where the persona classifier's suggestion is always respected at the start of each turn, and that the Oracle loop uses the updated persona for all decisions.
+*   If any suppression/confirmation logic is needed (e.g., user declines a suggested persona), it should be handled outside the Oracle workflow, likely in the event handler layer.
 
 ---
 
