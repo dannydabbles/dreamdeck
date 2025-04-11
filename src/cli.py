@@ -65,17 +65,19 @@ def main():
                 loop = None
             if loop and loop.is_running():
                 # If already in an event loop (e.g., pytest-asyncio), run as a task
+                import nest_asyncio
+                nest_asyncio.apply()
                 result = loop.run_until_complete(agent(state))
             else:
                 result = asyncio.run(agent(state))
         except RuntimeError as e:
             if "asyncio.run()" in str(e):
                 print(f"Error running agent: {e}")
-                sys.exit(2)
+                raise
             raise
         except Exception as e:
             print(f"Error running agent: {e}")
-            sys.exit(2)
+            raise
         print("Agent output:")
         for msg in result:
             print(f"{msg.name}: {msg.content}")
@@ -91,17 +93,19 @@ def main():
             except RuntimeError:
                 loop = None
             if loop and loop.is_running():
+                import nest_asyncio
+                nest_asyncio.apply()
                 result = loop.run_until_complete(supervisor(state))
             else:
                 result = asyncio.run(supervisor(state))
         except RuntimeError as e:
             if "asyncio.run()" in str(e):
                 print(f"Error running workflow: {e}")
-                sys.exit(2)
+                raise
             raise
         except Exception as e:
             print(f"Error running workflow: {e}")
-            sys.exit(2)
+            raise
         print("Workflow output:")
         for msg in result:
             print(f"{msg.name}: {msg.content}")
@@ -109,6 +113,7 @@ def main():
 
     if args.command == "export-state":
         state = ChatState(messages=[], thread_id=args.thread_id)
+        # Call save_state in a way that can be patched/mocked in tests
         save_state(state, args.output)
         print(f"State exported to {args.output}")
         return

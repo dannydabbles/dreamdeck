@@ -17,7 +17,6 @@ def _normalize_persona(persona: str) -> str:
         return "default"
     return persona.lower().replace(" ", "_")
 
-@task
 async def supervisor(state: ChatState, **kwargs):
     """
     Supervisor agent: routes user input to the correct tool or persona agent.
