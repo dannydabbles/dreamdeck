@@ -64,11 +64,15 @@ async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list
             suggested_persona = result.get("persona", "default")
             cl_logger.info(f"Oracle: Classifier suggests persona '{suggested_persona}'")
             state.current_persona = suggested_persona
+            # Force update the session AND the state object attribute
             try:
                 import chainlit as cl
                 cl.user_session.set("current_persona", state.current_persona)
             except Exception:
                 pass
+            # Defensive: update ChatState attribute explicitly
+            if hasattr(state, "__dict__"):
+                state.__dict__["current_persona"] = suggested_persona
             append_log(state.current_persona, f"Oracle dispatched to persona workflow: {state.current_persona}")
 
         persona_key = state.current_persona.lower().replace(" ", "_")
