@@ -131,25 +131,31 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
             # PATCH: Accept "continue_story" as a persona agent for end-of-turn
             is_persona_agent = next_action in persona_workflows or next_action == "continue_story"
 
+            import inspect
             try:
                 # Special handling for "knowledge" agent (needs knowledge_type)
                 if next_action == "knowledge":
                     knowledge_type = getattr(state, "knowledge_type", None) or inputs.get("knowledge_type", "lore")
-                    agent_output = await agent_func(state, knowledge_type=knowledge_type, config=config)
+                    result = agent_func(state, knowledge_type=knowledge_type, config=config)
                 # Special handling for "continue_story" (alias for writer agent)
                 elif next_action == "continue_story":
-                    agent_output = await agent_func(state, config=config)
+                    result = agent_func(state, config=config)
                 # Special handling for "roll" (alias for dice agent)
                 elif next_action == "roll":
-                    agent_output = await agent_func(state, config=config)
+                    result = agent_func(state, config=config)
                 # If this is a persona workflow, call with (inputs, state, config)
                 elif next_action in persona_workflows:
                     try:
-                        agent_output = await agent_func(inputs, state, config=config)
+                        result = agent_func(inputs, state, config=config)
                     except TypeError:
-                        agent_output = await agent_func(state, config=config)
+                        result = agent_func(state, config=config)
                 else:
-                    agent_output = await agent_func(state, config=config)
+                    result = agent_func(state, config=config)
+
+                if inspect.isawaitable(result):
+                    agent_output = await result
+                else:
+                    agent_output = result
 
                 # PATCH: Always append agent output to state.messages for all agents (tool and persona)
                 if isinstance(agent_output, list):
