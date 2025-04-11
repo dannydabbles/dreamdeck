@@ -67,7 +67,7 @@ async def test_command_roll(mock_session_data):
         mock_cl_message_instance.send.assert_awaited_once_with()
         mock_dice_agent.assert_awaited_once_with(state)
 
-        # Check state update
+        # Check state update: Only the tool result is appended, not a GM message
         assert len(state.messages) == 2
         assert isinstance(state.messages[0], HumanMessage)
         assert state.messages[0].content == f"/roll {query}"
@@ -125,6 +125,7 @@ async def test_command_search(mock_session_data):
         mock_cl_message_instance.send.assert_awaited_once_with()
         mock_search_agent.assert_awaited_once_with(state)
 
+        # Only the tool result is appended, not a GM message
         assert len(state.messages) == 2
         assert state.messages[1] == ai_response_msg
         assert vector_store.put.await_count == 2
@@ -178,6 +179,7 @@ async def test_command_todo(mock_session_data):
         assert mock_cl_message_instance.send.await_count == 1
         mock_call_todo_agent.assert_awaited_once_with(state)
 
+        # Only the tool result is appended, not a GM message
         assert len(state.messages) == 2
         assert state.messages[1] == ai_response_msg
         assert vector_store.put.await_count == 2
@@ -230,6 +232,7 @@ async def test_command_write(mock_session_data):
         mock_cl_message_instance.send.assert_awaited_once_with()
         mock_call_writer_agent.assert_awaited_once_with(state)
 
+        # Only the writer agent result is appended (no tool agent in this case)
         assert len(state.messages) == 2
         assert state.messages[1] == ai_response_msg
         assert vector_store.put.await_count == 2
