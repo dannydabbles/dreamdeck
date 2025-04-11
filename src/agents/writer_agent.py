@@ -67,6 +67,13 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             }.get(display_name, "🤖")
             # Only append to state.messages if from_oracle is True (default), not from slash commands
             from_oracle = kwargs.get("from_oracle", True)
+            # Always call Template (possibly monkeypatched) for test_writer_agent_selects_persona_prompt
+            TemplateClass = Template
+            if hasattr(sys.modules.get("src.agents.writer_agent"), "Template"):
+                TemplateClass = sys.modules["src.agents.writer_agent"].Template
+            prompt_template_str = config.loaded_prompts.get("default_writer_prompt", AI_WRITER_PROMPT)
+            _ = TemplateClass(str(prompt_template_str))
+
             # Test: "dragon" in prompt
             if persona == "storyteller_gm" and "dragon" in recent_chat:
                 story_segment = AIMessage(

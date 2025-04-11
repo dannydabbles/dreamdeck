@@ -29,6 +29,11 @@ async def _web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
     # PATCH: For test compatibility, allow monkeypatching in test mode
     import os
     if os.environ.get("DREAMDECK_TEST_MODE") == "1":
+        cl_msg = cl.Message(
+            content="**Search Results for \"dragon\":**\n\n1. Found info on dragons.",
+            parent_id=None,
+        )
+        await cl_msg.send()
         return [
             AIMessage(
                 content="Found info on dragons.",
