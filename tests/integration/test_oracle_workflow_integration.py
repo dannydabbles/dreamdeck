@@ -1,139 +1,256 @@
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock, call
-import uuid
-from src.models import ChatState, HumanMessage, AIMessage, ToolMessage
-from src.oracle_workflow import oracle_workflow
-from src.config import START_MESSAGE
-import chainlit as cl
-import src.oracle_workflow  # <-- Add this import for src.oracle_workflow
+import asyncio
+from unittest.mock import AsyncMock, patch, MagicMock
 
-@pytest.fixture
-def initial_chat_state():
-    """Provides a basic initial ChatState with a unique thread_id."""
-    thread_id = f"test_thread_{uuid.uuid4()}"
+import src.oracle_workflow as oracle_workflow_mod
+from src.models import ChatState, HumanMessage, AIMessage
+
+@pytest.mark.asyncio
+async def test_simple_turn_tool_then_persona(monkeypatch):
+    """
+    Oracle: roll -> storyteller_gm -> END_TURN
+    """
+    # Setup dummy state
     state = ChatState(
-        messages=[AIMessage(content=START_MESSAGE, name="Game Master", metadata={"message_id": f"start_{thread_id}", "persona": "storyteller_gm"})],
-        thread_id=thread_id,
-        current_persona="storyteller_gm"
+        messages=[HumanMessage(content="Roll a d20", name="Player")],
+        thread_id="thread1",
+        current_persona="storyteller_gm",
     )
-    return state
 
-@pytest.fixture(autouse=True)
-def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
-    import src.agents.persona_classifier_agent as pca_module  # Use alias
-    import src.agents.director_agent as director_module
-    import src.agents.knowledge_agent as knowledge_module
-    import src.agents.writer_agent as writer_module
-    import src.agents.todo_agent as todo_module
-    import src.agents.dice_agent as dice_module
-    import src.event_handlers as event_handlers_module
-    import src.agents.web_search_agent as web_search_module
-    import src.agents.report_agent as report_module
-    import src.agents.storyboard_editor_agent as storyboard_module
-    import src.oracle_workflow as oracle_workflow_module
+    # Patch persona classifier to always return storyteller_gm
+    monkeypatch.setattr(
+        "src.agents.persona_classifier_agent._classify_persona",
+        AsyncMock(return_value={"persona": "storyteller_gm", "reason": "test"}),
+    )
 
-    session_state = initial_chat_state.model_copy(deep=True)
-    session_data = {
-        "state": session_state,
-        "vector_memory": MagicMock(),
-        "chat_settings": {"persona": session_state.current_persona, "auto_persona_switch": True},
-        "current_persona": session_state.current_persona,
-        "user": {"identifier": "test_user"},
-        "gm_message": None,
-        "suggested_persona": None,
-        "pending_persona_switch": None,
-        "suppressed_personas": {},
+    # Patch oracle_agent to return "roll" then "storyteller_gm" then "END_TURN"
+    oracle_decisions = ["roll", "storyteller_gm", "END_TURN"]
+    async def fake_oracle_agent(state, **kwargs):
+        return oracle_decisions.pop(0)
+    monkeypatch.setattr("src.agents.oracle_agent.oracle_agent", fake_oracle_agent)
+
+    # Patch agents_map: roll returns a dice AIMessage, storyteller_gm returns a GM AIMessage
+    fake_dice_msg = AIMessage(content="You rolled a 20!", name="dice_roll", metadata={"message_id": "dice1"})
+    fake_gm_msg = AIMessage(content="The dragon appears!", name="Game Master", metadata={"message_id": "gm1"})
+    agents_map = {
+        "roll": AsyncMock(return_value=[fake_dice_msg]),
+        "storyteller_gm": AsyncMock(return_value=[fake_gm_msg]),
     }
+    monkeypatch.setattr(oracle_workflow_mod, "agents_map", agents_map)
+    monkeypatch.setattr(oracle_workflow_mod, "persona_workflows", {"storyteller_gm": agents_map["storyteller_gm"]})
 
-    def mock_get(key, default=None):
-        if key == 'state':
-            return session_data.get('state', default)
-        if key == "gm_message":
-            mock_msg = MagicMock(spec=cl.Message)
-            mock_msg.stream_token = AsyncMock()
-            mock_msg.send = AsyncMock()
-            mock_msg.update = AsyncMock()
-            mock_msg.id = f"mock_gm_msg_{uuid.uuid4()}"
-            return mock_msg
-        return session_data.get(key, default)
+    # Run workflow
+    result_state = await oracle_workflow_mod.oracle_workflow({"messages": state.messages, "previous": state}, state)
+    # Should have both dice and GM messages
+    assert any(m.content == "You rolled a 20!" for m in result_state.messages)
+    assert any(m.content == "The dragon appears!" for m in result_state.messages)
+    # tool_results_this_turn should only have the dice message
+    assert any(m.content == "You rolled a 20!" for m in result_state.tool_results_this_turn)
+    assert not any(m.content == "The dragon appears!" for m in result_state.tool_results_this_turn)
 
-    def mock_set(key, value):
-        session_data[key] = value
-        if key == 'state':
-            nonlocal session_state
-            session_state = value
+@pytest.mark.asyncio
+async def test_multi_tool_turn(monkeypatch):
+    """
+    Oracle: search -> roll -> storyteller_gm -> END_TURN
+    """
+    state = ChatState(
+        messages=[HumanMessage(content="Search for dragons and roll a d6", name="Player")],
+        thread_id="thread2",
+        current_persona="storyteller_gm",
+    )
 
-    mock_user_session = MagicMock()
-    mock_user_session.get = mock_get
-    mock_user_session.set = mock_set
-    monkeypatch.setattr(cl, "user_session", mock_user_session)
-    # Patch cl object within each module that uses `import chainlit as cl`
-    # Patch cl.user_session where it's directly imported as 'cl'
-    monkeypatch.setattr(oracle_workflow_module.cl, "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(pca_module.cl, "user_session", mock_user_session, raising=False)
-    # monkeypatch.setattr(director_module.cl, "user_session", mock_user_session, raising=False) # director_agent removed
-    monkeypatch.setattr(knowledge_module.cl, "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(writer_module.cl, "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(todo_module.cl, "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(report_module.cl, "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(storyboard_module.cl, "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(web_search_module.cl, "user_session", mock_user_session, raising=False) # Added for web_search_agent
+    monkeypatch.setattr(
+        "src.agents.persona_classifier_agent._classify_persona",
+        AsyncMock(return_value={"persona": "storyteller_gm", "reason": "test"}),
+    )
 
-    # Patch cl.user_session where it's imported as 'cl_user_session'
-    monkeypatch.setattr(dice_module, "cl_user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(event_handlers_module, "cl_user_session", mock_user_session, raising=False)
+    oracle_decisions = ["search", "roll", "storyteller_gm", "END_TURN"]
+    async def fake_oracle_agent(state, **kwargs):
+        return oracle_decisions.pop(0)
+    monkeypatch.setattr("src.agents.oracle_agent.oracle_agent", fake_oracle_agent)
 
-    # Patch cl.Message where it's directly imported as 'cl'
-    mock_message_instance = AsyncMock(spec=cl.Message)
-    mock_message_instance.id = f"mock_cl_msg_{uuid.uuid4()}"
-    mock_message_instance.stream_token = AsyncMock()
-    mock_message_instance.send = AsyncMock()
-    mock_message_instance.update = AsyncMock()
-    mock_message_cls = MagicMock(return_value=mock_message_instance)
-    monkeypatch.setattr(cl, "Message", mock_message_cls) # General patch
-    # Patch cl.Message where it's imported as 'cl'
-    monkeypatch.setattr(oracle_workflow_module.cl, "Message", mock_message_cls, raising=False)
-    monkeypatch.setattr(pca_module.cl, "Message", mock_message_cls, raising=False)
-    # monkeypatch.setattr(director_module.cl, "Message", mock_message_cls, raising=False) # director_agent removed
-    monkeypatch.setattr(knowledge_module.cl, "Message", mock_message_cls, raising=False)
-    monkeypatch.setattr(writer_module.cl, "Message", mock_message_cls, raising=False)
-    monkeypatch.setattr(todo_module.cl, "Message", mock_message_cls, raising=False)
-    monkeypatch.setattr(report_module.cl, "Message", mock_message_cls, raising=False)
-    monkeypatch.setattr(storyboard_module.cl, "Message", mock_message_cls, raising=False)
-    monkeypatch.setattr(web_search_module.cl, "Message", mock_message_cls, raising=False) # Added for web_search_agent
+    fake_search_msg = AIMessage(content="Found info on dragons.", name="web_search", metadata={"message_id": "search1"})
+    fake_dice_msg = AIMessage(content="You rolled a 6!", name="dice_roll", metadata={"message_id": "dice2"})
+    fake_gm_msg = AIMessage(content="A dragon swoops in!", name="Game Master", metadata={"message_id": "gm2"})
+    agents_map = {
+        "search": AsyncMock(return_value=[fake_search_msg]),
+        "roll": AsyncMock(return_value=[fake_dice_msg]),
+        "storyteller_gm": AsyncMock(return_value=[fake_gm_msg]),
+    }
+    monkeypatch.setattr(oracle_workflow_mod, "agents_map", agents_map)
+    monkeypatch.setattr(oracle_workflow_mod, "persona_workflows", {"storyteller_gm": agents_map["storyteller_gm"]})
 
-    # Patch cl.Message where it's imported as 'CLMessage'
-    monkeypatch.setattr(todo_module, "CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr(dice_module, "CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr(web_search_module, "CLMessage", mock_message_cls, raising=False) # Use alias
-    monkeypatch.setattr(report_module, "CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr(storyboard_module, "CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr(writer_module, "cl", MagicMock(Message=mock_message_cls, user_session=mock_user_session, AsyncLangchainCallbackHandler=AsyncMock()), raising=False) # Keep writer patch for cb
+    result_state = await oracle_workflow_mod.oracle_workflow({"messages": state.messages, "previous": state}, state)
+    # All three messages should be present
+    assert any(m.content == "Found info on dragons." for m in result_state.messages)
+    assert any(m.content == "You rolled a 6!" for m in result_state.messages)
+    assert any(m.content == "A dragon swoops in!" for m in result_state.messages)
+    # tool_results_this_turn should have search and dice, not GM
+    assert any(m.content == "Found info on dragons." for m in result_state.tool_results_this_turn)
+    assert any(m.content == "You rolled a 6!" for m in result_state.tool_results_this_turn)
+    assert not any(m.content == "A dragon swoops in!" for m in result_state.tool_results_this_turn)
 
-    # Patch cl.AsyncLangchainCallbackHandler in writer_agent
-    monkeypatch.setattr(writer_module.cl, "AsyncLangchainCallbackHandler", AsyncMock())
+@pytest.mark.asyncio
+async def test_direct_persona_turn(monkeypatch):
+    """
+    Oracle: storyteller_gm -> END_TURN
+    """
+    state = ChatState(
+        messages=[HumanMessage(content="Tell me a story", name="Player")],
+        thread_id="thread3",
+        current_persona="storyteller_gm",
+    )
 
+    monkeypatch.setattr(
+        "src.agents.persona_classifier_agent._classify_persona",
+        AsyncMock(return_value={"persona": "storyteller_gm", "reason": "test"}),
+    )
 
-    monkeypatch.setattr(oracle_workflow_module, "append_log", lambda *args, **kwargs: None)
-    monkeypatch.setattr(oracle_workflow_module, "save_text_file", lambda *args, **kwargs: None)
-    monkeypatch.setattr(oracle_workflow_module, "get_persona_daily_dir", lambda *a, **kw: MagicMock(joinpath=lambda x: MagicMock()))
+    oracle_decisions = ["storyteller_gm", "END_TURN"]
+    async def fake_oracle_agent(state, **kwargs):
+        return oracle_decisions.pop(0)
+    monkeypatch.setattr("src.agents.oracle_agent.oracle_agent", fake_oracle_agent)
 
-    mock_vector_store = session_data["vector_memory"]
-    mock_vector_store.put = AsyncMock()
-    mock_vector_store.add_documents = AsyncMock()
-    mock_vector_store.get = MagicMock(return_value=[])
-    mock_vector_store.collection = AsyncMock()
-    mock_vector_store.collection.add = AsyncMock()
-    mock_vector_store.collection.delete = AsyncMock()
+    fake_gm_msg = AIMessage(content="Once upon a time...", name="Game Master", metadata={"message_id": "gm3"})
+    agents_map = {
+        "storyteller_gm": AsyncMock(return_value=[fake_gm_msg]),
+    }
+    monkeypatch.setattr(oracle_workflow_mod, "agents_map", agents_map)
+    monkeypatch.setattr(oracle_workflow_mod, "persona_workflows", {"storyteller_gm": agents_map["storyteller_gm"]})
 
-    monkeypatch.setattr("src.agents.todo_agent.os.path.exists", lambda *args: False)
-    monkeypatch.setattr("src.agents.todo_agent.os.makedirs", lambda *args, **kwargs: None)
-    mock_open = MagicMock()
-    monkeypatch.setattr("builtins.open", mock_open)
+    result_state = await oracle_workflow_mod.oracle_workflow({"messages": state.messages, "previous": state}, state)
+    assert any(m.content == "Once upon a time..." for m in result_state.messages)
+    assert not result_state.tool_results_this_turn  # Should be empty
 
-    monkeypatch.setattr(oracle_workflow_module, "persona_classifier_agent", AsyncMock(return_value={"persona": initial_chat_state.current_persona}))
+@pytest.mark.asyncio
+async def test_max_iterations_hit(monkeypatch):
+    """
+    Oracle: returns 'roll' repeatedly, exceeding MAX_CHAIN_LENGTH
+    """
+    state = ChatState(
+        messages=[HumanMessage(content="Keep rolling", name="Player")],
+        thread_id="thread4",
+        current_persona="storyteller_gm",
+    )
 
-    return mock_user_session
+    monkeypatch.setattr(
+        "src.agents.persona_classifier_agent._classify_persona",
+        AsyncMock(return_value={"persona": "storyteller_gm", "reason": "test"}),
+    )
+
+    # Always return 'roll'
+    async def fake_oracle_agent(state, **kwargs):
+        return "roll"
+    monkeypatch.setattr("src.agents.oracle_agent.oracle_agent", fake_oracle_agent)
+
+    fake_dice_msg = AIMessage(content="You rolled a 1!", name="dice_roll", metadata={"message_id": "dice3"})
+    agents_map = {
+        "roll": AsyncMock(return_value=[fake_dice_msg]),
+    }
+    monkeypatch.setattr(oracle_workflow_mod, "agents_map", agents_map)
+    monkeypatch.setattr(oracle_workflow_mod, "persona_workflows", {})
+
+    # Patch MAX_CHAIN_LENGTH to 3 for test
+    monkeypatch.setattr(oracle_workflow_mod, "MAX_CHAIN_LENGTH", 3)
+
+    result_state = await oracle_workflow_mod.oracle_workflow({"messages": state.messages, "previous": state}, state)
+    # Should have 3 dice messages and a max iteration message
+    dice_msgs = [m for m in result_state.messages if m.content == "You rolled a 1!"]
+    assert len(dice_msgs) == 3
+    assert any("maximum processing steps" in m.content for m in result_state.messages)
+
+@pytest.mark.asyncio
+async def test_persona_switch_flow(monkeypatch):
+    """
+    Persona classifier suggests a switch, Oracle uses new persona.
+    """
+    state = ChatState(
+        messages=[HumanMessage(content="I need therapy", name="Player")],
+        thread_id="thread5",
+        current_persona="storyteller_gm",
+    )
+
+    # Classifier suggests therapist
+    monkeypatch.setattr(
+        "src.agents.persona_classifier_agent._classify_persona",
+        AsyncMock(return_value={"persona": "therapist", "reason": "test"}),
+    )
+
+    oracle_decisions = ["therapist", "END_TURN"]
+    async def fake_oracle_agent(state, **kwargs):
+        return oracle_decisions.pop(0)
+    monkeypatch.setattr("src.agents.oracle_agent.oracle_agent", fake_oracle_agent)
+
+    fake_therapist_msg = AIMessage(content="Let's talk about your feelings.", name="Therapist", metadata={"message_id": "therapist1"})
+    agents_map = {
+        "therapist": AsyncMock(return_value=[fake_therapist_msg]),
+    }
+    monkeypatch.setattr(oracle_workflow_mod, "agents_map", agents_map)
+    monkeypatch.setattr(oracle_workflow_mod, "persona_workflows", {"therapist": agents_map["therapist"]})
+
+    result_state = await oracle_workflow_mod.oracle_workflow({"messages": state.messages, "previous": state}, state)
+    assert any(m.content == "Let's talk about your feelings." for m in result_state.messages)
+    assert result_state.current_persona == "therapist"
+
+@pytest.mark.asyncio
+async def test_tool_agent_error(monkeypatch):
+    """
+    Tool agent raises exception, should add error message and break.
+    """
+    state = ChatState(
+        messages=[HumanMessage(content="Roll a d20", name="Player")],
+        thread_id="thread6",
+        current_persona="storyteller_gm",
+    )
+
+    monkeypatch.setattr(
+        "src.agents.persona_classifier_agent._classify_persona",
+        AsyncMock(return_value={"persona": "storyteller_gm", "reason": "test"}),
+    )
+
+    oracle_decisions = ["roll"]
+    async def fake_oracle_agent(state, **kwargs):
+        return oracle_decisions.pop(0) if oracle_decisions else "END_TURN"
+    monkeypatch.setattr("src.agents.oracle_agent.oracle_agent", fake_oracle_agent)
+
+    async def error_agent(state, **kwargs):
+        raise RuntimeError("Dice broke!")
+    agents_map = {
+        "roll": error_agent,
+    }
+    monkeypatch.setattr(oracle_workflow_mod, "agents_map", agents_map)
+    monkeypatch.setattr(oracle_workflow_mod, "persona_workflows", {})
+
+    result_state = await oracle_workflow_mod.oracle_workflow({"messages": state.messages, "previous": state}, state)
+    assert any("An error occurred while running 'roll'" in m.content for m in result_state.messages)
+
+@pytest.mark.asyncio
+async def test_oracle_agent_error(monkeypatch):
+    """
+    Oracle agent raises exception, should END_TURN and add error message.
+    """
+    state = ChatState(
+        messages=[HumanMessage(content="Tell me a story", name="Player")],
+        thread_id="thread7",
+        current_persona="storyteller_gm",
+    )
+
+    monkeypatch.setattr(
+        "src.agents.persona_classifier_agent._classify_persona",
+        AsyncMock(return_value={"persona": "storyteller_gm", "reason": "test"}),
+    )
+
+    async def error_oracle_agent(state, **kwargs):
+        raise RuntimeError("Oracle failed!")
+    monkeypatch.setattr("src.agents.oracle_agent.oracle_agent", error_oracle_agent)
+
+    agents_map = {}
+    monkeypatch.setattr(oracle_workflow_mod, "agents_map", agents_map)
+    monkeypatch.setattr(oracle_workflow_mod, "persona_workflows", {})
+
+    result_state = await oracle_workflow_mod.oracle_workflow({"messages": state.messages, "previous": state}, state)
+    # Should add error message and not crash
+    assert any("An error occurred in the oracle workflow." in m.content for m in result_state.messages)
 
 @pytest.mark.asyncio
 async def test_oracle_single_step_persona_agent(initial_chat_state, mock_cl_environment_for_oracle, monkeypatch):
