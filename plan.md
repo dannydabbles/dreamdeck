@@ -6,33 +6,23 @@ This document is a step-by-step roadmap for refactoring Dreamdeck to use a hiera
 
 ---
 
-## **Phase 1: Project Cleanup and Preparation**
+## **Phase 1: Project Cleanup and Preparation** ✅ *Completed*
 
 **Goal:** Remove legacy workflow code and tests to reduce context and avoid confusion.
 
-**Tasks:**
-- Archive or delete the following files (if not already done):
-  - `src/oracle_workflow.py`
-  - `src/agents/oracle_agent.py`
-  - `src/agents/director_agent.py`
-  - `src/persona_workflows.py`
-  - `src/agents/__init__.py`
-  - `src/tools_and_agents.py`
-  - `cli.py`
-  - `tests/integration/test_oracle_workflow_integration.py`
-  - `tests/integration/test_persona_workflow.py`
-  - `tests/integration/test_persona_workflows.py`
-  - `tests/integration/test_persona_system.py`
-  - `tests/integration/test_workflows.py`
-  - `tests/smoke/test_director_agent.py`
-  - Archive or remove Jinja2 prompts only used by the above:
-    - `src/prompts/director_prompt.j2`
-    - `src/prompts/oracle_decision_prompt.j2` (add this file to the chat if you want to archive it)
-- Commit the changes with a clear message.
+**Status:**  
+✅ All listed legacy files and prompts have been deleted or archived.  
+✅ Tests pass after cleanup.
 
-**Tips:**
-- Use `git mv` to archive, or `rm` to delete.
-- Run `make test` to ensure remaining tests pass.
+**Notes:**  
+- All old Oracle/Director/persona_workflows code and related tests are now removed.
+- Jinja2 prompts only used by the old workflow have been deleted.
+- The codebase is now ready for Phase 2: inventorying and defining agents & tools.
+
+**Helpful tips for next phases:**  
+- The codebase is now much cleaner; you can focus on the new agent/tool structure.
+- If you need to reference old workflow logic, check git history.
+- Run `make test` after each phase to ensure stability.
 
 ---
 
