@@ -188,7 +188,7 @@ async def on_chat_start():
                 Select(
                     id="persona",
                     label="Persona",
-                    values=["Storyteller GM", "Default"],
+                    values=["Storyteller GM", "Friend", "Default"],
                     initial="Storyteller GM",
                 ),
                 Slider(
