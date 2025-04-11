@@ -22,6 +22,18 @@ def initial_chat_state():
 @pytest.fixture(autouse=True)
 def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     """Mocks Chainlit session and message functions for oracle tests."""
+    # --- Import target modules for patching ---
+    import src.agents.persona_classifier_agent
+    import src.agents.knowledge_agent
+    import src.agents.writer_agent
+    import src.agents.todo_agent
+    import src.agents.dice_agent
+    import src.event_handlers
+    import src.agents.web_search_agent
+    import src.agents.report_agent
+    import src.agents.storyboard_editor_agent
+    # --- End imports ---
+
     # Use a copy of the initial state for the session data to avoid test interference
     session_state = initial_chat_state.model_copy(deep=True)
     session_data = {
@@ -63,24 +75,26 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     mock_user_session.set = mock_set
     monkeypatch.setattr(cl, "user_session", mock_user_session)
     # Patch specific agent imports if they use it directly
-    monkeypatch.setattr("src.agents.todo_agent.cl.user_session", mock_user_session, raising=False)
-    monkeypatch.setattr("src.agents.dice_agent.cl_user_session", mock_user_session, raising=False)
-    monkeypatch.setattr("src.event_handlers.cl_user_session", mock_user_session, raising=False)
+    # Use module objects now
+    monkeypatch.setattr(src.agents.todo_agent.cl, "user_session", mock_user_session, raising=False)
+    monkeypatch.setattr(src.agents.dice_agent, "cl_user_session", mock_user_session, raising=False) # Keep alias if used
+    monkeypatch.setattr(src.event_handlers, "cl_user_session", mock_user_session, raising=False) # Keep alias if used
 
     # Patch the entire 'cl' module inside src.agents.persona_classifier_agent
-    import types
     mock_cl_module_pc = MagicMock()
     mock_cl_module_pc.user_session = mock_user_session
     mock_cl_module_pc.Message = MagicMock()
     mock_cl_module_pc.context = MagicMock()
-    monkeypatch.setattr("src.agents.persona_classifier_agent", "cl", mock_cl_module_pc, raising=False)
+    # Use module object here
+    monkeypatch.setattr(src.agents.persona_classifier_agent, "cl", mock_cl_module_pc, raising=False)
 
     # Patch the entire 'cl' module inside src.agents.knowledge_agent
     mock_cl_module_knowledge = MagicMock()
     mock_cl_module_knowledge.user_session = mock_user_session
     mock_cl_module_knowledge.Message = MagicMock()
     mock_cl_module_knowledge.context = MagicMock()
-    monkeypatch.setattr("src.agents.knowledge_agent", "cl", mock_cl_module_knowledge, raising=False)
+    # Use module object here
+    monkeypatch.setattr(src.agents.knowledge_agent, "cl", mock_cl_module_knowledge, raising=False)
 
     # Mock cl.Message methods to avoid actual UI updates
     mock_message_instance = AsyncMock(spec=cl.Message)
@@ -102,23 +116,25 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
         context_token = context_var.set(mock_context_instance)
     except (ImportError, LookupError):
         monkeypatch.setattr(cl, "context", mock_context_instance)
-        monkeypatch.setattr("src.agents.todo_agent.cl.context", mock_context_instance, raising=False)
-        monkeypatch.setattr("src.event_handlers.cl.context", mock_context_instance, raising=False)
+        # Use module objects here
+        monkeypatch.setattr(src.agents.todo_agent.cl, "context", mock_context_instance, raising=False)
+        monkeypatch.setattr(src.event_handlers.cl, "context", mock_context_instance, raising=False)
 
     # Patch the entire 'cl' module inside src.agents.writer_agent
-    import types
     mock_cl_module = MagicMock()
     mock_cl_module.user_session = mock_user_session
     mock_cl_module.Message = mock_message_cls
     mock_cl_module.context = mock_context_instance
-    monkeypatch.setattr("src.agents.writer_agent", "cl", mock_cl_module, raising=False)
+    # Use module object here
+    monkeypatch.setattr(src.agents.writer_agent, "cl", mock_cl_module, raising=False)
 
     # --- Agent-Specific Message Mocking (Safeguard) ---
-    monkeypatch.setattr("src.agents.todo_agent.CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr("src.agents.dice_agent.CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr("src.agents.web_search_agent.cl.Message", mock_message_cls, raising=False)
-    monkeypatch.setattr("src.agents.report_agent.CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr("src.agents.storyboard_editor_agent.CLMessage", mock_message_cls, raising=False)
+    # Use module objects or correct aliases
+    monkeypatch.setattr(src.agents.todo_agent, "CLMessage", mock_message_cls, raising=False) # Note alias
+    monkeypatch.setattr(src.agents.dice_agent, "CLMessage", mock_message_cls, raising=False) # Note alias
+    monkeypatch.setattr(src.agents.web_search_agent.cl, "Message", mock_message_cls, raising=False)
+    monkeypatch.setattr(src.agents.report_agent, "CLMessage", mock_message_cls, raising=False) # Note alias
+    monkeypatch.setattr(src.agents.storyboard_editor_agent, "CLMessage", mock_message_cls, raising=False) # Note alias
 
     # Mock storage functions
     monkeypatch.setattr("src.storage.append_log", lambda *args, **kwargs: None)
