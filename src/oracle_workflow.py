@@ -108,16 +108,21 @@ async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list
             if tool_func:
                 try:
                     tool_outputs = await tool_func(state, config=config)
-                    # Patch metadata persona to match updated state.current_persona
+                    # Patch metadata persona and type to match updated state.current_persona
                     if isinstance(tool_outputs, list):
                         for msg in tool_outputs:
                             if hasattr(msg, "metadata") and isinstance(msg.metadata, dict):
                                 msg.metadata.setdefault("persona", state.current_persona)
-                        state.messages.extend(tool_outputs)
+                                msg.metadata.setdefault("type", "ai")
                     elif isinstance(tool_outputs, dict) and "messages" in tool_outputs:
                         for msg in tool_outputs["messages"]:
                             if hasattr(msg, "metadata") and isinstance(msg.metadata, dict):
                                 msg.metadata.setdefault("persona", state.current_persona)
+                                msg.metadata.setdefault("type", "ai")
+                    # Append outputs to state
+                    if isinstance(tool_outputs, list):
+                        state.messages.extend(tool_outputs)
+                    elif isinstance(tool_outputs, dict) and "messages" in tool_outputs:
                         state.messages.extend(tool_outputs["messages"])
                 except Exception as e:
                     cl_logger.error(f"Tool '{action}' failed: {e}")
@@ -125,6 +130,17 @@ async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list
         # After all tools, run the persona-specific writer agent
         try:
             response = await workflow_func(inputs, state, config=config)
+            # Patch metadata persona and type for final persona workflow outputs
+            if isinstance(response, list):
+                for msg in response:
+                    if hasattr(msg, "metadata") and isinstance(msg.metadata, dict):
+                        msg.metadata.setdefault("persona", state.current_persona)
+                        msg.metadata.setdefault("type", "ai")
+            elif isinstance(response, dict) and "messages" in response:
+                for msg in response["messages"]:
+                    if hasattr(msg, "metadata") and isinstance(msg.metadata, dict):
+                        msg.metadata.setdefault("persona", state.current_persona)
+                        msg.metadata.setdefault("type", "ai")
         except Exception as e:
             cl_logger.error(f"Persona workflow '{persona_key}' failed: {e}")
             response = [
