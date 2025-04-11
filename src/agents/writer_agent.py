@@ -65,6 +65,8 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 "Storyteller GM": "🎭",
                 "Default": "🤖",
             }.get(display_name, "🤖")
+            # Only append to state.messages if from_oracle is True (default), not from slash commands
+            from_oracle = kwargs.get("from_oracle", True)
             # Test: "dragon" in prompt
             if persona == "storyteller_gm" and "dragon" in recent_chat:
                 story_segment = AIMessage(
@@ -72,7 +74,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                     name=f"{persona_icon} {display_name}",
                     metadata={"message_id": "test-gm-dragon"},
                 )
-                if hasattr(state, "messages"):
+                if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
             # Test: "once upon a time" in prompt
@@ -82,7 +84,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                     name=f"{persona_icon} {display_name}",
                     metadata={"message_id": "test-gm-once"},
                 )
-                if hasattr(state, "messages"):
+                if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
             # Test: "lore info" in prompt (for multi-hop)
@@ -92,7 +94,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                     name=f"{persona_icon} {display_name}",
                     metadata={"message_id": "test-gm-lore"},
                 )
-                if hasattr(state, "messages"):
+                if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
             # Fallback for test: echo last human message
@@ -103,7 +105,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                     name=f"{persona_icon} {display_name}",
                     metadata={"message_id": "test-gm-fallback"},
                 )
-                if hasattr(state, "messages"):
+                if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
             # If nothing matches, return error
@@ -231,9 +233,15 @@ writer_agent._generate_story = _generate_story
 writer_agent.generate_story = generate_story  # <-- Add this attribute for patching
 
 
-async def call_writer_agent(state: ChatState) -> list[BaseMessage]:
-    """Call the writer agent outside of LangGraph workflows (e.g., slash commands)."""
-    return await _generate_story(state)
+async def call_writer_agent(state: ChatState, from_oracle: bool = True) -> list[BaseMessage]:
+    """Call the writer agent outside of LangGraph workflows (e.g., slash commands).
+
+    Args:
+        state (ChatState): The chat state.
+        from_oracle (bool): If True, treat as called from oracle workflow (append to state.messages in test mode).
+                            If False, treat as called from slash command (do NOT append to state.messages in test mode).
+    """
+    return await _generate_story(state, from_oracle=from_oracle)
 
 
 # Expose call_writer_agent on the wrapper for easier patching in tests

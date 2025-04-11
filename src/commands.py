@@ -84,7 +84,7 @@ async def command_roll(query: str = ""):
     # Immediately call writer agent to continue story
     from src.agents.writer_agent import call_writer_agent
 
-    gm_responses = await call_writer_agent(state)
+    gm_responses = await call_writer_agent(state, from_oracle=False)
     if gm_responses:
         gm_msg = gm_responses[0]
         # Only append if not an error message
@@ -162,7 +162,7 @@ async def command_search(query: str = ""):
     # Immediately call writer agent to continue story
     from src.agents.writer_agent import call_writer_agent
 
-    gm_responses = await call_writer_agent(state)
+    gm_responses = await call_writer_agent(state, from_oracle=False)
     if gm_responses:
         gm_msg = gm_responses[0]
         # Only append if not an error message
@@ -243,7 +243,7 @@ async def command_todo(query: str = ""):
     # Immediately call writer agent to continue story
     from src.agents.writer_agent import call_writer_agent
 
-    gm_responses = await call_writer_agent(state)
+    gm_responses = await call_writer_agent(state, from_oracle=False)
     if gm_responses:
         gm_msg = gm_responses[0]
         # Only append if not an error message
