@@ -16,8 +16,8 @@ from src.agents.writer_agent import (
     call_writer_agent,
     _WriterAgentWrapper,
 )
-from src.agents.director_agent import _direct_actions, director_agent
-from src.workflows import app_without_checkpoint as chat_workflow_app
+# from src.agents.director_agent import _direct_actions, director_agent # Removed
+from src.oracle_workflow import oracle_workflow # Use oracle_workflow directly
 from src.agents.dice_agent import _dice_roll, _DiceAgentWrapper
 from src.agents.todo_agent import _manage_todo, manage_todo
 from jinja2 import Template
@@ -199,8 +199,9 @@ async def test_writer_agent_selects_persona_prompt(monkeypatch, mock_cl_environm
         pass
 
 
+# Renamed test
 @pytest.mark.asyncio
-async def test_director_includes_persona(monkeypatch, mock_cl_environment):
+async def test_oracle_includes_persona_in_prompt(monkeypatch, mock_cl_environment):
     dummy_state = ChatState(
         messages=[HumanMessage(content="Tell me a story", name="Player")],
         thread_id="thread1",
@@ -208,18 +209,28 @@ async def test_director_includes_persona(monkeypatch, mock_cl_environment):
     )
 
     mock_response = AsyncMock()
-    mock_response.content = '{"actions": ["continue_story"]}'
+    # Oracle returns JSON with "next_action"
+    mock_response.content = '{"next_action": "therapist"}'
     with patch(
-        "src.agents.director_agent.ChatOpenAI.ainvoke", return_value=mock_response
-    ) as mock_ainvoke:
-        actions = await _direct_actions(dummy_state)
-        assert isinstance(actions, list)
-        assert "continue_story" in actions
-        # Check that the prompt passed to LLM includes persona info
-        call_args, call_kwargs = mock_ainvoke.call_args
-        system_prompt = call_args[0][0][1]
-        assert "Current persona: Therapist" in system_prompt
-        assert "Persona tool preferences:" in system_prompt
+        "src.agents.oracle_agent.ChatOpenAI.ainvoke", return_value=mock_response
+    ) as mock_ainvoke, patch(
+        "src.agents.oracle_agent.Template.render" # Patch render to inspect context
+    ) as mock_render:
+        # Import and call the internal oracle decision function
+        from src.agents.oracle_agent import _oracle_decision
+        next_action = await _oracle_decision(dummy_state)
+        assert next_action == "therapist" # Check oracle output parsing
+
+        # Check that the prompt context passed to render includes persona info
+        mock_render.assert_called_once()
+        render_call_args, render_call_kwargs = mock_render.call_args
+        # The context is passed as keyword arguments to render
+        assert "current_persona" in render_call_kwargs
+        assert render_call_kwargs["current_persona"] == "Therapist"
+        # Check other expected context keys
+        assert "available_agents" in render_call_kwargs
+        assert "recent_chat_history" in render_call_kwargs
+        assert "tool_results_this_turn" in render_call_kwargs
 
 
 @pytest.mark.asyncio
@@ -311,44 +322,53 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
     }
     monkeypatch.setattr(agents_mod, "agents_map", agents_map_patch) # Keep agent map patch
 
-    # Mock Oracle to return actions *after* filtering (knowledge, todo, therapist)
-    # Therapist persona avoids 'roll', prefers 'knowledge'
+    # Mock Oracle agent to simulate the desired sequence
+    oracle_call_count = 0
     async def fake_oracle(state, **kwargs):
-        # Simulate Oracle deciding based on persona preferences (even if prompt doesn't fully support it yet)
-        # It should avoid 'roll' and call 'knowledge', then 'todo', then 'therapist'
-        if state.last_agent_called is None:
-            return "knowledge" # Preferred tool
-        elif state.last_agent_called == "knowledge":
+        nonlocal oracle_call_count
+        oracle_call_count += 1
+        if oracle_call_count == 1:
+            # First call, Oracle should choose the preferred tool 'knowledge'
+            return "knowledge"
+        elif oracle_call_count == 2:
+            # Second call, after knowledge, Oracle should choose 'todo'
             return "todo"
-        elif state.last_agent_called == "todo":
-            return "therapist" # Persona agent is last
+        elif oracle_call_count == 3:
+            # Third call, after todo, Oracle should choose the persona agent 'therapist'
+            return "therapist"
         else:
+            # Subsequent calls, end the turn
             return "END_TURN"
 
-    async def fake_knowledge(state, knowledge_type, **kwargs):
+    # Patch the Oracle agent within the oracle_workflow module
+    monkeypatch.setattr("src.oracle_workflow.oracle_agent", fake_oracle)
+
+    # --- Mock the agents/workflows that Oracle will call ---
+    async def fake_knowledge(state, **kwargs): # knowledge_agent takes state
+         # Ensure knowledge_type is handled if needed, but likely not for this mock
          return [AIMessage(content="Knowledge result", name="knowledge", metadata={"message_id": "k1"})]
 
-    async def fake_todo(state, **kwargs):
+    async def fake_todo(state, **kwargs): # todo_agent takes state
          return [AIMessage(content="Todo result", name="todo", metadata={"message_id": "t1"})]
 
-    async def fake_therapist_workflow(inputs, state, **kwargs):
+    async def fake_therapist_workflow(inputs, state, **kwargs): # persona workflows take inputs, state
          return [AIMessage(content="Therapy response", name="therapist", metadata={"message_id": "w1"})]
 
-    # Patch the Oracle agent
-    monkeypatch.setattr("src.oracle_workflow.oracle_agent", fake_oracle)
-    # Patch the relevant agents in the agents_map
-    agents_map_patch["knowledge"] = fake_knowledge
-    agents_map_patch["todo"] = fake_todo
-    # Patch the persona workflow directly
-    monkeypatch.setitem(pw.persona_workflows, "therapist", fake_therapist_workflow)
-    # Ensure 'roll' is NOT called
+    # Patch the agents/workflows in the agents_map used by oracle_workflow
+    import src.oracle_workflow as owf # Import the module to patch its map
+    agents_map_patch = owf.agents_map.copy()
+    agents_map_patch["knowledge"] = fake_knowledge # Patch the actual knowledge agent function
+    agents_map_patch["todo"] = fake_todo # Patch the actual todo agent function
+    agents_map_patch["therapist"] = fake_therapist_workflow # Patch the persona workflow
+
+    # Ensure 'roll' is NOT called by patching it to fail the test
     async def fail_roll(state, **kwargs):
          pytest.fail("Dice agent 'roll' should have been avoided by Oracle")
     agents_map_patch["roll"] = fail_roll
-    monkeypatch.setattr(agents_mod, "agents_map", agents_map_patch)
+    monkeypatch.setattr(owf, "agents_map", agents_map_patch)
+    # --- End Mocking ---
 
-
-    # Mock vector store get method if needed
+    # Mock vector store
     mock_vector_store = MagicMock()
     mock_vector_store.get = MagicMock(return_value=[])
     mock_vector_store.put = AsyncMock()
@@ -367,14 +387,18 @@ async def test_workflow_filters_avoided_tools(monkeypatch, mock_cl_environment):
         current_persona=dummy_state.current_persona,
     )
     input_data = {"messages": dummy_state.messages, "previous": previous_state}
-    # Use the actual oracle_workflow function now
+    # Use the actual oracle_workflow function
     from src.oracle_workflow import oracle_workflow
+    # Pass state object as the second argument as well, as expected by the function signature
     final_state_obj = await oracle_workflow(
         input_data, previous_state, config=workflow_config
     )
 
+    # --- Assertions ---
     assert isinstance(final_state_obj, ChatState), f"Expected ChatState, got {type(final_state_obj)}"
     result_messages = final_state_obj.messages
+    # Check the sequence of calls made by Oracle
+    assert oracle_call_count == 3, f"Expected 3 Oracle calls, got {oracle_call_count}"
 
 
     # Check if the expected messages are present
@@ -506,28 +530,33 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
             )
         ]
 
-    # Patch underlying functions
-    # Patch the classifier called within the workflow/event handler
+    # --- Patching ---
+    # Patch the classifier called within the oracle_workflow
     monkeypatch.setattr("src.oracle_workflow.persona_classifier_agent", fake_classifier)
-    # Patch the Oracle agent
+
+    # Patch the Oracle agent to simulate the decision flow
+    oracle_call_count = 0
     async def fake_oracle(state, **kwargs):
+        nonlocal oracle_call_count
+        oracle_call_count += 1
         # Simulate Oracle deciding based on persona and history
-        if state.current_persona == "secretary" and not state.last_agent_called:
+        if state.current_persona == "secretary" and oracle_call_count == 1:
              return "todo" # First action after switch
-        elif state.last_agent_called == "todo":
+        elif state.last_agent_called == "todo" and oracle_call_count == 2:
              return "secretary" # Persona agent is last
         else:
              return "END_TURN"
     monkeypatch.setattr("src.oracle_workflow.oracle_agent", fake_oracle)
 
-    # Patch the relevant agents in the agents_map
-    agents_map_patch["todo"] = fake_todo
-    # Patch the secretary persona workflow directly
-    monkeypatch.setitem(pw.persona_workflows, "secretary", fake_writer) # Use fake_writer as the final step
-    monkeypatch.setattr(agents_mod, "agents_map", agents_map_patch)
+    # Patch the agents/workflows in the agents_map used by oracle_workflow
+    import src.oracle_workflow as owf # Import the module to patch its map
+    agents_map_patch = owf.agents_map.copy()
+    agents_map_patch["todo"] = fake_todo # Patch the actual todo agent function
+    agents_map_patch["secretary"] = fake_writer # Patch the secretary workflow with fake_writer
+    monkeypatch.setattr(owf, "agents_map", agents_map_patch)
+    # --- End Patching ---
 
-
-    # Mock vector store get method
+    # Mock vector store
     mock_vector_store = MagicMock()
     mock_vector_store.get = MagicMock(return_value=[])
     mock_vector_store.put = AsyncMock()
@@ -566,15 +595,19 @@ async def test_simulated_conversation_flow(monkeypatch, mock_cl_environment):
         messages=[], thread_id=test_thread_id, current_persona="secretary"
     )
     input_data = {"messages": dummy_state.messages, "previous": previous_state}
-    # Use the actual oracle_workflow function now
+    # Use the actual oracle_workflow function
     from src.oracle_workflow import oracle_workflow
+    # Pass state object as the second argument as well
     final_state_obj = await oracle_workflow(
         input_data, previous_state, config=workflow_config
     )
 
+    # --- Assertions ---
     assert isinstance(final_state_obj, ChatState), f"Expected ChatState, got {type(final_state_obj)}"
     result_messages = final_state_obj.messages
     final_persona = final_state_obj.current_persona
+    # Check Oracle call count
+    assert oracle_call_count == 2, f"Expected 2 Oracle calls, got {oracle_call_count}"
 
 
     # Assertions
@@ -705,14 +738,21 @@ async def test_multi_tool_persona_workflow(monkeypatch, mock_cl_environment):
         cl.user_session.set("current_persona", "secretary")
         return {"persona": "secretary", "reason": "User asked about tasks"}
 
-    # Patch director_agent to return multiple actions
-    async def fake_director(state, **kwargs):
-        return ["search", "roll", "todo", "write"]
+    # Patch Oracle agent to simulate the multi-step sequence
+    oracle_call_count = 0
+    async def fake_oracle(state, **kwargs):
+        nonlocal oracle_call_count
+        oracle_call_count += 1
+        if oracle_call_count == 1: return "search"
+        elif oracle_call_count == 2: return "roll"
+        elif oracle_call_count == 3: return "todo"
+        elif oracle_call_count == 4: return "secretary" # Final persona agent
+        else: return "END_TURN"
 
-    import src.oracle_workflow as oracle_mod
-    monkeypatch.setattr(oracle_mod, "director_agent", fake_director)
+    # Patch the Oracle agent within the oracle_workflow module
+    monkeypatch.setattr("src.oracle_workflow.oracle_agent", fake_oracle)
 
-    # Patch all tool agents to return dummy AI messages with correct metadata
+    # --- Mock the agents/workflows that Oracle will call ---
     async def fake_web_search(state, **kwargs):
         return [
             AIMessage(
@@ -765,17 +805,19 @@ async def test_multi_tool_persona_workflow(monkeypatch, mock_cl_environment):
             )
         ]
 
-    # Patch all relevant agents
-    monkeypatch.setattr(agents_mod, "persona_classifier_agent", fake_classifier)
-    monkeypatch.setattr(agents_mod, "web_search_agent", fake_web_search)
+    # Patch the agents/workflows in the agents_map used by oracle_workflow
+    import src.oracle_workflow as owf # Import the module to patch its map
+    agents_map_patch = owf.agents_map.copy()
+    agents_map_patch["search"] = fake_web_search
+    agents_map_patch["roll"] = fake_dice
+    agents_map_patch["todo"] = fake_todo
+    agents_map_patch["secretary"] = fake_writer # Secretary workflow uses fake_writer
+    monkeypatch.setattr(owf, "agents_map", agents_map_patch)
+    # --- End Mocking ---
 
-    monkeypatch.setattr("src.workflows.director_agent", fake_director)
-    monkeypatch.setattr("src.agents.dice_agent.dice_agent", fake_dice)
-    monkeypatch.setattr("src.agents.todo_agent.manage_todo", fake_todo)
-    monkeypatch.setattr("src.agents.writer_agent._generate_story", fake_writer)
 
     # Prepare dummy initial state with a user message
-    state = ChatState(
+    initial_state = ChatState(
         messages=[
             HumanMessage(
                 content="Tell me about dragons and roll for attack",
@@ -784,42 +826,40 @@ async def test_multi_tool_persona_workflow(monkeypatch, mock_cl_environment):
             )
         ],
         thread_id="thread-multitool",
-        current_persona="default",
+        current_persona="default", # Starts as default, classifier switches to secretary
     )
 
     from src.oracle_workflow import oracle_workflow
 
-    # Run the workflow
-    try:
-        result_state = await oracle_workflow.ainvoke(
-            {"messages": state.messages, "previous": state, "force_classify": True},
-            state,
-        )
-    except Exception as e:
-        # Defensive: if oracle_workflow fails, create dummy error state
-        from langchain_core.messages import AIMessage
-        result_state = state
-        error_msg = AIMessage(content="oracle_workflow failed", name="error", metadata={})
-        result_state.messages.append(error_msg)
+    # Run the workflow directly, passing state as the second argument
+    # Use force_classify to trigger the mocked classifier
+    input_data = {"messages": initial_state.messages, "previous": initial_state, "force_classify": True}
+    result_state = await oracle_workflow(
+        input_data,
+        initial_state, # Pass state object here
+        config={"configurable": {"thread_id": initial_state.thread_id}}
+    )
 
-    # Collect all AI messages
-    ai_msgs = [m for m in result_state.messages if isinstance(m, AIMessage)]
+
+    # --- Assertions ---
+    assert isinstance(result_state, ChatState), f"Expected ChatState, got {type(result_state)}"
+    # Collect all AI messages added *after* the initial user message
+    initial_msg_count = len(initial_state.messages)
+    ai_msgs = [m for m in result_state.messages[initial_msg_count:] if isinstance(m, AIMessage)]
     names = [m.name for m in ai_msgs]
 
-    # Defensive: if oracle_workflow failed, skip strict assertions
-    if "error" in names and len(names) == 1:
-        print("WARNING: oracle_workflow failed during test_multi_tool_persona_workflow, skipping strict assertions.")
-    else:
-        # Assert all tool outputs and final story are present
-        assert "web_search" in names
-        assert "dice_roll" in names
-        assert "todo" in names
-        assert any("Game Master" in m.name for m in ai_msgs)
+    # Assert all tool outputs and final story are present in the correct order
+    assert names == ["web_search", "dice_roll", "todo", "Game Master"], f"Unexpected agent sequence: {names}"
+    assert oracle_call_count == 4, f"Expected 4 Oracle calls, got {oracle_call_count}"
 
-        # Assert all AI messages have correct metadata
-        for m in ai_msgs:
-            assert m.metadata.get("type") == "ai"
-            assert m.metadata.get("persona") == "secretary"
+    # Assert final persona is correct
+    assert result_state.current_persona == "secretary"
+
+    # Assert all AI messages have correct metadata added by the workflow loop
+    for m in ai_msgs:
+        assert m.metadata.get("type") == "ai"
+        assert m.metadata.get("persona") == "secretary" # Should reflect the persona when the message was added
+        assert "agent" in m.metadata # Check agent name was added
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from src.models import ChatState

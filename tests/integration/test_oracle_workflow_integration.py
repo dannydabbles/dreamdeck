@@ -68,31 +68,51 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     mock_user_session.set = mock_set
     monkeypatch.setattr(cl, "user_session", mock_user_session)
     # Patch cl object within each module that uses `import chainlit as cl`
+    # Patch cl.user_session where it's directly imported as 'cl'
     monkeypatch.setattr(oracle_workflow_module.cl, "user_session", mock_user_session, raising=False)
     monkeypatch.setattr(pca_module.cl, "user_session", mock_user_session, raising=False)
-    monkeypatch.setattr(director_module.cl, "user_session", mock_user_session, raising=False)
+    # monkeypatch.setattr(director_module.cl, "user_session", mock_user_session, raising=False) # director_agent removed
     monkeypatch.setattr(knowledge_module.cl, "user_session", mock_user_session, raising=False)
     monkeypatch.setattr(writer_module.cl, "user_session", mock_user_session, raising=False)
     monkeypatch.setattr(todo_module.cl, "user_session", mock_user_session, raising=False)
     monkeypatch.setattr(report_module.cl, "user_session", mock_user_session, raising=False)
     monkeypatch.setattr(storyboard_module.cl, "user_session", mock_user_session, raising=False)
-    # Patch modules that use `from chainlit import user_session as cl_user_session`
+    monkeypatch.setattr(web_search_module.cl, "user_session", mock_user_session, raising=False) # Added for web_search_agent
+
+    # Patch cl.user_session where it's imported as 'cl_user_session'
     monkeypatch.setattr(dice_module, "cl_user_session", mock_user_session, raising=False)
     monkeypatch.setattr(event_handlers_module, "cl_user_session", mock_user_session, raising=False)
 
+    # Patch cl.Message where it's directly imported as 'cl'
     mock_message_instance = AsyncMock(spec=cl.Message)
     mock_message_instance.id = f"mock_cl_msg_{uuid.uuid4()}"
     mock_message_instance.stream_token = AsyncMock()
     mock_message_instance.send = AsyncMock()
     mock_message_instance.update = AsyncMock()
     mock_message_cls = MagicMock(return_value=mock_message_instance)
-    monkeypatch.setattr(cl, "Message", mock_message_cls)
+    monkeypatch.setattr(cl, "Message", mock_message_cls) # General patch
+    # Patch cl.Message where it's imported as 'cl'
+    monkeypatch.setattr(oracle_workflow_module.cl, "Message", mock_message_cls, raising=False)
+    monkeypatch.setattr(pca_module.cl, "Message", mock_message_cls, raising=False)
+    # monkeypatch.setattr(director_module.cl, "Message", mock_message_cls, raising=False) # director_agent removed
+    monkeypatch.setattr(knowledge_module.cl, "Message", mock_message_cls, raising=False)
+    monkeypatch.setattr(writer_module.cl, "Message", mock_message_cls, raising=False)
+    monkeypatch.setattr(todo_module.cl, "Message", mock_message_cls, raising=False)
+    monkeypatch.setattr(report_module.cl, "Message", mock_message_cls, raising=False)
+    monkeypatch.setattr(storyboard_module.cl, "Message", mock_message_cls, raising=False)
+    monkeypatch.setattr(web_search_module.cl, "Message", mock_message_cls, raising=False) # Added for web_search_agent
+
+    # Patch cl.Message where it's imported as 'CLMessage'
     monkeypatch.setattr(todo_module, "CLMessage", mock_message_cls, raising=False)
     monkeypatch.setattr(dice_module, "CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr("src.agents.web_search_agent.CLMessage", mock_message_cls, raising=False)
+    monkeypatch.setattr(web_search_module, "CLMessage", mock_message_cls, raising=False) # Use alias
     monkeypatch.setattr(report_module, "CLMessage", mock_message_cls, raising=False)
     monkeypatch.setattr(storyboard_module, "CLMessage", mock_message_cls, raising=False)
-    monkeypatch.setattr(writer_module, "cl", MagicMock(Message=mock_message_cls, user_session=mock_user_session), raising=False)
+    monkeypatch.setattr(writer_module, "cl", MagicMock(Message=mock_message_cls, user_session=mock_user_session, AsyncLangchainCallbackHandler=AsyncMock()), raising=False) # Keep writer patch for cb
+
+    # Patch cl.AsyncLangchainCallbackHandler in writer_agent
+    monkeypatch.setattr(writer_module.cl, "AsyncLangchainCallbackHandler", AsyncMock())
+
 
     monkeypatch.setattr(oracle_workflow_module, "append_log", lambda *args, **kwargs: None)
     monkeypatch.setattr(oracle_workflow_module, "save_text_file", lambda *args, **kwargs: None)

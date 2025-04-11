@@ -20,34 +20,27 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
         current_persona="Therapist",  # Persona with avoid=["roll"], prefer=["knowledge"]
     )
 
-    # Mock director_agent to return mixed actions
-    async def fake_director(state_arg):
-        # Return a mix of strings and dicts, including "roll" and "knowledge"
-        return ["roll", {"action": "knowledge", "type": "lore"}, "todo", "write"]
-
-    # Patch director_agent in workflows module
-    # Mock Oracle agent to simulate director's output filtered by persona prefs
-    # Therapist avoids roll, prefers knowledge. Input: ["roll", {"action": "knowledge", "type": "lore"}, "todo", "write"]
-    # Expected Oracle sequence: "knowledge", "todo", "therapist" (persona agent last)
+    # Mock Oracle agent to simulate the filtered/reordered sequence
+    # Therapist avoids roll, prefers knowledge. Input implies: roll, knowledge, todo, write
+    # Expected Oracle sequence: knowledge, todo, therapist (persona agent last)
     oracle_call_count = 0
     async def fake_oracle(state, **kwargs):
-         nonlocal oracle_call_count
-         oracle_call_count += 1
-         if oracle_call_count == 1:
-             return "knowledge"
-         elif oracle_call_count == 2:
-             return "todo"
-         elif oracle_call_count == 3:
-             return "therapist" # Persona agent is last
-         else:
-             return "END_TURN"
+        nonlocal oracle_call_count
+        oracle_call_count += 1
+        if oracle_call_count == 1:
+            return "knowledge"
+        elif oracle_call_count == 2:
+            return "todo"
+        elif oracle_call_count == 3:
+            return "therapist" # Persona agent is last
+        else:
+            return "END_TURN"
 
-    # Patch Oracle agent in the workflow module
+    # Patch Oracle agent in the oracle_workflow module
     monkeypatch.setattr("src.oracle_workflow.oracle_agent", fake_oracle)
 
-
-    # Patch writer_agent (used by persona workflows) to just return a dummy AIMessage
-    async def fake_writer(state_arg, **kwargs): # Add **kwargs
+    # Patch writer_agent's underlying function (_generate_story) used by persona workflows
+    async def fake_writer(state_arg, **kwargs):
         return [
             AIMessage(
                 content="Story continues",
@@ -56,95 +49,84 @@ async def test_persona_workflow_filters_and_reorders(monkeypatch):
             )
         ]
 
-    # Patch the underlying _generate_story function used by persona workflows
     monkeypatch.setattr("src.persona_workflows._generate_story", fake_writer)
 
-
-    # Patch knowledge_agent to return dummy AIMessage
-    async def fake_knowledge(state_arg, knowledge_type=None, **kwargs):
+    # Patch knowledge_agent function to return dummy AIMessage
+    async def fake_knowledge(state_arg, **kwargs): # knowledge_agent takes state
         return [
             AIMessage(
-                content=f"Knowledge: {knowledge_type}",
+                content="Knowledge result",
                 name="knowledge",
-                metadata={"message_id": f"kn_{knowledge_type}"},
+                metadata={"message_id": "kn1"},
             )
         ]
+    # Patch the knowledge agent function where it's used (likely in agents_map)
+    # We'll patch the map below.
 
-    # Patch the underlying knowledge_agent function
-    monkeypatch.setattr("src.persona_workflows.knowledge_agent", fake_knowledge)
+    # Patch todo_agent function to return dummy AIMessage
+    async def fake_todo(state_arg, **kwargs): # todo_agent takes state
+        return [
+            AIMessage(
+                content="Todo result",
+                name="todo",
+                metadata={"message_id": "td1"},
+            )
+        ]
+    # Patch the todo agent function where it's used (likely in agents_map)
+    # We'll patch the map below.
+
+    # Patch therapist workflow (already uses fake_writer via _generate_story patch)
+    # No, we need a specific mock for the therapist workflow itself
+    async def fake_therapist_workflow(inputs, state, **kwargs):
+         return [AIMessage(content="Therapy response", name="therapist", metadata={"message_id": "w1"})]
 
 
-    # Patch storyboard_editor_agent to do nothing (if it were called, which it isn't in this flow)
-    async def fake_storyboard(state_arg, gm_message_id=None):
-        return []
-
-    # This agent isn't called in the Oracle flow directly, patching underlying might be needed if persona workflow called it
-    # monkeypatch.setattr(workflows_module, "storyboard_editor_agent", fake_storyboard)
-
-
-    # Patch cl.user_session.get to avoid errors
+    # Patch cl.user_session.get to avoid errors in the workflow
     def fake_user_session_get(key, default=None):
-        if key == "config":
-            return {"configurable": {}}
-        return {}
-
+        if key == "state": return state # Return the initial state
+        if key == "vector_memory": return MagicMock()
+        if key == "chat_settings": return {}
+        return default
     monkeypatch.setattr("chainlit.user_session.get", fake_user_session_get)
+    monkeypatch.setattr("chainlit.user_session.set", MagicMock()) # Mock set as well
 
-    # Patch the entire agents_map to avoid calling real dice agent etc.
-    monkeypatch.setattr(
-        workflows_module,
-        "agents_map",
-        {
-            "roll": lambda *_args, **_kwargs: [],
-            "todo": lambda *_args, **_kwargs: [],
-            "write": fake_writer,
-            "continue_story": fake_writer,
-        },
-    )
+    # Patch the agents_map used by oracle_workflow
+    import src.oracle_workflow as owf
+    agents_map_patch = owf.agents_map.copy()
+    agents_map_patch["knowledge"] = fake_knowledge
+    agents_map_patch["todo"] = fake_todo
+    agents_map_patch["therapist"] = fake_therapist_workflow
+    # Ensure 'roll' is NOT called
+    async def fail_roll(state, **kwargs):
+         pytest.fail("Dice agent 'roll' should have been avoided by Oracle")
+    agents_map_patch["roll"] = fail_roll
+    monkeypatch.setattr(owf, "agents_map", agents_map_patch)
 
-    # Run the workflow
+    # Patch necessary functions within oracle_workflow itself if needed
+    monkeypatch.setattr(owf, "append_log", lambda *a, **kw: None)
+    monkeypatch.setattr(owf, "get_persona_daily_dir", lambda *a, **kw: MagicMock())
+    monkeypatch.setattr(owf, "save_text_file", lambda *a, **kw: None)
+    monkeypatch.setattr(owf, "persona_classifier_agent", AsyncMock(return_value={"persona": "Therapist"})) # Assume classifier runs
+
+    # Run the workflow using the _chat_workflow alias which wraps oracle_workflow
+    # Pass state as the second argument
     new_state = await workflows_module._chat_workflow(
-        {"messages": []},
-        state,
+        {"messages": state.messages, "previous": state}, # Pass input dict
+        state, # Pass state object
+        config={"configurable": {"thread_id": state.thread_id}} # Pass config
     )
 
-    # The initial director returns ["roll", {"action": "knowledge", "type": "lore"}, "todo", "write"]
-    # Therapist persona avoid=["roll"], prefer=["knowledge"]
-    # So after filtering/reordering, actions should be:
-    # [{"action": "knowledge", "type": "lore"}, "todo", "write"]
-    # with "knowledge" first (preferred), "roll" removed
+    # --- Assertions ---
+    assert isinstance(new_state, ChatState), f"Expected ChatState, got {type(new_state)}"
 
-    # Check that the first AI message is from knowledge agent
-    knowledge_msgs = [
-        m
-        for m in new_state.messages
-        if isinstance(m, AIMessage) and m.name == "knowledge"
-    ]
-    # Accept if knowledge agent was skipped and writer ran directly
-    if not knowledge_msgs:
-        # Defensive: print all AI message names for debugging
-        ai_names = [m.name for m in new_state.messages if isinstance(m, AIMessage)]
-        print(f"AI message names: {ai_names}")
-    # Relax assertion: knowledge agent message is optional if writer ran
-    # assert knowledge_msgs, "Knowledge agent message should be present"
+    # Check the sequence of AI messages added
+    initial_msg_count = len(state.messages)
+    ai_msgs = [m for m in new_state.messages[initial_msg_count:] if isinstance(m, AIMessage)]
+    names = [m.name for m in ai_msgs]
 
-    # Check that no dice_roll message is present (since 'roll' was avoided)
-    dice_msgs = [
-        m
-        for m in new_state.messages
-        if isinstance(m, AIMessage) and m.name == "dice_roll"
-    ]
-    assert not dice_msgs, "Dice roll should be skipped for therapist persona"
+    # Expected sequence based on fake_oracle: knowledge -> todo -> therapist
+    assert names == ["knowledge", "todo", "therapist"], f"Unexpected agent sequence: {names}"
+    assert oracle_call_count == 3, f"Expected 3 Oracle calls, got {oracle_call_count}"
 
-    # Check that the final message is from writer agent
-    writer_msgs = [
-        m
-        for m in new_state.messages
-        if isinstance(m, AIMessage) and m.name == "Game Master"
-    ]
-    # Accept if writer failed and returned error message instead
-    if not writer_msgs:
-        ai_names = [m.name for m in new_state.messages if isinstance(m, AIMessage)]
-        print(f"AI message names: {ai_names}")
-    # Relax assertion: writer agent message is optional if error occurred
-    # assert writer_msgs, "Writer agent message should be present"
+    # Check that no dice_roll message is present
+    assert "dice_roll" not in names, "Dice roll should be skipped for therapist persona"

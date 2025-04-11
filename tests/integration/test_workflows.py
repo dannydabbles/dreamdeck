@@ -24,10 +24,13 @@ async def test_oracle_workflow_memory_updates(mock_chat_state):
         "src.oracle_workflow.persona_classifier_agent",
         AsyncMock(return_value={"persona": "default"}),
     # Patch Oracle agent instead of Director
-    ), patch(
+    ), patch( # Patch oracle_agent within the oracle_workflow module
         "src.oracle_workflow.oracle_agent",
         AsyncMock(return_value="default"), # Oracle decides to call default persona workflow
-    ), patch(
+    ), patch( # Patch agents_map within the oracle_workflow module
+        "src.oracle_workflow.agents_map",
+        {"default": AsyncMock(return_value=[dummy_gm_msg])} # Map 'default' action to the mocked workflow
+    ), patch( # Patch cl.user_session.get within the oracle_workflow module
         "src.oracle_workflow.cl.user_session.get", new_callable=MagicMock
     ) as mock_user_session_get:
 
@@ -44,13 +47,14 @@ async def test_oracle_workflow_memory_updates(mock_chat_state):
 
         result_state = await oracle_workflow.ainvoke(
             {"messages": initial_state.messages, "previous": initial_state},
-            initial_state,
+            initial_state, # Pass state object as second arg
+            config={"configurable": {"thread_id": initial_state.thread_id}} # Pass config
         )
 
-        assert isinstance(result_state, ChatState)
+        assert isinstance(result_state, ChatState), f"Expected ChatState, got {type(result_state)}"
         assert any(
             m.content == "Story continues" for m in result_state.messages
-        )
+        ), "Expected dummy GM message not found"
 
 
 @pytest.mark.asyncio
@@ -99,21 +103,26 @@ async def test_oracle_workflow_dispatches_to_persona(monkeypatch):
     monkeypatch.setattr("src.oracle_workflow.oracle_agent", fake_oracle)
 
     # Patch the agents_map within oracle_workflow to include the patched secretary
-    # No need to patch other tools if Oracle directly calls secretary
-    import src.agents as agents_mod
-    agents_map_patch = agents_mod.agents_map.copy() # Start with real map
+    import src.oracle_workflow as owf
+    agents_map_patch = owf.agents_map.copy() # Start with real map from the module
     agents_map_patch["secretary"] = fake_secretary # Override secretary
-    monkeypatch.setattr("src.oracle_workflow.agents_map", agents_map_patch)
+    monkeypatch.setattr(owf, "agents_map", agents_map_patch)
+
+    # Patch necessary cl functions within oracle_workflow
+    monkeypatch.setattr(owf.cl, "user_session", MagicMock(get=lambda k,d=None: {}))
+    monkeypatch.setattr(owf, "append_log", lambda *a, **kw: None)
 
 
     state = ChatState(messages=[], thread_id="t", current_persona="default") # Start as default
     # Run the workflow - it should classify, then oracle calls secretary
-    final_state = await oracle_workflow.ainvoke(
-        {"messages": [], "previous": state},
-        state,
+    # Pass state object as second argument
+    final_state = await oracle_workflow(
+        {"messages": [], "previous": state, "force_classify": True}, # Force classify
+        state, # Pass state object
          config={"configurable": {"thread_id": "t"}}
     )
 
+    assert isinstance(final_state, ChatState), f"Expected ChatState, got {type(final_state)}"
     assert called.get("secretary"), "fake_secretary workflow was not called"
     assert final_state.current_persona == "secretary", "Final state persona should be secretary"
 
@@ -134,24 +143,31 @@ async def test_oracle_workflow_classifier_switch(monkeypatch):
 
     import src.oracle_workflow as owf
     monkeypatch.setattr(owf, "persona_classifier_agent", fake_classifier)
-    monkeypatch.setattr(owf, "director_agent", AsyncMock(return_value=["write"]))
-    monkeypatch.setitem(
-        owf.persona_workflows,
-        "therapist",
-        fake_therapist,
+    # Patch oracle_agent instead of director_agent
+    monkeypatch.setattr(owf, "oracle_agent", AsyncMock(return_value="therapist")) # Oracle calls therapist workflow
+    # Patch agents_map within oracle_workflow
+    agents_map_patch = owf.agents_map.copy()
+    agents_map_patch["therapist"] = fake_therapist # Map therapist action to the fake workflow
+    monkeypatch.setattr(owf, "agents_map", agents_map_patch)
+
+    # Patch necessary cl functions within oracle_workflow
+    monkeypatch.setattr(owf.cl, "user_session", MagicMock(get=lambda k,d=None: {}))
+    monkeypatch.setattr(owf, "append_log", lambda *a, **kw: None)
+
+    # current_persona cannot be None (pydantic validation), so set to default
+    state = ChatState(messages=[], thread_id="t", current_persona="default")
+    # Pass state object as second argument, force classify
+    result_state = await oracle_workflow(
+        {"messages": [], "previous": state, "force_classify": True},
+        state, # Pass state object
+        config={"configurable": {"thread_id": "t"}}
     )
 
-    # current_persona cannot be None (pydantic validation), so set to empty string
-    state = ChatState(messages=[], thread_id="t", current_persona="")
-    result_state = await oracle_workflow.ainvoke(
-        {"messages": [], "previous": state},
-        state,
-    )
-
+    assert isinstance(result_state, ChatState), f"Expected ChatState, got {type(result_state)}"
     assert result_state.current_persona == "therapist"
     assert any(
         m.content == "Therapist response" for m in result_state.messages
-    )
+    ), "Therapist response message not found"
 
 
 @pytest.mark.asyncio
@@ -171,21 +187,26 @@ async def test_oracle_workflow_error_handling(monkeypatch):
     # Patch agents_map in oracle_workflow module
     agents_map_patch = owf.agents_map.copy()
     agents_map_patch["default"] = broken_workflow
-    monkeypatch.setattr("src.oracle_workflow.agents_map", agents_map_patch)
+    monkeypatch.setattr(owf, "agents_map", agents_map_patch) # Patch map on the module
+
+    # Patch necessary cl functions within oracle_workflow
+    monkeypatch.setattr(owf.cl, "user_session", MagicMock(get=lambda k,d=None: {}))
+    monkeypatch.setattr(owf, "append_log", lambda *a, **kw: None)
 
 
     state = ChatState(messages=[], thread_id="t", current_persona="default")
-    result_state = await oracle_workflow.ainvoke(
+    # Pass state object as second argument
+    result_state = await oracle_workflow(
         {"messages": [], "previous": state},
-        state,
+        state, # Pass state object
          config={"configurable": {"thread_id": "t"}}
     )
 
-    assert isinstance(result_state, ChatState), "Workflow did not return ChatState"
+    assert isinstance(result_state, ChatState), f"Workflow did not return ChatState, got {type(result_state)}"
     # Should append an error message from the Oracle loop's error handling
     assert any(
         m.name == "error" for m in result_state.messages
-    ), "Error message not found in state"
+    ), f"Error message not found in state messages: {[m.name for m in result_state.messages]}"
 
 
 import src.persona_workflows as pw
@@ -214,22 +235,36 @@ async def test_oracle_workflow_multi_hop(monkeypatch):
         state.messages.append(
             AIMessage(content="Story continues", name="Game Master", metadata={})
         )
+        # Return only the new messages added by this workflow
         return state.messages[-2:]
 
     import src.oracle_workflow as owf
-    monkeypatch.setattr(owf, "director_agent", AsyncMock(return_value=["write"]))
-    monkeypatch.setitem(owf.persona_workflows, "storyteller_gm", fake_storyteller)
+    # Patch oracle_agent instead of director_agent
+    # Simulate Oracle deciding to call the storyteller_gm workflow
+    monkeypatch.setattr(owf, "oracle_agent", AsyncMock(return_value="storyteller_gm"))
+    # Patch agents_map within oracle_workflow
+    agents_map_patch = owf.agents_map.copy()
+    agents_map_patch["storyteller_gm"] = fake_storyteller # Map action to the fake workflow
+    monkeypatch.setattr(owf, "agents_map", agents_map_patch)
+
+    # Patch necessary cl functions within oracle_workflow
+    monkeypatch.setattr(owf.cl, "user_session", MagicMock(get=lambda k,d=None: {}))
+    monkeypatch.setattr(owf, "append_log", lambda *a, **kw: None)
+    monkeypatch.setattr(owf, "persona_classifier_agent", AsyncMock(return_value={"persona": "storyteller_gm"})) # Assume classifier runs
 
     state = ChatState(
         messages=[HumanMessage(content="Tell me a story", name="Player")],
         thread_id="t",
         current_persona="storyteller_gm",
     )
-    result_state = await oracle_workflow.ainvoke(
+    # Pass state object as second argument
+    result_state = await oracle_workflow(
         {"messages": state.messages, "previous": state},
-        state,
+        state, # Pass state object
+        config={"configurable": {"thread_id": "t"}}
     )
 
+    assert isinstance(result_state, ChatState), f"Expected ChatState, got {type(result_state)}"
     contents = [m.content for m in result_state.messages]
-    assert "Lore info" in contents
-    assert "Story continues" in contents
+    assert "Lore info" in contents, f"Lore info missing in {contents}"
+    assert "Story continues" in contents, f"Story continues missing in {contents}"
