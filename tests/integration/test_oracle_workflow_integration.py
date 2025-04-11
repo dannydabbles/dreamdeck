@@ -22,7 +22,6 @@ def initial_chat_state():
 @pytest.fixture(autouse=True)
 def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
     """Mocks Chainlit session and message functions for oracle tests."""
-    mock_session = MagicMock()
     # Use a copy of the initial state for the session data to avoid test interference
     session_state = initial_chat_state.model_copy(deep=True)
     session_data = {
@@ -31,7 +30,7 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
         "chat_settings": {"persona": session_state.current_persona, "auto_persona_switch": True},
         "current_persona": session_state.current_persona,
         "user": {"identifier": "test_user"},
-        "gm_message": None,
+        "gm_message": None,  # Keep gm_message handling
         "suggested_persona": None,
         "pending_persona_switch": None,
         "suppressed_personas": {},
@@ -41,6 +40,14 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
         # Ensure the 'state' returned is the one currently in session_data
         if key == 'state':
             return session_data.get('state', default)
+        # Handle gm_message specifically for writer agent
+        if key == "gm_message":
+            mock_msg = MagicMock(spec=cl.Message)
+            mock_msg.stream_token = AsyncMock()
+            mock_msg.send = AsyncMock()
+            mock_msg.update = AsyncMock()
+            mock_msg.id = f"mock_gm_msg_{uuid.uuid4()}"
+            return mock_msg
         return session_data.get(key, default)
 
     def mock_set(key, value):
@@ -50,55 +57,73 @@ def mock_cl_environment_for_oracle(monkeypatch, initial_chat_state):
             nonlocal session_state
             session_state = value
 
-
-    mock_session.get = mock_get
-    mock_session.set = mock_set
-    monkeypatch.setattr(cl, "user_session", mock_session)
+    # Mock cl.user_session more directly
+    mock_user_session = MagicMock()
+    mock_user_session.get = mock_get
+    mock_user_session.set = mock_set
+    monkeypatch.setattr(cl, "user_session", mock_user_session)
+    # Also patch specific agent imports if they use it directly
+    monkeypatch.setattr("src.agents.writer_agent.cl.user_session", mock_user_session, raising=False)
+    monkeypatch.setattr("src.agents.todo_agent.cl.user_session", mock_user_session, raising=False)
+    monkeypatch.setattr("src.agents.dice_agent.cl_user_session", mock_user_session, raising=False)
+    monkeypatch.setattr("src.agents.persona_classifier_agent.cl.user_session", mock_user_session, raising=False)
+    monkeypatch.setattr("src.agents.knowledge_agent.cl.user_session", mock_user_session, raising=False)
+    monkeypatch.setattr("src.event_handlers.cl_user_session", mock_user_session, raising=False)
 
     # Mock cl.Message methods to avoid actual UI updates
-    mock_message_instance = AsyncMock()
-    mock_message_instance.id = f"mock_cl_msg_{uuid.uuid4()}" # Ensure it has a unique ID per instance
-    # Make stream_token and send awaitable mocks
+    mock_message_instance = AsyncMock(spec=cl.Message)
+    mock_message_instance.id = f"mock_cl_msg_{uuid.uuid4()}"
     mock_message_instance.stream_token = AsyncMock()
     mock_message_instance.send = AsyncMock()
+    mock_message_instance.update = AsyncMock()
     mock_message_cls = MagicMock(return_value=mock_message_instance)
     monkeypatch.setattr(cl, "Message", mock_message_cls)
 
-    # Mock cl.context for thread_id
-    mock_context = MagicMock()
+    # --- Explicit Context Mocking ---
+    mock_context_instance = MagicMock()
     # Ensure context thread_id matches the state's thread_id
-    mock_context.session.thread_id = initial_chat_state.thread_id
-    monkeypatch.setattr(cl, "context", mock_context)
+    mock_context_instance.session.thread_id = initial_chat_state.thread_id
+    mock_context_instance.emitter = AsyncMock()
+
+    try:
+        from chainlit.context import context_var
+        context_token = context_var.set(mock_context_instance)
+    except (ImportError, LookupError):
+        monkeypatch.setattr(cl, "context", mock_context_instance)
+        monkeypatch.setattr("src.agents.writer_agent.cl.context", mock_context_instance, raising=False)
+        monkeypatch.setattr("src.agents.todo_agent.cl.context", mock_context_instance, raising=False)
+        monkeypatch.setattr("src.event_handlers.cl.context", mock_context_instance, raising=False)
+
+    # --- Agent-Specific Message Mocking (Safeguard) ---
+    monkeypatch.setattr("src.agents.writer_agent.cl.Message", mock_message_cls, raising=False)
+    monkeypatch.setattr("src.agents.todo_agent.CLMessage", mock_message_cls, raising=False)
+    monkeypatch.setattr("src.agents.dice_agent.CLMessage", mock_message_cls, raising=False)
+    monkeypatch.setattr("src.agents.web_search_agent.cl.Message", mock_message_cls, raising=False)
+    monkeypatch.setattr("src.agents.report_agent.CLMessage", mock_message_cls, raising=False)
+    monkeypatch.setattr("src.agents.knowledge_agent.cl.Message", mock_message_cls, raising=False)
+    monkeypatch.setattr("src.agents.storyboard_editor_agent.CLMessage", mock_message_cls, raising=False)
 
     # Mock storage functions
     monkeypatch.setattr("src.storage.append_log", lambda *args, **kwargs: None)
     monkeypatch.setattr("src.storage.save_text_file", lambda *args, **kwargs: None)
-    monkeypatch.setattr("src.storage.load_text_file", lambda *args, **kwargs: "") # Mock load as well
+    monkeypatch.setattr("src.storage.load_text_file", lambda *args, **kwargs: "")
 
     # Mock vector store put/add methods, allow get to return empty list
     mock_vector_store = session_data["vector_memory"]
     mock_vector_store.put = AsyncMock()
     mock_vector_store.add_documents = AsyncMock()
     mock_vector_store.get = MagicMock(return_value=[])
-    # Mock collection add/delete if needed by specific tests (e.g., reset)
     mock_vector_store.collection = AsyncMock()
     mock_vector_store.collection.add = AsyncMock()
     mock_vector_store.collection.delete = AsyncMock()
 
-
-    # Ensure writer agent uses the mocked cl.Message
-    # This might require patching within the writer_agent module specifically
-
     # Ensure todo agent uses the mocked cl.Message and storage
-    monkeypatch.setattr("src.agents.todo_agent.cl", cl)
-    monkeypatch.setattr("src.agents.todo_agent.os.path.exists", lambda *args: False) # Assume file doesn't exist initially
+    monkeypatch.setattr("src.agents.todo_agent.os.path.exists", lambda *args: False)
     monkeypatch.setattr("src.agents.todo_agent.os.makedirs", lambda *args, **kwargs: None)
-    # Mock open globally instead of inside src.agents.todo_agent
     mock_open = MagicMock()
     monkeypatch.setattr("builtins.open", mock_open)
 
-
-    return mock_session # Return the mock session
+    return mock_user_session
 
 # --- Test Cases ---
 
