@@ -7,6 +7,9 @@ from src.agents.persona_classifier_agent import persona_classifier_agent
 # from src.agents.director_agent import director_agent
 from src.agents.oracle_agent import oracle_agent # Phase 1: Import oracle_agent
 from src.agents import agents_map # Phase 1: Import agents_map
+
+# Expose append_log for test monkeypatching
+from src.storage import append_log
 from src.config import MAX_CHAIN_LENGTH # Phase 1: Import max iterations
 from langchain_core.runnables import RunnableLambda
 import logging
@@ -123,9 +126,16 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
             is_persona_agent = next_action in persona_workflows
 
             try:
-                # Execute the chosen agent/tool
+                # Special handling for "knowledge" agent (needs knowledge_type)
+                if next_action == "knowledge":
+                    # Try to infer knowledge_type from state or inputs, fallback to "lore"
+                    knowledge_type = getattr(state, "knowledge_type", None) or inputs.get("knowledge_type", "lore")
+                    agent_output = await agent_func(state, knowledge_type=knowledge_type, config=config)
+                # Special handling for "continue_story" (alias for writer agent)
+                elif next_action == "continue_story":
+                    agent_output = await agent_func(state, config=config)
                 # If this is a persona workflow, call with (inputs, state, config)
-                if next_action in persona_workflows:
+                elif next_action in persona_workflows:
                     try:
                         agent_output = await agent_func(inputs, state, config=config)
                     except TypeError:
