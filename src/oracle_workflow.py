@@ -100,6 +100,14 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
         if os.environ.get("DREAMDECK_TEST_MODE") == "1" or getattr(oracle_agent, "_force_undecorated", False):
             use_undecorated_oracle = True
 
+        # PATCH: Add "continue_story" and "roll" to agents_map if not present
+        if "continue_story" not in agents_map:
+            from src.agents.writer_agent import writer_agent
+            agents_map["continue_story"] = writer_agent._generate_story
+        if "roll" not in agents_map:
+            from src.agents.dice_agent import dice_agent
+            agents_map["roll"] = dice_agent._dice_roll
+
         while iterations < MAX_CHAIN_LENGTH:
             iterations += 1
             cl_logger.info(f"Oracle loop iteration: {iterations}")
@@ -115,31 +123,32 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
                 cl_logger.info("Oracle decided END_TURN.")
                 break
 
-            # Get the agent function from the map
+            # PATCH: Accept "continue_story" as a valid action, mapped to writer agent
+            # PATCH: Accept "roll" as a valid action, mapped to dice agent
             agent_func = agents_map.get(next_action)
-
             if not agent_func:
                 cl_logger.error(f"Oracle chose unknown action: '{next_action}'. Ending turn.")
                 break
 
-            # Check if the chosen action is a persona agent (signaling end of tool chain)
+            # PATCH: Accept "continue_story" as a persona agent for end-of-turn
             is_persona_agent = next_action in persona_workflows or next_action == "continue_story"
 
             try:
                 # Special handling for "knowledge" agent (needs knowledge_type)
                 if next_action == "knowledge":
-                    # Try to infer knowledge_type from state or inputs, fallback to "lore"
                     knowledge_type = getattr(state, "knowledge_type", None) or inputs.get("knowledge_type", "lore")
                     agent_output = await agent_func(state, knowledge_type=knowledge_type, config=config)
                 # Special handling for "continue_story" (alias for writer agent)
                 elif next_action == "continue_story":
+                    agent_output = await agent_func(state, config=config)
+                # Special handling for "roll" (alias for dice agent)
+                elif next_action == "roll":
                     agent_output = await agent_func(state, config=config)
                 # If this is a persona workflow, call with (inputs, state, config)
                 elif next_action in persona_workflows:
                     try:
                         agent_output = await agent_func(inputs, state, config=config)
                     except TypeError:
-                        # For test monkeypatching: allow fallback to (state, **kwargs)
                         agent_output = await agent_func(state, config=config)
                 else:
                     agent_output = await agent_func(state, config=config)
@@ -148,23 +157,20 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
                 if isinstance(agent_output, list):
                     valid_messages = [msg for msg in agent_output if isinstance(msg, BaseMessage)]
                     if valid_messages:
-                        # Patch metadata for consistency (Phase 2 refinement needed)
                         for msg in valid_messages:
                             if isinstance(msg, AIMessage):
                                 if msg.metadata is None:
                                     msg.metadata = {}
                                 msg.metadata.setdefault("type", "ai")
                                 msg.metadata.setdefault("persona", state.current_persona)
-                                msg.metadata.setdefault("agent", next_action) # Track which agent generated it
+                                msg.metadata.setdefault("agent", next_action)
                         state.messages.extend(valid_messages)
-                        # Phase 3: Add tool results if not a persona agent
                         if not is_persona_agent:
                             state.tool_results_this_turn.extend(valid_messages)
-                        state.last_agent_called = next_action # Track successful agent call
+                        state.last_agent_called = next_action
                 elif isinstance(agent_output, dict) and "messages" in agent_output:
-                     # Handle dict output (legacy or specific tools)
-                     valid_messages = [msg for msg in agent_output["messages"] if isinstance(msg, BaseMessage)]
-                     if valid_messages:
+                    valid_messages = [msg for msg in agent_output["messages"] if isinstance(msg, BaseMessage)]
+                    if valid_messages:
                         for msg in valid_messages:
                             if isinstance(msg, AIMessage):
                                 if msg.metadata is None:
@@ -177,7 +183,6 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
                             state.tool_results_this_turn.extend(valid_messages)
                         state.last_agent_called = next_action
                 elif isinstance(agent_output, ChatState):
-                    # If agent returns full state, update state (less common)
                     state = agent_output
                     state.last_agent_called = next_action
                 else:
@@ -191,18 +196,16 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
             except Exception as e:
                 cl_logger.error(f"Agent '{next_action}' failed: {e}", exc_info=True)
                 state.increment_error_count()
-                # Add error message to state? Or just log? For now, log and break.
                 error_msg = AIMessage(
                     content=f"An error occurred while running '{next_action}'.",
                     name="error",
                     metadata={"message_id": None, "agent": next_action},
                 )
                 state.messages.append(error_msg)
-                break # Stop processing on agent error
+                break
 
         if iterations >= MAX_CHAIN_LENGTH:
             cl_logger.warning(f"Oracle reached max iterations ({MAX_CHAIN_LENGTH}). Ending turn.")
-            # Optionally add a message indicating max iterations reached
             max_iter_msg = AIMessage(
                 content="Reached maximum processing steps for this turn.",
                 name="system",
@@ -210,7 +213,6 @@ async def oracle_workflow(inputs: dict, state: ChatState, *, config=None) -> Cha
             )
             state.messages.append(max_iter_msg)
 
-        # Return the final state after the loop finishes or breaks
         return state
 
     except Exception as e:

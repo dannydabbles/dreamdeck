@@ -193,6 +193,8 @@ persona_workflows = {
     "lorekeeper": lorekeeper_workflow,
     "dungeon_master": dungeon_master_workflow,
     "default": default_workflow,
+    # PATCH: allow "continue_story" to be routed to storyteller_workflow for test compatibility
+    "continue_story": storyteller_workflow,
 }
 
 __all__ = [
