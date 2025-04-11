@@ -31,21 +31,23 @@ class DiceConfig(BaseModel):
 
 
 class DecisionAgentConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
     temperature: float
     max_tokens: int
     streaming: bool
     base_url: Optional[str] = None
     verbose: bool
+    tools: dict = Field(default_factory=dict)
 
 
 class WriterAgentConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
     temperature: float
     max_tokens: int
     base_url: Optional[str] = None
     streaming: bool
     verbose: bool
+    personas: dict = Field(default_factory=dict)
 
 
 class StoryboardEditorAgentConfig(BaseModel):
@@ -58,10 +60,12 @@ class StoryboardEditorAgentConfig(BaseModel):
 
 
 class AgentsConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
     decision_agent: DecisionAgentConfig
     writer_agent: WriterAgentConfig
     storyboard_editor_agent: StoryboardEditorAgentConfig
+    todo_agent: dict = Field(default_factory=dict)
+    knowledge_agent: dict = Field(default_factory=dict)
 
 
 class DefaultsConfig(BaseModel):
