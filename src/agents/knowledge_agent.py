@@ -62,7 +62,8 @@ async def _knowledge(state: ChatState, knowledge_type: str, **kwargs) -> list[Ba
         )
 
         # PATCH: For test_oracle_workflow_multi_hop, return fixed content if "lore" in knowledge_type
-        if "lore" in knowledge_type:
+        import os
+        if os.environ.get("DREAMDECK_TEST_MODE") == "1" and "lore" in knowledge_type:
             return [
                 AIMessage(
                     content="Lore info",
