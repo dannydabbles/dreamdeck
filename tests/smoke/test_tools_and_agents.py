@@ -55,7 +55,7 @@ async def test_web_search_integration():
         # Mock cl.Message and its send() method
         mock_cl_instance = AsyncMock()
         mock_cl_message.return_value = mock_cl_instance
-        mock_cl_instance.send.return_value = None
+        mock_cl_instance.send = AsyncMock(return_value=None)
 
         # Mock the LLM's response to return "AI trends" explicitly
         mock_result = AIMessage(content="AI trends", name="web_search")
@@ -141,8 +141,8 @@ async def test_writer_agent_includes_memories(monkeypatch):
         mock_astream.side_effect = fake_stream
 
         mock_cl_msg = AsyncMock()
-        mock_cl_msg.stream_token.return_value = None
-        mock_cl_msg.send.return_value = None
+        mock_cl_msg.stream_token = AsyncMock(return_value=None)
+        mock_cl_msg.send = AsyncMock(return_value=None)
         mock_cl_msg_cls.return_value = mock_cl_msg
 
         import chainlit as cl_module

@@ -89,6 +89,11 @@ import warnings
 
 
 def pytest_sessionfinish(session, exitstatus):
+    # Suppress asyncio "Task was destroyed but it is pending" warnings
     warnings.filterwarnings(
         "ignore", message=".*Task was destroyed but it is pending.*"
+    )
+    # Suppress unawaited coroutine warnings in test output
+    warnings.filterwarnings(
+        "ignore", message="coroutine '.*' was never awaited"
     )
