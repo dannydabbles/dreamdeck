@@ -1,6 +1,7 @@
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
+import uuid
 
 import src.oracle_workflow as oracle_workflow_mod
 from src.models import ChatState, HumanMessage, AIMessage
@@ -270,14 +271,14 @@ async def test_oracle_single_step_persona_agent(initial_chat_state, mock_cl_envi
     mock_persona_agent_output = [AIMessage(content="A grand story unfolds!", name=current_state.current_persona, metadata={"message_id": "agent_msg_1", "agent": current_state.current_persona, "persona": current_state.current_persona})]
     mock_persona_agent = AsyncMock(return_value=mock_persona_agent_output)
     monkeypatch.setitem(
-        src.oracle_workflow.agents_map,
+        oracle_workflow_mod.agents_map,
         current_state.current_persona,
         mock_persona_agent
     )
 
     inputs = {"messages": current_state.messages, "previous": current_state, "state": current_state}
 
-    final_state = await oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
+    final_state = await oracle_workflow_mod.oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
 
     assert isinstance(final_state, ChatState)
     mock_oracle_agent.assert_called_once() # Check if oracle_agent was called
@@ -308,15 +309,15 @@ async def test_oracle_multi_step_tool_then_persona(initial_chat_state, mock_cl_e
 
     mock_search_output = [AIMessage(content="Found info about dragons.", name="search_tool", metadata={"message_id": "search_msg_1", "agent": "search", "persona": current_state.current_persona})]
     mock_search_agent = AsyncMock(return_value=mock_search_output)
-    monkeypatch.setitem(src.oracle_workflow.agents_map, "search", mock_search_agent)
+    monkeypatch.setitem(oracle_workflow_mod.agents_map, "search", mock_search_agent)
 
     mock_persona_agent_output = [AIMessage(content="Okay, here's a story about dragons...", name=current_state.current_persona, metadata={"message_id": "agent_msg_1", "agent": current_state.current_persona, "persona": current_state.current_persona})]
     mock_persona_agent = AsyncMock(return_value=mock_persona_agent_output)
-    monkeypatch.setitem(src.oracle_workflow.agents_map, current_state.current_persona, mock_persona_agent)
+    monkeypatch.setitem(oracle_workflow_mod.agents_map, current_state.current_persona, mock_persona_agent)
 
     inputs = {"messages": current_state.messages, "previous": current_state, "state": current_state}
 
-    final_state = await oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
+    final_state = await oracle_workflow_mod.oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
 
     assert isinstance(final_state, ChatState)
     assert mock_oracle_agent.call_count == 2 # Called for search, then for persona agent
@@ -361,11 +362,11 @@ async def test_oracle_max_iterations_reached(initial_chat_state, mock_cl_environ
         for i in range(MAX_ITER)
     ]
     mock_search_agent = AsyncMock(side_effect=mock_search_outputs)
-    monkeypatch.setitem(src.oracle_workflow.agents_map, "search", mock_search_agent)
+    monkeypatch.setitem(oracle_workflow_mod.agents_map, "search", mock_search_agent)
 
     inputs = {"messages": current_state.messages, "previous": current_state, "state": current_state}
 
-    final_state = await oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
+    final_state = await oracle_workflow_mod.oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
 
     assert isinstance(final_state, ChatState)
     # Oracle is called MAX_ITER times, then loop breaks
@@ -394,11 +395,11 @@ async def test_oracle_persona_classification_updates_state(initial_chat_state, m
 
     mock_therapist_output = [AIMessage(content="Let's talk about that.", name="therapist", metadata={"message_id": "therapist_msg_1", "agent": "therapist", "persona": "therapist"})]
     mock_therapist_agent = AsyncMock(return_value=mock_therapist_output)
-    monkeypatch.setitem(src.oracle_workflow.agents_map, "therapist", mock_therapist_agent)
+    monkeypatch.setitem(oracle_workflow_mod.agents_map, "therapist", mock_therapist_agent)
 
     inputs = {"messages": current_state.messages, "previous": current_state, "state": current_state, "force_classify": True}
 
-    final_state = await oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
+    final_state = await oracle_workflow_mod.oracle_workflow(inputs, current_state, config={"configurable": {"thread_id": current_state.thread_id}})
 
     assert isinstance(final_state, ChatState)
     mock_classifier.assert_called_once()
