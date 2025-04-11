@@ -6,7 +6,9 @@ from src.agents.persona_classifier_agent import persona_classifier_agent
 # Phase 1: Remove director_agent import
 # from src.agents.director_agent import director_agent
 from src.agents.oracle_agent import oracle_agent # Phase 1: Import oracle_agent
-# Do NOT import agents_map at module level! Import inside oracle_workflow for test patching.
+
+# Expose agents_map for test monkeypatching
+from src.agents import agents_map
 
 # Expose append_log for test monkeypatching
 from src.storage import append_log, get_persona_daily_dir
