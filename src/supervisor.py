@@ -35,6 +35,9 @@ async def supervisor(state: ChatState, **kwargs):
         if user_input.startswith(f"/{tool_name}") or tool_name in user_input:
             cl_logger.info(f"Supervisor: Routing to {tool_name}_agent.")
             agent = get_agent(tool_name)
+            if agent is None:
+                cl_logger.warning(f"Supervisor: No agent found for tool '{tool_name}'.")
+                continue
             if tool_name == "storyboard":
                 # Find last GM message id for storyboard
                 gm_msg = next(

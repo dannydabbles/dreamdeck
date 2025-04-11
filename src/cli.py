@@ -55,7 +55,11 @@ def main():
         # Add a synthetic HumanMessage for input
         from langchain_core.messages import HumanMessage
         state.messages.append(HumanMessage(content=args.input, name="Player"))
-        result = asyncio.run(agent(state))
+        try:
+            result = asyncio.run(agent(state))
+        except Exception as e:
+            print(f"Error running agent: {e}")
+            sys.exit(2)
         print("Agent output:")
         for msg in result:
             print(f"{msg.name}: {msg.content}")

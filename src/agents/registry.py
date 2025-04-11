@@ -50,6 +50,8 @@ AGENT_REGISTRY = {
 
 def get_agent(name):
     """Get agent callable by name (case-insensitive)."""
+    if not isinstance(name, str):
+        return None
     return AGENT_REGISTRY.get(name.lower(), {}).get("agent")
 
 def list_agents():
