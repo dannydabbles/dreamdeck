@@ -75,6 +75,13 @@ async def oracle_workflow(inputs: dict, state:ChatState, *, config=None) -> list
                 state.__dict__["current_persona"] = suggested_persona
             append_log(state.current_persona, f"Oracle dispatched to persona workflow: {state.current_persona}")
 
+            # After classifier, update persona in all existing AI message metadata to match new persona
+            for msg in state.messages:
+                if isinstance(msg, AIMessage):
+                    if msg.metadata is None:
+                        msg.metadata = {}
+                    msg.metadata["persona"] = state.current_persona
+
         persona_key = state.current_persona.lower().replace(" ", "_")
         workflow_func = persona_workflows.get(persona_key)
 
