@@ -2,12 +2,12 @@
 Exports all agent entrypoints for use in commands and workflows.
 """
 
-from .web_search_agent import web_search_agent
-from .dice_agent import dice_roll
+from .web_search_agent import _web_search
+from .dice_agent import _dice_roll
 from .writer_agent import writer_agent
-from .todo_agent import manage_todo
-from .knowledge_agent import knowledge_agent as knowledge_agent_func
-from .report_agent import report_agent
+from .todo_agent import _manage_todo
+from .knowledge_agent import _knowledge as knowledge_agent_func
+from .report_agent import _generate_report
 # Phase 1: Import persona workflows to add them to the map
 from src.persona_workflows import (
     storyteller_workflow,
@@ -37,13 +37,13 @@ from .dice_agent import _dice_roll
 agents_map = {
     "roll": _dice_roll,
     "dice_roll": _dice_roll,
-    "search": web_search_agent,
-    "web_search": web_search_agent,
-    "todo": manage_todo,
-    "manage_todo": manage_todo,
+    "search": _web_search,
+    "web_search": _web_search,
+    "todo": _manage_todo,
+    "manage_todo": _manage_todo,
     "write": writer_agent,
     "continue_story": writer_agent,
-    "report": report_agent,
+    "report": _generate_report,
     "knowledge": knowledge_agent_func,  # Patch: expose as function, not partial
     # Phase 1: Add persona agents to the map using their keys
     "storyteller_gm": storyteller_workflow,
