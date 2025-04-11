@@ -264,6 +264,9 @@ get_persona_daily_dir = get_persona_daily_dir
 from src.storage import save_text_file
 save_text_file = save_text_file
 
+# Expose agents_map and persona_workflows for test monkeypatching
+from src.agents import agents_map, persona_workflows
+
 
 class OracleWorkflowWrapper:
     async def ainvoke(self, *args, **kwargs):
