@@ -9,7 +9,6 @@ from src.agents.oracle_agent import oracle_agent # Phase 1: Import oracle_agent
 from src.agents import agents_map # Phase 1: Import agents_map
 
 # Expose append_log for test monkeypatching
-append_log = append_log
 from src.storage import append_log
 from src.config import MAX_CHAIN_LENGTH # Phase 1: Import max iterations
 from langchain_core.runnables import RunnableLambda
