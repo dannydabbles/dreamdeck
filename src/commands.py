@@ -512,3 +512,10 @@ async def command_persona(query: str = ""):
     await cl.Message(
         content=f"✅ Persona forcibly switched to **{persona_name}**."
     ).send()
+
+
+# Fallback handler for empty slash command ("/")
+@cl.command(name="", description="Fallback for empty slash command")
+async def command_empty():
+    """Fallback for empty slash command (/)"""
+    await cl.Message(content="Unknown command: /").send()
