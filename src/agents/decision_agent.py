@@ -1,6 +1,19 @@
 from src.config import config, OPENAI_SETTINGS, LLM_TIMEOUT
 import logging
 from jinja2 import Template
+
+# --- PATCH: Monkeypatch langgraph.config.get_config to avoid "outside of a runnable context" error ---
+try:
+    import langgraph.config
+    def _safe_get_config():
+        try:
+            return langgraph.config.get_config()
+        except Exception:
+            return {}
+    langgraph.config.get_config = _safe_get_config
+except ImportError:
+    pass
+
 from langgraph.func import task
 from langchain_core.messages import BaseMessage, AIMessage
 from langchain_openai import ChatOpenAI
