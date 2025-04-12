@@ -1,19 +1,7 @@
 """
 Supervisor agent for Dreamdeck, orchestrating persona agents and tools
-using the langgraph-supervisor pattern.
+using the langgraph-supervisor pattern, now using the langgraph-supervisor graph API.
 """
-
-# --- PATCH: Monkeypatch langgraph.config.get_config to avoid "outside of a runnable context" error in tests ---
-try:
-    import langgraph.config
-    def _safe_get_config():
-        try:
-            return langgraph.config.get_config()
-        except Exception:
-            return {}
-    langgraph.config.get_config = _safe_get_config
-except ImportError:
-    pass
 
 from src.models import ChatState
 from src.agents.registry import AGENT_REGISTRY, get_agent
@@ -23,21 +11,7 @@ import logging
 import sys
 import os
 
-# Monkeypatch: Use a no-op task decorator in test environments to avoid langgraph context errors
-def _noop_decorator(func):
-    return func
-
-import os
-if (
-    "pytest" in sys.modules
-    or "PYTEST_CURRENT_TEST" in os.environ
-    or "PYTEST_RUNNING" in os.environ
-    or os.environ.get("DREAMDECK_TEST_MODE") == "1"
-):
-    # Patch: also check DREAMDECK_TEST_MODE for test compatibility
-    task = _noop_decorator
-else:
-    from langgraph.func import task
+from langgraph_supervisor import SupervisorGraph, SupervisorNode, ToolNode, PersonaNode
 
 cl_logger = logging.getLogger("chainlit")
 
@@ -46,73 +20,47 @@ def _normalize_persona(persona: str) -> str:
         return "default"
     return persona.lower().replace(" ", "_")
 
-async def supervisor(state: ChatState, **kwargs):
-    """
-    Supervisor agent: routes user input to the correct tool or persona agent.
-    Uses the central agent registry for extensibility.
-    """
-    # Extract config if present (for LangGraph context propagation)
-    config = kwargs.get("config", None)
+# Define PersonaNode for each persona in writer_agent (if registry exists)
+persona_nodes = {}
+if hasattr(writer_agent, "persona_agent_registry"):
+    for persona_key, agent in writer_agent.persona_agent_registry.items():
+        persona_nodes[persona_key] = PersonaNode(
+            name=persona_key,
+            agent=agent,
+        )
+else:
+    # Fallback: just use writer_agent as default persona
+    persona_nodes["default"] = PersonaNode(
+        name="default",
+        agent=writer_agent,
+    )
 
-    last_human = state.get_last_human_message()
-    if not last_human:
-        cl_logger.warning("Supervisor: No user message found in state.")
-        return []
+# Define ToolNodes for each tool in AGENT_REGISTRY
+tool_nodes = {}
+for tool_name, entry in AGENT_REGISTRY.items():
+    tool_nodes[tool_name] = ToolNode(
+        name=tool_name,
+        agent=entry["agent"],
+    )
 
-    user_input = last_human.content.strip().lower()
+# SupervisorNode: decision logic for routing
+class DreamdeckSupervisorNode(SupervisorNode):
+    def __init__(self):
+        super().__init__(name="dreamdeck_supervisor")
 
-    # Tool routing: check for explicit tool commands
-    for tool_name in AGENT_REGISTRY:
-        if user_input.startswith(f"/{tool_name}") or tool_name in user_input:
-            cl_logger.info(f"Supervisor: Routing to {tool_name}_agent.")
-            agent = get_agent(tool_name)
-            if agent is None:
-                cl_logger.warning(f"Supervisor: No agent found for tool '{tool_name}'.")
-                continue
-            if tool_name == "storyboard":
-                # Find last GM message id for storyboard
-                gm_msg = next(
-                    (msg for msg in reversed(state.messages)
-                     if isinstance(msg, AIMessage) and msg.name and "game master" in msg.name.lower()
-                     and msg.metadata and "message_id" in msg.metadata),
-                    None,
-                )
-                if gm_msg:
-                    # Only pass config if agent supports it (i.e., is a LangGraph Runnable)
-                    if config is not None and hasattr(agent, "ainvoke"):
-                        return await agent(state, gm_message_id=gm_msg.metadata["message_id"], config=config)
-                    else:
-                        return await agent(state, gm_message_id=gm_msg.metadata["message_id"])
-                else:
-                    cl_logger.warning("Supervisor: No GM message found for storyboard.")
-                    return []
-            # Only pass config if agent supports it (i.e., is a LangGraph Runnable)
-            if config is not None and hasattr(agent, "ainvoke"):
-                return await agent(state, config=config)
-            else:
-                return await agent(state)
+    async def route(self, state: ChatState, **kwargs):
+        last_human = state.get_last_human_message()
+        if not last_human:
+            cl_logger.warning("Supervisor: No user message found in state.")
+            return {"route": "default"}
 
-    # --- LLM-based dynamic routing: call decision agent ---
-    decision_agent = get_agent("decision")
-    if decision_agent is not None:
-        decision = await decision_agent(state)
-        route = decision.get("route", "writer")
-        cl_logger.info(f"Supervisor: Decision agent route: {route}")
-        # Route can be: "dice", "search", "todo", "storyboard", "writer", "persona:Therapist", etc.
-        if route.startswith("persona:"):
-            persona_name = route.split(":", 1)[1].strip()
-            persona_key = _normalize_persona(persona_name)
-            state.current_persona = persona_key.replace("_", " ").title()
-            agent = getattr(writer_agent, "persona_agent_registry", {}).get(persona_key, writer_agent)
-            cl_logger.info(f"Supervisor: Routing to persona agent '{persona_key}' (via decision agent).")
-            if config is not None and hasattr(agent, "ainvoke"):
-                return await agent(state, config=config)
-            else:
-                return await agent(state)
-        elif route in AGENT_REGISTRY:
-            agent = get_agent(route)
-            if agent is not None:
-                if route == "storyboard":
+        user_input = last_human.content.strip().lower()
+
+        # Tool routing: check for explicit tool commands
+        for tool_name in AGENT_REGISTRY:
+            if user_input.startswith(f"/{tool_name}") or tool_name in user_input:
+                cl_logger.info(f"Supervisor: Routing to {tool_name}_agent.")
+                if tool_name == "storyboard":
                     # Find last GM message id for storyboard
                     gm_msg = next(
                         (msg for msg in reversed(state.messages)
@@ -121,49 +69,63 @@ async def supervisor(state: ChatState, **kwargs):
                         None,
                     )
                     if gm_msg:
-                        if config is not None and hasattr(agent, "ainvoke"):
-                            return await agent(state, gm_message_id=gm_msg.metadata["message_id"], config=config)
-                        else:
-                            return await agent(state, gm_message_id=gm_msg.metadata["message_id"])
+                        return {"route": tool_name, "gm_message_id": gm_msg.metadata["message_id"]}
                     else:
                         cl_logger.warning("Supervisor: No GM message found for storyboard.")
-                        return []
-                if config is not None and hasattr(agent, "ainvoke"):
-                    return await agent(state, config=config)
-                else:
-                    return await agent(state)
-        else:
-            # fallback: treat as persona name
-            persona_key = _normalize_persona(route)
-            state.current_persona = persona_key.replace("_", " ").title()
-            agent = getattr(writer_agent, "persona_agent_registry", {}).get(persona_key, writer_agent)
-            cl_logger.info(f"Supervisor: Routing to persona agent '{persona_key}' (fallback from decision agent).")
-            if config is not None and hasattr(agent, "ainvoke"):
-                return await agent(state, config=config)
-            else:
-                return await agent(state)
+                        return {"route": "default"}
+                return {"route": tool_name}
 
-    # Fallback: route to current persona agent
-    persona = getattr(state, "current_persona", "default")
-    persona_key = _normalize_persona(persona)
-    state.current_persona = persona_key.replace("_", " ").title()
-    agent = getattr(writer_agent, "persona_agent_registry", {}).get(persona_key, writer_agent)
-    cl_logger.info(f"Supervisor: Routing to persona agent '{persona_key}'.")
-    if config is not None and hasattr(agent, "ainvoke"):
-        return await agent(state, config=config)
-    else:
-        return await agent(state)
+        # --- LLM-based dynamic routing: call decision agent ---
+        decision_agent = get_agent("decision")
+        if decision_agent is not None:
+            decision = await decision_agent(state)
+            route = decision.get("route", "writer")
+            cl_logger.info(f"Supervisor: Decision agent route: {route}")
+            if route.startswith("persona:"):
+                persona_name = route.split(":", 1)[1].strip()
+                persona_key = _normalize_persona(persona_name)
+                state.current_persona = persona_key.replace("_", " ").title()
+                return {"route": f"persona:{persona_key}"}
+            elif route in AGENT_REGISTRY:
+                if route == "storyboard":
+                    gm_msg = next(
+                        (msg for msg in reversed(state.messages)
+                         if isinstance(msg, AIMessage) and msg.name and "game master" in msg.name.lower()
+                         and msg.metadata and "message_id" in msg.metadata),
+                        None,
+                    )
+                    if gm_msg:
+                        return {"route": route, "gm_message_id": gm_msg.metadata["message_id"]}
+                    else:
+                        cl_logger.warning("Supervisor: No GM message found for storyboard.")
+                        return {"route": "default"}
+                return {"route": route}
+            else:
+                # fallback: treat as persona name
+                persona_key = _normalize_persona(route)
+                state.current_persona = persona_key.replace("_", " ").title()
+                return {"route": f"persona:{persona_key}"}
+
+        # Fallback: route to current persona agent
+        persona = getattr(state, "current_persona", "default")
+        persona_key = _normalize_persona(persona)
+        state.current_persona = persona_key.replace("_", " ").title()
+        return {"route": f"persona:{persona_key}"}
+
+# Build the SupervisorGraph
+supervisor_graph = SupervisorGraph(
+    supervisor_node=DreamdeckSupervisorNode(),
+    persona_nodes=persona_nodes,
+    tool_nodes=tool_nodes,
+)
+
+# The main entrypoint for Chainlit and tests
+async def supervisor(state: ChatState, **kwargs):
+    """
+    Entrypoint for the Dreamdeck supervisor using langgraph-supervisor.
+    """
+    # The SupervisorGraph handles routing and execution
+    return await supervisor_graph.ainvoke(state, **kwargs)
 
 # Patch: add .ainvoke for test compatibility (LangGraph expects this in tests)
-import sys as _sys
-import os as _os
-if (
-    "pytest" in _sys.modules
-    or "PYTEST_CURRENT_TEST" in _os.environ
-    or "PYTEST_RUNNING" in _os.environ
-    or _os.environ.get("DREAMDECK_TEST_MODE") == "1"
-):
-    async def _ainvoke(state, config=None, **kwargs):
-        # Always forward config for LangGraph context
-        return await supervisor(state, config=config, **kwargs)
-    supervisor.ainvoke = _ainvoke
+supervisor.ainvoke = supervisor_graph.ainvoke
