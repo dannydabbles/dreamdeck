@@ -11,6 +11,7 @@ from src.agents.knowledge_agent import knowledge_agent
 from src.agents.report_agent import report_agent
 from src.agents.storyboard_editor_agent import storyboard_editor_agent
 from src.agents.persona_classifier_agent import persona_classifier_agent
+from src.agents.decision_agent import decision_agent
 
 AGENT_REGISTRY = {
     "writer": {
@@ -44,6 +45,10 @@ AGENT_REGISTRY = {
     "persona_classifier": {
         "agent": persona_classifier_agent,
         "description": "Suggests best persona for next turn.",
+    },
+    "decision": {
+        "agent": decision_agent,
+        "description": "LLM-based agent router (oracle/decision agent).",
     },
     # Add more agents/tools here as needed
 }

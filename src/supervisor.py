@@ -92,34 +92,63 @@ async def supervisor(state: ChatState, **kwargs):
             else:
                 return await agent(state)
 
-    # --- Natural language dice roll detection ---
-    import re
-    dice_patterns = [
-        r"\broll (a|an)? ?\d*d\d+\b",   # e.g., "roll a d20", "roll 2d6"
-        r"\broll\b.*\bdice\b",          # e.g., "roll the dice"
-        r"\bd\d+\b",                    # e.g., "d20"
-        r"\b\d+d\d+\b",                 # e.g., "2d6"
-    ]
-    if (
-        re.search(r"\broll\b", user_input)
-        and (re.search(r"\bd\d+\b", user_input) or re.search(r"\b\d+d\d+\b", user_input))
-    ) or any(re.search(pat, user_input) for pat in dice_patterns):
-        cl_logger.info("Supervisor: Detected natural language dice roll, routing to dice_agent.")
-        agent = get_agent("dice")
-        if agent is not None:
+    # --- LLM-based dynamic routing: call decision agent ---
+    decision_agent = get_agent("decision")
+    if decision_agent is not None:
+        decision = await decision_agent(state)
+        route = decision.get("route", "writer")
+        cl_logger.info(f"Supervisor: Decision agent route: {route}")
+        # Route can be: "dice", "search", "todo", "storyboard", "writer", "persona:Therapist", etc.
+        if route.startswith("persona:"):
+            persona_name = route.split(":", 1)[1].strip()
+            persona_key = _normalize_persona(persona_name)
+            state.current_persona = persona_key.replace("_", " ").title()
+            agent = getattr(writer_agent, "persona_agent_registry", {}).get(persona_key, writer_agent)
+            cl_logger.info(f"Supervisor: Routing to persona agent '{persona_key}' (via decision agent).")
+            if config is not None and hasattr(agent, "ainvoke"):
+                return await agent(state, config=config)
+            else:
+                return await agent(state)
+        elif route in AGENT_REGISTRY:
+            agent = get_agent(route)
+            if agent is not None:
+                if route == "storyboard":
+                    # Find last GM message id for storyboard
+                    gm_msg = next(
+                        (msg for msg in reversed(state.messages)
+                         if isinstance(msg, AIMessage) and msg.name and "game master" in msg.name.lower()
+                         and msg.metadata and "message_id" in msg.metadata),
+                        None,
+                    )
+                    if gm_msg:
+                        if config is not None and hasattr(agent, "ainvoke"):
+                            return await agent(state, gm_message_id=gm_msg.metadata["message_id"], config=config)
+                        else:
+                            return await agent(state, gm_message_id=gm_msg.metadata["message_id"])
+                    else:
+                        cl_logger.warning("Supervisor: No GM message found for storyboard.")
+                        return []
+                if config is not None and hasattr(agent, "ainvoke"):
+                    return await agent(state, config=config)
+                else:
+                    return await agent(state)
+        else:
+            # fallback: treat as persona name
+            persona_key = _normalize_persona(route)
+            state.current_persona = persona_key.replace("_", " ").title()
+            agent = getattr(writer_agent, "persona_agent_registry", {}).get(persona_key, writer_agent)
+            cl_logger.info(f"Supervisor: Routing to persona agent '{persona_key}' (fallback from decision agent).")
             if config is not None and hasattr(agent, "ainvoke"):
                 return await agent(state, config=config)
             else:
                 return await agent(state)
 
-    # Default: route to current persona agent
+    # Fallback: route to current persona agent
     persona = getattr(state, "current_persona", "default")
     persona_key = _normalize_persona(persona)
-    # Always update state.current_persona to the resolved persona_key for consistency
     state.current_persona = persona_key.replace("_", " ").title()
     agent = getattr(writer_agent, "persona_agent_registry", {}).get(persona_key, writer_agent)
     cl_logger.info(f"Supervisor: Routing to persona agent '{persona_key}'.")
-    # Only pass config if agent supports it (i.e., is a LangGraph Runnable)
     if config is not None and hasattr(agent, "ainvoke"):
         return await agent(state, config=config)
     else:
