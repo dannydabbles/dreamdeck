@@ -70,7 +70,16 @@ def main():
         from langchain_core.messages import HumanMessage
         state.messages.append(HumanMessage(content=args.input, name="Player"))
         try:
-            result = run_async(agent(state))
+            # Always use run_until_complete if an event loop is running (pytest)
+            try:
+                loop = asyncio.get_running_loop()
+                if loop.is_running():
+                    return_value = loop.run_until_complete(agent(state))
+                else:
+                    return_value = asyncio.run(agent(state))
+            except RuntimeError:
+                return_value = asyncio.run(agent(state))
+            result = return_value
         except RuntimeError as e:
             print(f"Error running agent: {e}")
             raise
@@ -87,7 +96,15 @@ def main():
         from langchain_core.messages import HumanMessage
         state.messages.append(HumanMessage(content=args.input, name="Player"))
         try:
-            result = run_async(supervisor(state))
+            try:
+                loop = asyncio.get_running_loop()
+                if loop.is_running():
+                    return_value = loop.run_until_complete(supervisor(state))
+                else:
+                    return_value = asyncio.run(supervisor(state))
+            except RuntimeError:
+                return_value = asyncio.run(supervisor(state))
+            result = return_value
         except RuntimeError as e:
             print(f"Error running workflow: {e}")
             raise

@@ -15,7 +15,12 @@ import os
 def _noop_decorator(func):
     return func
 
-if "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ:
+import os
+if (
+    "pytest" in sys.modules
+    or "PYTEST_CURRENT_TEST" in os.environ
+    or "PYTEST_RUNNING" in os.environ
+):
     task = _noop_decorator
 else:
     from langgraph.func import task
