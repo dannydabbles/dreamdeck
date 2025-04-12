@@ -594,19 +594,10 @@ async def on_message(message: cl.Message):
             command_name = parts[0][1:]  # remove leading slash
             known_commands = {cmd["id"] for cmd in commands}
             # Special case: if user just sends "/", treat as unknown command "/"
-            if command_name == "":
-                await cl.Message(content="Unknown command: /").send()
-                return
-            # If command_name is empty or only whitespace, treat as unknown command "/"
-            if not command_name.strip():
-                await cl.Message(content="Unknown command: /").send()
-                return
-            # If command_name is 'unknowncmd' and the original message is exactly '/', treat as unknown command '/'
-            if command_name == "unknowncmd" and message.content.strip() == "/":
+            if command_name == "" or not command_name.strip():
                 await cl.Message(content="Unknown command: /").send()
                 return
             if command_name not in known_commands:
-                # Only echo the slash and command, ignore any trailing args
                 await cl.Message(content=f"Unknown command: /{command_name}").send()
                 return
 
