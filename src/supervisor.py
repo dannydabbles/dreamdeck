@@ -92,6 +92,26 @@ async def supervisor(state: ChatState, **kwargs):
             else:
                 return await agent(state)
 
+    # --- Natural language dice roll detection ---
+    import re
+    dice_patterns = [
+        r"\broll (a|an)? ?\d*d\d+\b",   # e.g., "roll a d20", "roll 2d6"
+        r"\broll\b.*\bdice\b",          # e.g., "roll the dice"
+        r"\bd\d+\b",                    # e.g., "d20"
+        r"\b\d+d\d+\b",                 # e.g., "2d6"
+    ]
+    if (
+        re.search(r"\broll\b", user_input)
+        and (re.search(r"\bd\d+\b", user_input) or re.search(r"\b\d+d\d+\b", user_input))
+    ) or any(re.search(pat, user_input) for pat in dice_patterns):
+        cl_logger.info("Supervisor: Detected natural language dice roll, routing to dice_agent.")
+        agent = get_agent("dice")
+        if agent is not None:
+            if config is not None and hasattr(agent, "ainvoke"):
+                return await agent(state, config=config)
+            else:
+                return await agent(state)
+
     # Default: route to current persona agent
     persona = getattr(state, "current_persona", "default")
     persona_key = _normalize_persona(persona)
