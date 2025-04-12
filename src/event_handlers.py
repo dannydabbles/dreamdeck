@@ -157,6 +157,9 @@ async def on_chat_start():
     and sends initial messages. Agents and vector store are stored in the Chainlit user session.
     """
 
+    # Import load_knowledge_documents so it is defined in this scope
+    global load_knowledge_documents
+
     # Determine active persona from profile selection, default if none
     persona = cl.user_session.get("current_persona", "Default")
 
@@ -320,6 +323,10 @@ async def on_chat_resume(thread: ThreadDict):
     Initializes agents and vector store, reconstructs chat state from thread history,
     and stores them in the Chainlit user session.
     """
+
+    # Import load_knowledge_documents so it is defined in this scope
+    global load_knowledge_documents
+
     # Determine persona from thread tags, default if none found
     resumed_persona = "Default"
     tags = thread.get("tags", [])
@@ -765,6 +772,7 @@ async def on_message(message: cl.Message):
         )
 
 
+# --- load_knowledge_documents definition moved up for visibility ---
 async def load_knowledge_documents():
     """Load documents from the knowledge directory into the vector store."""
     if not os.path.exists(KNOWLEDGE_DIRECTORY):
