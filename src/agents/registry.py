@@ -53,11 +53,25 @@ AGENT_REGISTRY = {
     # Add more agents/tools here as needed
 }
 
-def get_agent(name):
-    """Get agent callable by name (case-insensitive)."""
+def get_agent(name, helper=False):
+    """Get agent callable by name (case-insensitive).
+    If helper=True, return the helper function for non-langgraph context.
+    """
     if not isinstance(name, str):
         return None
-    return AGENT_REGISTRY.get(name.lower(), {}).get("agent")
+    agent = AGENT_REGISTRY.get(name.lower(), {}).get("agent")
+    if helper and agent:
+        # Try to get the *_helper function if it exists
+        helper_name = f"{name.lower()}_helper"
+        try:
+            # Try to import the helper from the agent module
+            mod = agent.__module__
+            import importlib
+            agent_mod = importlib.import_module(mod)
+            return getattr(agent_mod, helper_name, agent)
+        except Exception:
+            return agent
+    return agent
 
 def list_agents():
     """List all registered agents/tools."""

@@ -281,6 +281,10 @@ writer_agent.generate_story = generate_story  # <-- Add this attribute for patch
 # Expose persona agent registry for supervisor
 writer_agent.persona_agent_registry = persona_agent_registry
 
+# Helper for non-langgraph context (slash commands, CLI, etc)
+async def writer_agent_helper(state: ChatState, **kwargs) -> list[BaseMessage]:
+    return await _generate_story(state, **kwargs)
+
 async def call_writer_agent(state: ChatState, from_oracle: bool = True) -> list[BaseMessage]:
     """Call the writer agent outside of LangGraph workflows (e.g., slash commands).
 

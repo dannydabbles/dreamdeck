@@ -97,5 +97,9 @@ async def _knowledge(state: ChatState, knowledge_type: str, **kwargs) -> list[Ba
 async def knowledge_agent(state: ChatState, knowledge_type: str, **kwargs) -> list[BaseMessage]:
     return await _knowledge(state, knowledge_type, **kwargs)
 
+# Helper for non-langgraph context (slash commands, CLI, etc)
+async def knowledge_agent_helper(state: ChatState, knowledge_type: str, **kwargs) -> list[BaseMessage]:
+    return await _knowledge(state, knowledge_type, **kwargs)
+
 # Patch: expose the undecorated function for test monkeypatching
 knowledge_agent._knowledge = _knowledge

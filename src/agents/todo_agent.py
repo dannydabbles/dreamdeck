@@ -21,6 +21,10 @@ TODO_FILE_NAME = config.todo_file_name
 async def todo_agent(state: ChatState, **kwargs) -> list[AIMessage]:
     return await _manage_todo(state, **kwargs)
 
+# Helper for non-langgraph context (slash commands, CLI, etc)
+async def todo_agent_helper(state: ChatState, **kwargs) -> list[AIMessage]:
+    return await _manage_todo(state, **kwargs)
+
 
 @cl.step(name="Todo Agent", type="tool")
 async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:

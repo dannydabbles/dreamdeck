@@ -161,3 +161,7 @@ async def _web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
 @task
 async def web_search_agent(state: ChatState, **kwargs) -> list[BaseMessage]:
     return await _web_search(state, **kwargs)
+
+# Helper for non-langgraph context (slash commands, CLI, etc)
+async def web_search_agent_helper(state: ChatState, **kwargs) -> list[BaseMessage]:
+    return await _web_search(state, **kwargs)

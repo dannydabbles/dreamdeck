@@ -32,6 +32,10 @@ cl_logger = logging.getLogger("chainlit")
 async def dice_agent(state: ChatState, **kwargs) -> List[BaseMessage]:
     return await _dice_roll(state, **kwargs)
 
+# Helper for non-langgraph context (slash commands, CLI, etc)
+async def dice_agent_helper(state: ChatState, **kwargs) -> List[BaseMessage]:
+    return await _dice_roll(state, **kwargs)
+
 
 @cl.step(name="Dice Agent: Roll Dice", type="tool")
 async def _dice_roll(
