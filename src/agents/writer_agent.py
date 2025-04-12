@@ -44,7 +44,11 @@ for persona in getattr(config.agents.writer_agent, "personas", {}).keys():
     persona_agent_registry[persona.lower()] = PersonaAgent(persona)
 
 # Default agent fallback
-writer_agent = PersonaAgent("Default")
+if "default" not in persona_agent_registry:
+    writer_agent = PersonaAgent("Default")
+    persona_agent_registry["default"] = writer_agent
+else:
+    writer_agent = persona_agent_registry["default"]
 
 
 @cl.step(name="Writer Agent: Generate Story", type="tool")
