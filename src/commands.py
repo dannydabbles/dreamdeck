@@ -25,6 +25,10 @@ from src.config import IMAGE_GENERATION_ENABLED, START_MESSAGE
 
 cl_logger = logging.getLogger("chainlit")
 
+@cl.command(name="", description="Handle empty slash command")
+async def command_empty():
+    """Handles the case where the slash command is just `/` with no command name."""
+    await cl.Message(content="Unknown command: /").send()
 
 @cl.command(name="roll", description="Roll dice via natural language or dice notation")
 async def command_roll(query: str = ""):
