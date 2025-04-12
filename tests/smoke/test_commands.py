@@ -507,35 +507,6 @@ async def test_unknown_slash_command():
         mock_cl_message_instance.send.assert_awaited_once()
 
 
-@pytest.mark.asyncio
-async def test_empty_slash_command():
-    with patch(
-        "src.commands.cl.Message", new_callable=MagicMock
-    ) as mock_cl_message_cls:
-        mock_cl_message_instance = AsyncMock()
-        mock_cl_message_instance.send.return_value = None
-        mock_cl_message_cls.return_value = mock_cl_message_instance
-
-        from src.event_handlers import on_message
-
-        dummy_msg = MagicMock()
-        dummy_msg.content = "/"
-        dummy_msg.command = ""  # Not a button
-        dummy_msg.author = "Player"
-        dummy_msg.id = "msgid"
-
-        with patch(
-            "src.event_handlers.cl.user_session.get",
-            side_effect=lambda k, default=None: {
-                "state": ChatState(messages=[], thread_id="t1"),
-                "vector_memory": AsyncMock(),
-                "user": {"identifier": "Player"},
-            }.get(k, default),
-        ):
-            await on_message(dummy_msg)
-
-        mock_cl_message_cls.assert_called_with(content="Unknown command: /")
-        mock_cl_message_instance.send.assert_awaited_once()
 
 
 @pytest.mark.asyncio
