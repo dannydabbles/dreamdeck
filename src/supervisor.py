@@ -90,10 +90,41 @@ async def supervisor(state: ChatState, **kwargs):
         from src.agents.writer_agent import writer_agent_helper
         agent = writer_agent_helper
 
-    # 3. Call the agent/tool
+    # 3. Always call the agent's "_helper" function if it exists, else the agent itself
+    # This avoids LangGraph context errors from @task-decorated functions
+    agent_helper = None
+    if hasattr(agent, "__module__"):
+        try:
+            import importlib
+            agent_mod = importlib.import_module(agent.__module__)
+            helper_name = getattr(agent, "__name__", None)
+            if helper_name and helper_name.endswith("_agent"):
+                helper_func_name = helper_name + "_helper"
+                agent_helper = getattr(agent_mod, helper_func_name, None)
+            # Fallback: try common helper names
+            if not agent_helper and hasattr(agent_mod, "dice_agent_helper"):
+                agent_helper = getattr(agent_mod, "dice_agent_helper", None)
+            if not agent_helper and hasattr(agent_mod, "web_search_agent_helper"):
+                agent_helper = getattr(agent_mod, "web_search_agent_helper", None)
+            if not agent_helper and hasattr(agent_mod, "todo_agent_helper"):
+                agent_helper = getattr(agent_mod, "todo_agent_helper", None)
+            if not agent_helper and hasattr(agent_mod, "writer_agent_helper"):
+                agent_helper = getattr(agent_mod, "writer_agent_helper", None)
+            if not agent_helper and hasattr(agent_mod, "storyboard_editor_agent_helper"):
+                agent_helper = getattr(agent_mod, "storyboard_editor_agent_helper", None)
+            if not agent_helper and hasattr(agent_mod, "knowledge_agent_helper"):
+                agent_helper = getattr(agent_mod, "knowledge_agent_helper", None)
+            if not agent_helper and hasattr(agent_mod, "report_agent_helper"):
+                agent_helper = getattr(agent_mod, "report_agent_helper", None)
+        except Exception:
+            agent_helper = None
+
+    # If a helper function exists, use it; else use the agent directly
+    agent_to_call = agent_helper if agent_helper else agent
+
     if route in ("dice", "roll", "web_search", "search", "todo", "knowledge", "report", "storyboard"):
         # Tool agent: call tool, then follow up with GM if appropriate
-        tool_result = await agent(state)
+        tool_result = await agent_to_call(state)
         # If the tool result is not an error, follow up with the GM persona
         if tool_result and getattr(tool_result[0], "name", "") != "error":
             # Optionally, update state with tool result before calling GM
@@ -106,7 +137,7 @@ async def supervisor(state: ChatState, **kwargs):
             return tool_result
     else:
         # Persona agent: just call it
-        return await agent(state)
+        return await agent_to_call(state)
 
 # Patch: add .ainvoke for test compatibility (LangGraph expects this in tests)
 supervisor.ainvoke = supervisor
