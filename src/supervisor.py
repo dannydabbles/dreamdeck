@@ -65,3 +65,8 @@ async def supervisor(state: ChatState, **kwargs):
 
 # Patch: add .ainvoke for test compatibility (LangGraph expects this in tests)
 supervisor.ainvoke = supervisor_workflow.ainvoke
+
+# Patch: add dummy 'task' attribute for test compatibility (for unittest.mock.patch in tests)
+def _noop_task(x):
+    return x
+supervisor.task = _noop_task
