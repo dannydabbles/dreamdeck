@@ -70,84 +70,91 @@ async def supervisor(state: ChatState, **kwargs):
     """
     Entrypoint for the Dreamdeck supervisor.
     Uses the decision agent (oracle) to decide which agent/tool/persona to call next,
-    then calls that agent, and (if it's a tool) follows up with the GM persona if appropriate.
+    then calls that agent, and (if it's a tool) continues routing until a persona agent is called last.
 
-    This version avoids langgraph context issues by always calling the agent's *_helper function
-    (if available) instead of the @task-decorated function.
-
-    Additionally, the supervisor/oracle will also decide and set the current persona based on the conversation.
+    This version supports multi-hop routing: it will keep calling the decision agent and routing to tools/personas
+    until a persona agent is called last (i.e., the decision agent returns a persona route).
     """
-    # 1. Use the decision agent to decide what to do next
-    # Always use the helper to avoid langgraph context issues
     from src.agents.decision_agent import _decide_next_agent
-    decision = await _decide_next_agent(state)
-    route = decision.get("route", "writer")
-    cl_logger.info(f"Supervisor: decision agent routed to '{route}'")
-
-    # 1b. If the route is a persona (e.g., "persona:Therapist"), update state.current_persona accordingly
-    if route.startswith("persona:"):
-        persona_name = route.split(":", 1)[1]
-        cl_logger.info(f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision")
-        state.current_persona = persona_name
-        import chainlit as cl
-        cl.user_session.set("current_persona", persona_name)
-
-    # 2. Route to the correct agent/tool/persona, always using the helper if available
     from src.agents.registry import get_agent
-    agent = get_agent(route, helper=True)
-    if agent is None:
-        cl_logger.warning(f"Supervisor: unknown route '{route}', defaulting to writer agent")
-        from src.agents.writer_agent import writer_agent_helper
-        agent = writer_agent_helper
 
-    # 3. Always call the agent's "_helper" function if it exists, else the agent itself
-    # This avoids LangGraph context errors from @task-decorated functions
-    agent_helper = None
-    if hasattr(agent, "__module__"):
-        try:
-            import importlib
-            agent_mod = importlib.import_module(agent.__module__)
-            helper_name = getattr(agent, "__name__", None)
-            if helper_name and helper_name.endswith("_agent"):
-                helper_func_name = helper_name + "_helper"
-                agent_helper = getattr(agent_mod, helper_func_name, None)
-            # Fallback: try common helper names
-            if not agent_helper and hasattr(agent_mod, "dice_agent_helper"):
-                agent_helper = getattr(agent_mod, "dice_agent_helper", None)
-            if not agent_helper and hasattr(agent_mod, "web_search_agent_helper"):
-                agent_helper = getattr(agent_mod, "web_search_agent_helper", None)
-            if not agent_helper and hasattr(agent_mod, "todo_agent_helper"):
-                agent_helper = getattr(agent_mod, "todo_agent_helper", None)
-            if not agent_helper and hasattr(agent_mod, "writer_agent_helper"):
-                agent_helper = getattr(agent_mod, "writer_agent_helper", None)
-            if not agent_helper and hasattr(agent_mod, "storyboard_editor_agent_helper"):
-                agent_helper = getattr(agent_mod, "storyboard_editor_agent_helper", None)
-            if not agent_helper and hasattr(agent_mod, "knowledge_agent_helper"):
-                agent_helper = getattr(agent_mod, "knowledge_agent_helper", None)
-            if not agent_helper and hasattr(agent_mod, "report_agent_helper"):
-                agent_helper = getattr(agent_mod, "report_agent_helper", None)
-        except Exception:
-            agent_helper = None
+    max_hops = 5  # Prevent infinite loops
+    hops = 0
+    results = []
+    last_route = None
 
-    # If a helper function exists, use it; else use the agent directly
-    agent_to_call = agent_helper if agent_helper else agent
+    while hops < max_hops:
+        decision = await _decide_next_agent(state)
+        route = decision.get("route", "writer")
+        cl_logger.info(f"Supervisor: decision agent routed to '{route}'")
+        last_route = route
 
-    if route in ("dice", "roll", "web_search", "search", "todo", "knowledge", "report", "storyboard"):
-        # Tool agent: call tool, then follow up with GM if appropriate
-        tool_result = await agent_to_call(state)
-        # If the tool result is not an error, follow up with the GM persona
-        if tool_result and getattr(tool_result[0], "name", "") != "error":
-            # Optionally, update state with tool result before calling GM
-            state.messages.extend(tool_result)
-            # Call the GM persona (writer agent) to narrate or react
-            from src.agents.writer_agent import writer_agent_helper
-            gm_result = await writer_agent_helper(state)
-            return tool_result + gm_result
+        # If the route is a persona (e.g., "persona:Therapist"), update state.current_persona accordingly
+        if route.startswith("persona:"):
+            persona_name = route.split(":", 1)[1]
+            cl_logger.info(f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision")
+            state.current_persona = persona_name
+            import chainlit as cl
+            cl.user_session.set("current_persona", persona_name)
+            # Route to the persona agent (writer agent with correct persona)
+            agent = get_agent("writer", helper=True)
+            if agent is None:
+                from src.agents.writer_agent import writer_agent_helper
+                agent = writer_agent_helper
+            # Always call the helper
+            persona_result = await agent(state)
+            results.extend(persona_result)
+            break  # Persona agent is always last
         else:
-            return tool_result
-    else:
-        # Persona agent: just call it
-        return await agent_to_call(state)
+            # Route to the correct tool agent, always using the helper if available
+            agent = get_agent(route, helper=True)
+            if agent is None:
+                cl_logger.warning(f"Supervisor: unknown route '{route}', defaulting to writer agent")
+                from src.agents.writer_agent import writer_agent_helper
+                agent = writer_agent_helper
+
+            # Always call the agent's "_helper" function if it exists, else the agent itself
+            agent_helper = None
+            if hasattr(agent, "__module__"):
+                try:
+                    import importlib
+                    agent_mod = importlib.import_module(agent.__module__)
+                    helper_name = getattr(agent, "__name__", None)
+                    if helper_name and helper_name.endswith("_agent"):
+                        helper_func_name = helper_name + "_helper"
+                        agent_helper = getattr(agent_mod, helper_func_name, None)
+                    # Fallback: try common helper names
+                    if not agent_helper and hasattr(agent_mod, "dice_agent_helper"):
+                        agent_helper = getattr(agent_mod, "dice_agent_helper", None)
+                    if not agent_helper and hasattr(agent_mod, "web_search_agent_helper"):
+                        agent_helper = getattr(agent_mod, "web_search_agent_helper", None)
+                    if not agent_helper and hasattr(agent_mod, "todo_agent_helper"):
+                        agent_helper = getattr(agent_mod, "todo_agent_helper", None)
+                    if not agent_helper and hasattr(agent_mod, "writer_agent_helper"):
+                        agent_helper = getattr(agent_mod, "writer_agent_helper", None)
+                    if not agent_helper and hasattr(agent_mod, "storyboard_editor_agent_helper"):
+                        agent_helper = getattr(agent_mod, "storyboard_editor_agent_helper", None)
+                    if not agent_helper and hasattr(agent_mod, "knowledge_agent_helper"):
+                        agent_helper = getattr(agent_mod, "knowledge_agent_helper", None)
+                    if not agent_helper and hasattr(agent_mod, "report_agent_helper"):
+                        agent_helper = getattr(agent_mod, "report_agent_helper", None)
+                except Exception:
+                    agent_helper = None
+
+            agent_to_call = agent_helper if agent_helper else agent
+
+            tool_result = await agent_to_call(state)
+            if tool_result:
+                results.extend(tool_result)
+                # Optionally, update state with tool result before next hop
+                state.messages.extend(tool_result)
+            # After tool, loop to call decision agent again for next step
+        hops += 1
+
+    if hops >= max_hops:
+        cl_logger.warning("Supervisor: max hops reached, ending turn with current results.")
+
+    return results
 
 # Patch: add .ainvoke for test compatibility (LangGraph expects this in tests)
 supervisor.ainvoke = supervisor
