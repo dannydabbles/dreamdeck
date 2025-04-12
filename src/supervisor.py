@@ -70,3 +70,7 @@ supervisor.ainvoke = supervisor_workflow.ainvoke
 def _noop_task(x):
     return x
 supervisor.task = _noop_task
+
+# Patch: add dummy 'task' attribute at module level for test compatibility
+def task(x):
+    return x
