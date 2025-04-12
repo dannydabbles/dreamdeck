@@ -25,12 +25,10 @@ from src.config import IMAGE_GENERATION_ENABLED, START_MESSAGE
 
 cl_logger = logging.getLogger("chainlit")
 
-@cl.command(name="", description="Handle empty slash command")
 async def command_empty():
     """Handles the case where the slash command is just `/` with no command name."""
     await cl.Message(content="Unknown command: /").send()
 
-@cl.command(name="roll", description="Roll dice via natural language or dice notation")
 async def command_roll(query: str = ""):
     """Slash command: /roll - Roll dice via natural language or dice notation
 
@@ -114,7 +112,6 @@ async def command_roll(query: str = ""):
     cl_logger.info(f"/roll command processed.")
 
 
-@cl.command(name="search", description="Perform a web search")
 async def command_search(query: str = ""):
     """Slash command: /search - Perform a web search
 
@@ -193,7 +190,6 @@ async def command_search(query: str = ""):
     cl_logger.info(f"/search command processed.")
 
 
-@cl.command(name="todo", description="Add a TODO item")
 async def command_todo(query: str = ""):
     """Slash command: /todo - Add a TODO item
 
@@ -275,7 +271,6 @@ async def command_todo(query: str = ""):
     cl_logger.info(f"/todo command processed.")
 
 
-@cl.command(name="write", description="Directly prompt the current persona agent")
 async def command_write(query: str = ""):
     """Slash command: /write - Directly prompt the writer agent (current persona)
 
@@ -340,7 +335,6 @@ async def command_write(query: str = ""):
     cl_logger.info(f"/write command processed.")
 
 
-@cl.command(name="storyboard", description="Generate storyboard images for the last Game Master message")
 async def command_storyboard(query: str = ""):
     """Slash command: /storyboard - Generate storyboard images for the last Game Master message
 
@@ -384,7 +378,6 @@ async def command_storyboard(query: str = ""):
         )
 
 
-@cl.command(name="help", description="Show help message")
 async def command_help():
     """Slash command: /help - Show help message"""
     help_text = """
@@ -404,7 +397,6 @@ async def command_help():
     await cl.Message(content=help_text.strip()).send()
 
 
-@cl.command(name="reset", description="Reset the current story")
 async def command_reset():
     """Slash command: /reset - Reset the current story"""
     cl_logger.info("Resetting chat state and vector store")
@@ -433,7 +425,6 @@ async def command_reset():
     cl.user_session.set("state", state)
 
 
-@cl.command(name="save", description="Export the current story as markdown")
 async def command_save():
     """Slash command: /save - Export the current story as markdown"""
     state: ChatState = cl.user_session.get("state")
@@ -465,7 +456,6 @@ async def command_save():
     ).send()
 
 
-@cl.command(name="report", description="Generate a daily summary report")
 async def command_report():
     """Slash command: /report - Generate a daily summary report"""
     state: ChatState = cl.user_session.get("state")
@@ -494,7 +484,6 @@ async def command_report():
     cl_logger.info("/report command processed.")
 
 
-@cl.command(name="persona", description="Force switch to a specific persona")
 async def command_persona(query: str = ""):
     """Slash command: /persona [name] - Force switch persona immediately"""
     persona_name = query.strip()
