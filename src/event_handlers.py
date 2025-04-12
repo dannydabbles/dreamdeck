@@ -153,12 +153,13 @@ def auth_callback(username: str, password: str):
         return None
 
 
-# Register Chainlit commands for UI buttons and slash menu at import time (global scope)
-import asyncio
-asyncio.get_event_loop().create_task(cl.set_commands(commands))
-
 @cl.on_chat_start
 async def on_chat_start():
+    # Register Chainlit commands for UI buttons and slash menu (per session, not global)
+    try:
+        await cl.set_commands(commands)
+    except Exception as e:
+        cl_logger.warning(f"Could not register commands in Chainlit UI: {e}")
     """Initialize new chat session with Chainlit integration.
 
     Sets up the user session, initializes the chat state, initializes agents and vector store,
