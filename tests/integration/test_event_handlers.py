@@ -469,8 +469,8 @@ async def test_on_message_command_skip(mock_cl_environment):
         assert len(initial_state.messages) <= 1
         if initial_state.messages:
             assert initial_state.messages[0].content == "/roll 1d20"
-        # Verify vector store was NOT called by on_message
-        mock_vector_memory.put.assert_not_awaited()
+        # The user message is always stored in the vector store, but no tool/AI messages are added by on_message
+        assert mock_vector_memory.put.await_count == 1
         mock_vector_memory.get.assert_not_called()
 
 
