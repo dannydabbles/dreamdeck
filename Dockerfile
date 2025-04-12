@@ -1,7 +1,7 @@
 # The builder image, used to build the virtual environment
 FROM python:3.12-slim-bookworm as builder
 
-RUN apt-get update && apt-get install -y git build-essential
+RUN apt-get update && apt-get install -y git build-essential make
 
 RUN pip install poetry
 
