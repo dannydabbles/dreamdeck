@@ -153,6 +153,10 @@ def auth_callback(username: str, password: str):
         return None
 
 
+# Register Chainlit commands for UI buttons and slash menu at import time (global scope)
+import asyncio
+asyncio.get_event_loop().create_task(cl.set_commands(commands))
+
 @cl.on_chat_start
 async def on_chat_start():
     """Initialize new chat session with Chainlit integration.
@@ -186,13 +190,6 @@ async def on_chat_start():
         cl_user_session.set("storyboard_editor_agent", storyboard_editor_agent)
         cl_user_session.set("dice_roll_agent", dice_roll_agent)
         cl_user_session.set("web_search_agent", web_search_agent)
-
-        # Register Chainlit commands for UI buttons and slash menu
-        # Chainlit v1.0+ supports cl.Command and cl.Action for UI integration.
-        try:
-            await cl.set_commands(commands)
-        except Exception as e:
-            cl_logger.warning(f"Could not register commands in Chainlit UI: {e}")
 
         # Define Chat Settings with persona selector and LLM options
         settings = await cl.ChatSettings(
