@@ -597,8 +597,12 @@ async def on_message(message: cl.Message):
             if command_name == "" or not command_name.strip():
                 await cl.Message(content="Unknown command: /").send()
                 return
+            # If the command is not in known_commands, but the original message is just "/", treat as unknown "/"
             if command_name not in known_commands:
-                await cl.Message(content=f"Unknown command: /{command_name}").send()
+                if command_line == "/":
+                    await cl.Message(content="Unknown command: /").send()
+                else:
+                    await cl.Message(content=f"Unknown command: /{command_name}").send()
                 return
 
         # Add user message to state immediately
