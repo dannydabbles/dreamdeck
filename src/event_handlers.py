@@ -13,17 +13,19 @@ PERSONA_SUPPRESSION_TURNS = 3
 from src.agents.persona_classifier_agent import persona_classifier_agent
 
 # Define Chainlit commands for UI buttons and slash menu
+from chainlit import Command, Action
+
 commands = [
-    {"id": "roll", "icon": "dice-5", "description": "Roll dice"},
-    {"id": "search", "icon": "globe", "description": "Web search"},
-    {"id": "todo", "icon": "list", "description": "Add a TODO"},
-    {"id": "write", "icon": "pen-line", "description": "Direct prompt to writer"},
-    {"id": "storyboard", "icon": "image", "description": "Generate storyboard"},
-    {"id": "report", "icon": "bar-chart", "description": "Generate daily report"},
-    {"id": "persona", "icon": "user", "description": "Switch persona"},
-    {"id": "help", "icon": "help-circle", "description": "Show help"},
-    {"id": "reset", "icon": "refresh-ccw", "description": "Reset story"},
-    {"id": "save", "icon": "save", "description": "Export story"},
+    Command(name="roll", description="Roll dice", icon="dice-5"),
+    Command(name="search", description="Web search", icon="globe"),
+    Command(name="todo", description="Add a TODO", icon="list"),
+    Command(name="write", description="Direct prompt to writer", icon="pen-line"),
+    Command(name="storyboard", description="Generate storyboard", icon="image"),
+    Command(name="report", description="Generate daily report", icon="bar-chart"),
+    Command(name="persona", description="Switch persona", icon="user"),
+    Command(name="help", description="Show help", icon="help-circle"),
+    Command(name="reset", description="Reset story", icon="refresh-ccw"),
+    Command(name="save", description="Export story", icon="save"),
 ]
 from chainlit.types import ThreadDict
 from tenacity import (
@@ -187,23 +189,10 @@ async def on_chat_start():
 
         # Register Chainlit commands for UI buttons and slash menu
         # Chainlit v1.0+ supports cl.Command and cl.Action for UI integration.
-        # This block will try the modern API, fallback to emitter if needed.
         try:
-            from chainlit import Command
-            cl_commands = [
-                Command(
-                    name=cmd["id"],
-                    description=cmd.get("description", ""),
-                    icon=cmd.get("icon", None)
-                )
-                for cmd in commands
-            ]
-            await cl.set_commands(cl_commands)
-        except Exception:
-            try:
-                await cl.context.emitter.set_commands(commands)
-            except Exception as e:
-                cl_logger.warning(f"Could not register commands in Chainlit UI: {e}")
+            await cl.set_commands(commands)
+        except Exception as e:
+            cl_logger.warning(f"Could not register commands in Chainlit UI: {e}")
 
         # Define Chat Settings with persona selector and LLM options
         settings = await cl.ChatSettings(
@@ -275,18 +264,10 @@ async def on_chat_start():
 
         # Initialize thread in Chainlit with a start message
         # Use Chainlit Action objects for UI buttons (v1.0+)
-        try:
-            from chainlit import Action
-            actions = [
-                Action(id=cmd["id"], name=cmd["description"], icon=cmd.get("icon", None))
-                for cmd in commands
-            ]
-        except Exception:
-            # Fallback to dicts if Action not available
-            actions = [
-                {"id": cmd["id"], "name": cmd["description"], "icon": cmd.get("icon", None)}
-                for cmd in commands
-            ]
+        actions = [
+            Action(id=cmd.name, name=cmd.description, icon=cmd.icon)
+            for cmd in commands
+        ]
         start_cl_msg = cl.Message(
             content=START_MESSAGE,
             author=current_user_identifier,
