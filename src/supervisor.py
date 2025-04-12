@@ -38,6 +38,10 @@ for agent in tool_agents:
         unique_tool_agents[agent_name] = agent
 tool_agents = list(unique_tool_agents.values())
 
+# Remove any tool agent whose name matches a persona agent (case-sensitive)
+persona_agent_names = set(getattr(agent, "name", None) for agent in persona_agents if getattr(agent, "name", None))
+tool_agents = [agent for agent in tool_agents if getattr(agent, "name", None) not in persona_agent_names]
+
 # Use the writer agent's LLM if available, else fallback to gpt-4o
 try:
     model = writer_agent.llm
