@@ -92,9 +92,18 @@ else:
 # Tool agents
 tool_agents = [entry["agent"] for tool, entry in AGENT_REGISTRY.items()]
 
+# Choose the LLM model for the supervisor (use writer_agent.llm if available, else fallback)
+try:
+    model = writer_agent.llm
+except AttributeError:
+    # Fallback: import and instantiate your model here if needed
+    from langchain_openai import ChatOpenAI
+    model = ChatOpenAI(model="gpt-4o")
+
 # Create the supervisor workflow using the public API
 supervisor_workflow = create_supervisor(
-    [dreamdeck_supervisor_agent] + persona_agents + tool_agents
+    [dreamdeck_supervisor_agent] + persona_agents + tool_agents,
+    model=model,
 ).compile()
 
 # The main entrypoint for Chainlit and tests
