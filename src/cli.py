@@ -39,11 +39,18 @@ def main():
     # List agents/tools
     subparsers.add_parser("list-agents", help="List all available agents/tools")
 
+    # Describe agent/tool
+    describe_parser = subparsers.add_parser("describe", help="Describe an agent/tool")
+    describe_parser.add_argument("agent", help="Agent/tool name")
+
     # Run agent
     run_agent_parser = subparsers.add_parser("run-agent", help="Run a specific agent")
     run_agent_parser.add_argument("agent", help="Agent name")
     run_agent_parser.add_argument("--persona", help="Persona name", default="Default")
     run_agent_parser.add_argument("--input", help="Input text", required=True)
+    run_agent_parser.add_argument("--temp", type=float, help="LLM temperature override")
+    run_agent_parser.add_argument("--max-tokens", type=int, help="LLM max tokens override")
+    run_agent_parser.add_argument("--endpoint", help="LLM endpoint override")
 
     # Run workflow (supervisor)
     run_workflow_parser = subparsers.add_parser("run-workflow", help="Run the supervisor workflow")
@@ -63,6 +70,15 @@ def main():
             print(f"  {name:20} {desc}")
         return
 
+    if args.command == "describe":
+        from src.agents.registry import describe_agent
+        desc = describe_agent(args.agent)
+        if not desc:
+            print(f"No description found for agent/tool: {args.agent}")
+        else:
+            print(f"{args.agent}:\n{desc}")
+        return
+
     if args.command == "run-agent":
         agent = get_agent(args.agent)
         if not agent:
@@ -71,6 +87,14 @@ def main():
         state = ChatState(messages=[], thread_id="cli", current_persona=args.persona)
         from langchain_core.messages import HumanMessage
         state.messages.append(HumanMessage(content=args.input, name="Player"))
+        # Optionally override LLM settings via user_session
+        if args.temp or args.max_tokens or args.endpoint:
+            import chainlit as cl
+            cl.user_session.set("chat_settings", {
+                "writer_temp": args.temp,
+                "writer_max_tokens": args.max_tokens,
+                "writer_endpoint": args.endpoint,
+            })
         try:
             result = run_async(agent(state))
         except RuntimeError as e:

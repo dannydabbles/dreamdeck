@@ -189,7 +189,7 @@ async def on_chat_start():
                 Select(
                     id="persona",
                     label="Persona",
-                    values=["Storyteller GM", "Friend", "Default"],
+                    values=["Storyteller GM", "Friend", "Therapist", "Secretary", "Coder", "Dungeon Master", "Default"],
                     initial="Storyteller GM",
                 ),
                 Slider(
@@ -214,10 +214,45 @@ async def on_chat_start():
                     initial=config.WRITER_AGENT_BASE_URL or "",
                     placeholder="e.g., http://localhost:5000/v1",
                 ),
+                Slider(
+                    id="decision_temp",
+                    label="Decision Agent - Temperature",
+                    min=0.0,
+                    max=2.0,
+                    step=0.1,
+                    initial=config.DECISION_AGENT_TEMPERATURE,
+                ),
+                Slider(
+                    id="storyboard_temp",
+                    label="Storyboard Agent - Temperature",
+                    min=0.0,
+                    max=2.0,
+                    step=0.1,
+                    initial=config.STORYBOARD_EDITOR_AGENT_TEMPERATURE,
+                ),
+                Slider(
+                    id="storyboard_max_tokens",
+                    label="Storyboard Agent - Max Tokens",
+                    min=100,
+                    max=16000,
+                    step=100,
+                    initial=config.STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
+                ),
+                TextInput(
+                    id="storyboard_endpoint",
+                    label="Storyboard Agent - OpenAI Endpoint URL",
+                    initial=config.STORYBOARD_EDITOR_AGENT_BASE_URL or "",
+                    placeholder="e.g., http://localhost:5000/v1",
+                ),
                 Switch(
                     id="auto_persona_switch",
                     label="Auto Persona Switching",
                     initial=True,
+                ),
+                Switch(
+                    id="show_prompt",
+                    label="Show Rendered Prompt (Dev Only)",
+                    initial=False,
                 ),
             ]
         ).send()
@@ -241,6 +276,14 @@ async def on_chat_start():
         start_cl_msg = cl.Message(
             content=START_MESSAGE,
             author=current_user_identifier,
+            actions=[
+                cl.Action(id="roll", label="Roll Dice", type="button"),
+                cl.Action(id="search", label="Web Search", type="button"),
+                cl.Action(id="todo", label="Add TODO", type="button"),
+                cl.Action(id="write", label="Direct Prompt", type="button"),
+                cl.Action(id="storyboard", label="Generate Storyboard", type="button"),
+                cl.Action(id="help", label="Help", type="button"),
+            ],
         )
         await start_cl_msg.send()
 
@@ -451,6 +494,35 @@ async def on_message(message: cl.Message):
         # Save updated state (if needed)
         cl.user_session.set("state", state)
         return  # Skip normal message processing
+
+    # Handle Chainlit Actions (button clicks)
+    if hasattr(message, "action") and message.action:
+        action_id = message.action
+        cl_logger.info(f"Action button selected: {action_id}")
+        from src import commands as cmd_mod
+        if action_id == "roll_again":
+            # Reuse last roll query if available, else empty
+            last_human = state.get_last_human_message()
+            last_query = ""
+            if last_human and last_human.content.startswith("/roll"):
+                last_query = last_human.content[5:].strip()
+            await cmd_mod.command_roll(last_query)
+        elif action_id == "continue_story":
+            from src.agents.writer_agent import call_writer_agent
+            await call_writer_agent(state, from_oracle=False)
+        elif action_id == "search":
+            await cmd_mod.command_search("")
+        elif action_id == "todo":
+            await cmd_mod.command_todo("")
+        elif action_id == "write":
+            await cmd_mod.command_write("")
+        elif action_id == "storyboard":
+            await cmd_mod.command_storyboard("")
+        elif action_id == "help":
+            await cmd_mod.command_help()
+        else:
+            await cl.Message(content=f"Unknown action: {action_id}").send()
+        return
 
     # Retrieve current user identifier from session
     current_user_identifier = None

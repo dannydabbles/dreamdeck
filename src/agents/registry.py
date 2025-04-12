@@ -57,3 +57,13 @@ def get_agent(name):
 def list_agents():
     """List all registered agents/tools."""
     return [(k, v["description"]) for k, v in AGENT_REGISTRY.items()]
+
+def describe_agent(name):
+    """Return the docstring or description for an agent/tool."""
+    agent = get_agent(name)
+    if agent is None:
+        return None
+    doc = getattr(agent, "__doc__", None)
+    if doc:
+        return doc
+    return AGENT_REGISTRY.get(name.lower(), {}).get("description", "")

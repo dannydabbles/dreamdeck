@@ -37,7 +37,14 @@ async def command_roll(query: str = ""):
         return
 
     # Create and send user message
-    user_cl_msg = cl.Message(content=f"/roll {query}", author="Player")
+    user_cl_msg = cl.Message(
+        content=f"/roll {query}",
+        author="Player",
+        actions=[
+            cl.Action(id="roll_again", label="Roll Again", type="button"),
+            cl.Action(id="continue_story", label="Continue Story", type="button"),
+        ],
+    )
     await user_cl_msg.send()
     user_cl_msg_id = user_cl_msg.id
 
