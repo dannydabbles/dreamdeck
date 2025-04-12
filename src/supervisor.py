@@ -20,7 +20,9 @@ if (
     "pytest" in sys.modules
     or "PYTEST_CURRENT_TEST" in os.environ
     or "PYTEST_RUNNING" in os.environ
+    or os.environ.get("DREAMDECK_TEST_MODE") == "1"
 ):
+    # Patch: also check DREAMDECK_TEST_MODE for test compatibility
     task = _noop_decorator
 else:
     from langgraph.func import task
