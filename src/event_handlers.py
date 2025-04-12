@@ -596,7 +596,12 @@ async def on_message(message: cl.Message):
                 return
             parts = command_line.split(maxsplit=1)
             command_name = parts[0][1:]  # remove leading slash
+            command_name = command_name.strip()
             known_commands = {cmd["id"] for cmd in commands}
+            # If command_name is empty, treat as unknown command "/"
+            if not command_name:
+                await cl.Message(content="Unknown command: /").send()
+                return
             if command_name not in known_commands:
                 await cl.Message(content=f"Unknown command: /{command_name}").send()
                 return
