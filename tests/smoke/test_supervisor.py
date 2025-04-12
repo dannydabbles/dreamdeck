@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import sys
 
+from langchain_core.runnables.config import RunnableConfig
+
 @pytest.mark.asyncio
 async def test_supervisor_tool_routing(monkeypatch):
     # Patch get_agent to return the undecorated function to avoid langgraph context issues
@@ -16,7 +18,9 @@ async def test_supervisor_tool_routing(monkeypatch):
          patch("src.supervisor.task", lambda x: x):
         from src.supervisor import supervisor
         state = ChatState(messages=[HumanMessage(content="/dice", name="Player")], thread_id="t1")
-        result = await supervisor(state)
+        # Provide a RunnableConfig to ensure LangGraph context is set
+        config = RunnableConfig(configurable={"thread_id": "t1"})
+        result = await supervisor.ainvoke(state, config=config)
         # Accept either the dummy_agent's return or the real _dice_roll's output
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
@@ -34,7 +38,8 @@ async def test_supervisor_storyboard_routing(monkeypatch):
         # Add a GM message with message_id
         gm_msg = AIMessage(content="scene", name="Game Master", metadata={"message_id": "gm1"})
         state = ChatState(messages=[HumanMessage(content="/storyboard", name="Player"), gm_msg], thread_id="t1")
-        result = await supervisor(state)
+        config = RunnableConfig(configurable={"thread_id": "t1"})
+        result = await supervisor.ainvoke(state, config=config)
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
 
