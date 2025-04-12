@@ -71,11 +71,17 @@ def patch_task_and_registry(monkeypatch):
     def safe_asyncio_run(coro, *args, **kwargs):
         try:
             loop = asyncio.get_running_loop()
+            if loop.is_running():
+                # In a running event loop (pytest-asyncio), run as a task and wait for result
+                import nest_asyncio
+                nest_asyncio.apply()
+                task = loop.create_task(coro)
+                return loop.run_until_complete(task)
+            else:
+                return loop.run_until_complete(coro)
         except RuntimeError:
             # No running loop, safe to use asyncio.run
             return orig_asyncio_run(coro, *args, **kwargs)
-        # Already in a running loop (pytest-asyncio), so just await
-        return loop.run_until_complete(coro) if not loop.is_running() else loop.create_task(coro)
 
     monkeypatch.setattr(asyncio, "run", safe_asyncio_run)
 
