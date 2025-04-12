@@ -490,10 +490,6 @@ async def command_report():
     cl_logger.info("/report command processed.")
 
 
-@cl.command(name="", description="Handle empty slash command")
-async def command_empty():
-    """Handles the case where the slash command is just `/` with no command name."""
-    await cl.Message(content="Unknown command: /").send()
 @cl.command(name="persona", description="Force switch to a specific persona")
 async def command_persona(query: str = ""):
     """Slash command: /persona [name] - Force switch persona immediately"""
@@ -518,16 +514,4 @@ async def command_persona(query: str = ""):
     ).send()
 
 
-# Fallback handler for unknown commands, including the empty slash command
-@cl.command(name=None, description="Fallback for unknown slash commands")
-async def command_unknown(command: str = "", *args, **kwargs):
-    # If the command is exactly '/', return the expected message
-    if command.strip() == "/":
-        await cl.Message(content="Unknown command: /").send()
-    else:
-        # Extract the command name for the error message
-        cmd = command.strip()
-        if not cmd.startswith("/"):
-            cmd = f"/{cmd}"
-        await cl.Message(content=f"Unknown command: {cmd}").send()
 
