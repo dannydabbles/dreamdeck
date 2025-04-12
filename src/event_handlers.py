@@ -590,19 +590,15 @@ async def on_message(message: cl.Message):
         # Check if message starts with slash and is unknown command
         if message.content.strip().startswith("/"):
             command_line = message.content.strip()
+            # Special case: if user just sends "/", treat as unknown command "/"
+            if command_line == "/":
+                await cl.Message(content="Unknown command: /").send()
+                return
             parts = command_line.split(maxsplit=1)
             command_name = parts[0][1:]  # remove leading slash
             known_commands = {cmd["id"] for cmd in commands}
-            # Special case: if user just sends "/", treat as unknown command "/"
-            if command_name == "" or not command_name.strip():
-                await cl.Message(content="Unknown command: /").send()
-                return
-            # If the command is not in known_commands, but the original message is just "/", treat as unknown "/"
             if command_name not in known_commands:
-                if command_line == "/":
-                    await cl.Message(content="Unknown command: /").send()
-                else:
-                    await cl.Message(content=f"Unknown command: /{command_name}").send()
+                await cl.Message(content=f"Unknown command: /{command_name}").send()
                 return
 
         # Add user message to state immediately
