@@ -26,6 +26,9 @@ FROM python:3.12-slim-bookworm as runtime
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
 
+# Install make in the runtime image for CI/test compatibility
+RUN apt-get update && apt-get install -y make
+
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 RUN pip install poetry
 
