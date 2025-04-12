@@ -166,6 +166,16 @@ async def on_chat_start():
     # Chainlit v2+: Use cl.ChatSettings and Action objects for UI
     # (No cl.set_commands or cl.command decorator)
 
+    # Register slash commands for the UI's "/" menu
+    await cl.set_chat_commands([
+        {
+            "name": f"/{cmd['id']}",
+            "description": cmd["description"],
+            "parameters": [],
+        }
+        for cmd in COMMANDS
+    ])
+
     # Import load_knowledge_documents so it is defined in this scope
     global load_knowledge_documents
 
@@ -306,6 +316,16 @@ async def on_chat_resume(thread: ThreadDict):
     Initializes agents and vector store, reconstructs chat state from thread history,
     and stores them in the Chainlit user session.
     """
+
+    # Register slash commands for the UI's "/" menu on resume as well
+    await cl.set_chat_commands([
+        {
+            "name": f"/{cmd['id']}",
+            "description": cmd["description"],
+            "parameters": [],
+        }
+        for cmd in COMMANDS
+    ])
 
     # Import load_knowledge_documents so it is defined in this scope
     global load_knowledge_documents
