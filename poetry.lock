@@ -2078,6 +2078,22 @@ httpx = ">=0.25.2"
 orjson = ">=3.10.1"
 
 [[package]]
+name = "langgraph-supervisor"
+version = "0.0.16"
+description = "An implementation of a supervisor multi-agent architecture using LangGraph"
+optional = false
+python-versions = ">=3.10"
+files = [
+    {file = "langgraph_supervisor-0.0.16-py3-none-any.whl", hash = "sha256:9fe1883c1b4868f1b1e45dc9e116cdaad8947c1aa5a6f145b33ce20eeb576498"},
+    {file = "langgraph_supervisor-0.0.16.tar.gz", hash = "sha256:1576a150f527f10895cbe61d954924f30f72dcf489337713b61e4c158c6b4d7a"},
+]
+
+[package.dependencies]
+langchain-core = ">=0.3.40,<0.4.0"
+langgraph = ">=0.3.5,<0.4.0"
+langgraph-prebuilt = ">=0.1.7,<0.2.0"
+
+[[package]]
 name = "langsmith"
 version = "0.3.27"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
@@ -6317,4 +6333,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "6da64204be770eae2f1b5aa1e9f85bfc52ed17f6832949aae4cd13973119a87e"
+content-hash = "0e2cd3ab5ffd2de03b6f6434acd8d96e26ba61888b4eb83b6189c825b43819a6"
