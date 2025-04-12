@@ -39,6 +39,9 @@ async def supervisor(state: ChatState, **kwargs):
     Supervisor agent: routes user input to the correct tool or persona agent.
     Uses the central agent registry for extensibility.
     """
+    # Extract config if present (for LangGraph context propagation)
+    config = kwargs.get("config", None)
+
     last_human = state.get_last_human_message()
     if not last_human:
         cl_logger.warning("Supervisor: No user message found in state.")
@@ -63,18 +66,27 @@ async def supervisor(state: ChatState, **kwargs):
                     None,
                 )
                 if gm_msg:
-                    return await agent(state, gm_message_id=gm_msg.metadata["message_id"])
+                    if config is not None:
+                        return await agent(state, gm_message_id=gm_msg.metadata["message_id"], config=config)
+                    else:
+                        return await agent(state, gm_message_id=gm_msg.metadata["message_id"])
                 else:
                     cl_logger.warning("Supervisor: No GM message found for storyboard.")
                     return []
-            return await agent(state)
+            if config is not None:
+                return await agent(state, config=config)
+            else:
+                return await agent(state)
 
     # Default: route to current persona agent
     persona = getattr(state, "current_persona", "default")
     persona_key = _normalize_persona(persona)
     agent = getattr(writer_agent, "persona_agent_registry", {}).get(persona_key, writer_agent)
     cl_logger.info(f"Supervisor: Routing to persona agent '{persona_key}'.")
-    return await agent(state)
+    if config is not None:
+        return await agent(state, config=config)
+    else:
+        return await agent(state)
 
 # Patch: add .ainvoke for test compatibility (LangGraph expects this in tests)
 import sys as _sys
@@ -86,5 +98,6 @@ if (
     or _os.environ.get("DREAMDECK_TEST_MODE") == "1"
 ):
     async def _ainvoke(state, config=None, **kwargs):
-        return await supervisor(state, **kwargs)
+        # Always forward config for LangGraph context
+        return await supervisor(state, config=config, **kwargs)
     supervisor.ainvoke = _ainvoke
