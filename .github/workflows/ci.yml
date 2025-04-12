@@ -17,30 +17,25 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+    - name: Build and start services with Docker Compose
+      run: docker-compose up -d --build
 
-    - name: Install Poetry
+    - name: Wait for app to be ready
       run: |
-        python -m pip install --upgrade pip
-        pip install poetry
+        for i in {1..30}; do
+          if docker-compose logs dreamdeck | grep -q "Dreamdeck app loaded"; then
+            echo "App is ready!"
+            break
+          fi
+          echo "Waiting for app to be ready..."
+          sleep 5
+        done
 
-    - name: Install dependencies
-      run: poetry install
+    - name: Run tests in Docker
+      run: docker-compose exec -T dreamdeck make test
 
-    - name: Run tests
-      run: poetry run pytest --maxfail=1 --disable-warnings --cov=. --cov-report=xml
+    - name: Lint with flake8 in Docker
+      run: docker-compose exec -T dreamdeck poetry run flake8 . tests/
 
-    - name: Upload coverage report artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: coverage.xml
-
-    - name: Lint with flake8
-      run: poetry run flake8 . tests/
-
-    - name: Check formatting with black
-      run: poetry run black --check . tests/
+    - name: Check formatting with black in Docker
+      run: docker-compose exec -T dreamdeck poetry run black --check . tests/
