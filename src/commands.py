@@ -7,7 +7,7 @@ They are registered as Chainlit slash commands for UI discoverability.
 
 import os
 import sys
-import chainlit as cl
+from chainlit import cl
 import logging
 from langchain_core.messages import HumanMessage, AIMessage
 from src.models import ChatState
