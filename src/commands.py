@@ -41,8 +41,8 @@ async def command_roll(query: str = ""):
         content=f"/roll {query}",
         author="Player",
         actions=[
-            cl.Action(id="roll_again", label="Roll Again", type="button"),
-            cl.Action(id="continue_story", label="Continue Story", type="button"),
+            cl.Action(id="roll_again", name="Roll Again", payload=None, type="button"),
+            cl.Action(id="continue_story", name="Continue Story", payload=None, type="button"),
         ],
     )
     await user_cl_msg.send()
