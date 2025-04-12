@@ -652,7 +652,8 @@ async def on_message(message: cl.Message):
                 if ai_messages:
                     for msg in ai_messages:
                         state.messages.append(msg)
-                        msg_id = msg.metadata.get("message_id") if msg.metadata else None
+                        metadata = getattr(msg, "metadata", None)
+                        msg_id = metadata.get("message_id") if metadata else None
                         if not msg_id:
                             cl_logger.warning(
                                 f"AIMessage missing message_id, skipping vector store save: {msg.content}"
@@ -660,7 +661,7 @@ async def on_message(message: cl.Message):
                             continue
 
                         # Defensive copy of metadata or empty dict
-                        meta = dict(msg.metadata) if msg.metadata else {}
+                        meta = dict(metadata) if metadata else {}
 
                         # --- PHASE 2 PATCH: Enforce consistent metadata ---
                         # Always set type to 'ai'
