@@ -37,7 +37,7 @@ jobs:
         done
 
     - name: Run tests in Docker
-      run: docker-compose exec -T dreamdeck make test
+      run: docker-compose exec -T dreamdeck make docker-test
 
     - name: Lint with flake8 in Docker
       run: docker-compose exec -T dreamdeck poetry run flake8 . tests/

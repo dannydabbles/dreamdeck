@@ -30,6 +30,10 @@ integration:
 test:
 	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
 
+docker-test:
+	@echo "Running tests in Docker/CI environment (no conda)..."
+	PYTHONPATH=. poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
+
 lint:
 	@echo "Linting the code..."
 	@poetry run flake8 .
