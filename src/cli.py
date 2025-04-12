@@ -22,8 +22,8 @@ def run_async(coro):
     try:
         loop = asyncio.get_running_loop()
         if loop.is_running():
-            # In pytest or other running event loop, raise so tests can patch this
-            raise RuntimeError("asyncio.run() cannot be called from a running event loop")
+            # In pytest or other running event loop, use run_until_complete
+            return loop.run_until_complete(coro)
     except RuntimeError:
         # No running event loop, safe to use asyncio.run
         return asyncio.run(coro)
