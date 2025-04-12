@@ -74,6 +74,8 @@ async def supervisor(state: ChatState, **kwargs):
 
     This version avoids langgraph context issues by always calling the agent's *_helper function
     (if available) instead of the @task-decorated function.
+
+    Additionally, the supervisor/oracle will also decide and set the current persona based on the conversation.
     """
     # 1. Use the decision agent to decide what to do next
     # Always use the helper to avoid langgraph context issues
@@ -81,6 +83,14 @@ async def supervisor(state: ChatState, **kwargs):
     decision = await _decide_next_agent(state)
     route = decision.get("route", "writer")
     cl_logger.info(f"Supervisor: decision agent routed to '{route}'")
+
+    # 1b. If the route is a persona (e.g., "persona:Therapist"), update state.current_persona accordingly
+    if route.startswith("persona:"):
+        persona_name = route.split(":", 1)[1]
+        cl_logger.info(f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision")
+        state.current_persona = persona_name
+        import chainlit as cl
+        cl.user_session.set("current_persona", persona_name)
 
     # 2. Route to the correct agent/tool/persona, always using the helper if available
     from src.agents.registry import get_agent
