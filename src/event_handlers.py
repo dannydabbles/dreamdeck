@@ -594,16 +594,11 @@ async def on_message(message: cl.Message):
             if command_line == "/" or command_line.strip() == "/":
                 await cl.Message(content="Unknown command: /").send()
                 return
-            parts = command_line.split(maxsplit=1)
-            command_name = parts[0][1:]  # remove leading slash
-            command_name = command_name.strip()
+            # Extract command name after slash
+            command_name = command_line[1:].split(maxsplit=1)[0].strip()
             known_commands = {cmd["id"] for cmd in commands}
             # If command_name is empty, treat as unknown command "/"
             if not command_name:
-                await cl.Message(content="Unknown command: /").send()
-                return
-            # If the original message is just "/" or whitespace after the slash, treat as unknown command "/"
-            if command_name == "" or command_line == "/" or command_line.strip() == "/":
                 await cl.Message(content="Unknown command: /").send()
                 return
             if command_name not in known_commands:
