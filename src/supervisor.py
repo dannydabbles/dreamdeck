@@ -61,7 +61,9 @@ async def supervisor(state: ChatState, **kwargs):
     """
     Entrypoint for the Dreamdeck supervisor using langgraph-supervisor.
     """
-    return await supervisor_workflow.ainvoke(state, **kwargs)
+    result = await supervisor_workflow.ainvoke(state, **kwargs)
+    # Return just the messages list for test compatibility
+    return result["messages"]
 
 # Patch: add .ainvoke for test compatibility (LangGraph expects this in tests)
 supervisor.ainvoke = supervisor_workflow.ainvoke
