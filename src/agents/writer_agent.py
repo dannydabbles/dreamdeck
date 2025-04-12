@@ -32,6 +32,7 @@ persona_agent_registry = {}
 class PersonaAgent:
     def __init__(self, persona_name: str):
         self.persona_name = persona_name
+        self.name = persona_name  # Add .name attribute for supervisor compatibility
 
     async def __call__(self, state: ChatState, **kwargs) -> list[BaseMessage]:
         # Set the current persona in state for this agent
