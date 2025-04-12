@@ -490,6 +490,11 @@ async def command_report():
     cl_logger.info("/report command processed.")
 
 
+@cl.command(name="", description="Handle empty slash command")
+async def command_empty():
+    """Handles the case where the slash command is just `/` with no command name."""
+    await cl.Message(content="Unknown command: /").send()
+
 @cl.command(name="persona", description="Force switch to a specific persona")
 async def command_persona(query: str = ""):
     """Slash command: /persona [name] - Force switch persona immediately"""
