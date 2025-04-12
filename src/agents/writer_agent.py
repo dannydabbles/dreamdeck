@@ -212,10 +212,8 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
         await gm_message.send()
 
         persona_name = state.current_persona
-        if persona_name.lower() in ["storyteller_gm", "dungeon_master"]:
-            display_name = "Game Master"
-        else:
-            display_name = persona_name
+        # Always use the current persona as the display name, not always "Game Master"
+        display_name = persona_name
 
         persona_icon = {
             "Therapist": "🧠",

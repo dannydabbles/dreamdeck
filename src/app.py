@@ -4,7 +4,6 @@ from src import commands  # Ensure commands module is imported
 
 import logging
 
-
 # Set a default persona at chat start if none exists
 @cl.on_chat_start
 async def _set_default_persona():
@@ -18,9 +17,9 @@ async def _set_default_persona():
         persona = cl.user_session.get("current_persona")
         await cl.Message(content=f"Continuing with persona **{persona}**.").send()
 
-
-from src.event_handlers import *  # Register all event handlers
-from src.commands import *  # Register slash commands
+# Register all event handlers and commands
+from src.event_handlers import *
+from src.commands import *
 
 logging.getLogger("chainlit").info(
     "Dreamdeck app loaded with default persona and event handlers."

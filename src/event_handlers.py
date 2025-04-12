@@ -183,7 +183,7 @@ async def on_chat_start():
         # Register Chainlit commands for UI buttons
         await cl.context.emitter.set_commands(commands)
 
-        # Define Chat Settings with persona selector
+        # Define Chat Settings with persona selector and LLM options
         settings = await cl.ChatSettings(
             [
                 Select(

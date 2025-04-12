@@ -95,6 +95,8 @@ async def supervisor(state: ChatState, **kwargs):
     # Default: route to current persona agent
     persona = getattr(state, "current_persona", "default")
     persona_key = _normalize_persona(persona)
+    # Always update state.current_persona to the resolved persona_key for consistency
+    state.current_persona = persona_key.replace("_", " ").title()
     agent = getattr(writer_agent, "persona_agent_registry", {}).get(persona_key, writer_agent)
     cl_logger.info(f"Supervisor: Routing to persona agent '{persona_key}'.")
     # Only pass config if agent supports it (i.e., is a LangGraph Runnable)
