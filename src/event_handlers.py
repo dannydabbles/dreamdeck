@@ -185,8 +185,25 @@ async def on_chat_start():
         cl_user_session.set("dice_roll_agent", dice_roll_agent)
         cl_user_session.set("web_search_agent", web_search_agent)
 
-        # Register Chainlit commands for UI buttons
-        await cl.context.emitter.set_commands(commands)
+        # Register Chainlit commands for UI buttons and slash menu
+        # Chainlit v1.0+ supports cl.Command and cl.Action for UI integration.
+        # This block will try the modern API, fallback to emitter if needed.
+        try:
+            from chainlit import Command
+            cl_commands = [
+                Command(
+                    name=cmd["id"],
+                    description=cmd.get("description", ""),
+                    icon=cmd.get("icon", None)
+                )
+                for cmd in commands
+            ]
+            await cl.set_commands(cl_commands)
+        except Exception:
+            try:
+                await cl.context.emitter.set_commands(commands)
+            except Exception as e:
+                cl_logger.warning(f"Could not register commands in Chainlit UI: {e}")
 
         # Define Chat Settings with persona selector and LLM options
         settings = await cl.ChatSettings(
@@ -257,17 +274,23 @@ async def on_chat_start():
         asyncio.create_task(load_knowledge_documents())
 
         # Initialize thread in Chainlit with a start message
+        # Use Chainlit Action objects for UI buttons (v1.0+)
+        try:
+            from chainlit import Action
+            actions = [
+                Action(id=cmd["id"], name=cmd["description"], icon=cmd.get("icon", None))
+                for cmd in commands
+            ]
+        except Exception:
+            # Fallback to dicts if Action not available
+            actions = [
+                {"id": cmd["id"], "name": cmd["description"], "icon": cmd.get("icon", None)}
+                for cmd in commands
+            ]
         start_cl_msg = cl.Message(
             content=START_MESSAGE,
             author=current_user_identifier,
-            actions=[
-                cl.Action(id="roll", name="Roll Dice", payload={}),
-                cl.Action(id="search", name="Web Search", payload={}),
-                cl.Action(id="todo", name="Add TODO", payload={}),
-                cl.Action(id="write", name="Direct Prompt", payload={}),
-                cl.Action(id="storyboard", name="Generate Storyboard", payload={}),
-                cl.Action(id="help", name="Help", payload={}),
-            ],
+            actions=actions,
         )
         await start_cl_msg.send()
 
@@ -421,48 +444,51 @@ async def on_chat_resume(thread: ThreadDict):
 
 
 # Register Chainlit action callbacks for UI buttons
+# Register Chainlit action callbacks for UI buttons using the modern API
+from chainlit import Action
+
 @cl.action_callback("roll")
-async def on_roll_action(action):
+async def on_roll_action(action: Action):
     from src import commands as cmd_mod
     await cmd_mod.command_roll("")
 
 @cl.action_callback("search")
-async def on_search_action(action):
+async def on_search_action(action: Action):
     from src import commands as cmd_mod
     await cmd_mod.command_search("")
 
 @cl.action_callback("todo")
-async def on_todo_action(action):
+async def on_todo_action(action: Action):
     from src import commands as cmd_mod
     await cmd_mod.command_todo("")
 
 @cl.action_callback("write")
-async def on_write_action(action):
+async def on_write_action(action: Action):
     from src import commands as cmd_mod
     await cmd_mod.command_write("")
 
 @cl.action_callback("storyboard")
-async def on_storyboard_action(action):
+async def on_storyboard_action(action: Action):
     from src import commands as cmd_mod
     await cmd_mod.command_storyboard("")
 
 @cl.action_callback("help")
-async def on_help_action(action):
+async def on_help_action(action: Action):
     from src import commands as cmd_mod
     await cmd_mod.command_help()
 
 @cl.action_callback("reset")
-async def on_reset_action(action):
+async def on_reset_action(action: Action):
     from src import commands as cmd_mod
     await cmd_mod.command_reset()
 
 @cl.action_callback("save")
-async def on_save_action(action):
+async def on_save_action(action: Action):
     from src import commands as cmd_mod
     await cmd_mod.command_save()
 
 @cl.action_callback("persona")
-async def on_persona_action(action):
+async def on_persona_action(action: Action):
     from src import commands as cmd_mod
     await cmd_mod.command_persona("")
 
