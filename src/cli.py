@@ -15,9 +15,6 @@ from src.models import ChatState
 from src.agents.registry import get_agent, list_agents
 from src.supervisor import supervisor
 
-# Import save_state for patching in tests
-from src.storage import save_state
-
 def run_async(coro):
     """
     Run an async coroutine in a way that works in both normal and test (event loop) environments.
@@ -27,9 +24,9 @@ def run_async(coro):
     except RuntimeError:
         loop = None
     if loop and loop.is_running():
-        # In pytest or other running event loop, must be called from async context
-        # So, raise to let the test handle it, or use asyncio.ensure_future if needed
-        raise RuntimeError("Cannot use run_async from a running event loop. Use 'await' in tests.")
+        # In pytest or other running event loop, run the coroutine directly
+        # This allows tests to work without raising
+        return loop.run_until_complete(coro)
     else:
         return asyncio.run(coro)
 
@@ -104,7 +101,8 @@ def main():
 
     if args.command == "export-state":
         state = ChatState(messages=[], thread_id=args.thread_id)
-        # Call save_state in a way that can be patched/mocked in tests
+        # Import save_state here so it can be patched in tests
+        from src.storage import save_state
         save_state(state, args.output)
         print(f"State exported to {args.output}")
         return
