@@ -13,7 +13,7 @@ def _noop_decorator(*args, **kwargs):
         return func
     return wrapper
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(autouse=True, scope="function")
 def patch_task_and_registry(monkeypatch):
     # Patch langgraph.func.task to a no-op decorator for all tests
     monkeypatch.setattr("langgraph.func.task", _noop_decorator, raising=False)
