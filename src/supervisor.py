@@ -11,15 +11,7 @@ import logging
 import sys
 import os
 
-try:
-    from langgraph_supervisor.graph import SupervisorGraph
-    from langgraph_supervisor.nodes import SupervisorNode, ToolNode, PersonaNode
-except ImportError as e:
-    raise ImportError(
-        "Could not import SupervisorGraph, SupervisorNode, ToolNode, PersonaNode from langgraph_supervisor. "
-        "Please ensure you have the latest version of langgraph-supervisor installed. "
-        "Try: pip install --upgrade langgraph-supervisor"
-    ) from e
+from langgraph_supervisor import SupervisorGraph, SupervisorNode, ToolNode, PersonaNode
 
 cl_logger = logging.getLogger("chainlit")
 
