@@ -432,6 +432,52 @@ async def on_chat_resume(thread: ThreadDict):
     await load_knowledge_documents()
 
 
+# Register Chainlit action callbacks for UI buttons
+@cl.action_callback("roll")
+async def on_roll_action(action):
+    from src import commands as cmd_mod
+    await cmd_mod.command_roll("")
+
+@cl.action_callback("search")
+async def on_search_action(action):
+    from src import commands as cmd_mod
+    await cmd_mod.command_search("")
+
+@cl.action_callback("todo")
+async def on_todo_action(action):
+    from src import commands as cmd_mod
+    await cmd_mod.command_todo("")
+
+@cl.action_callback("write")
+async def on_write_action(action):
+    from src import commands as cmd_mod
+    await cmd_mod.command_write("")
+
+@cl.action_callback("storyboard")
+async def on_storyboard_action(action):
+    from src import commands as cmd_mod
+    await cmd_mod.command_storyboard("")
+
+@cl.action_callback("help")
+async def on_help_action(action):
+    from src import commands as cmd_mod
+    await cmd_mod.command_help()
+
+@cl.action_callback("reset")
+async def on_reset_action(action):
+    from src import commands as cmd_mod
+    await cmd_mod.command_reset()
+
+@cl.action_callback("save")
+async def on_save_action(action):
+    from src import commands as cmd_mod
+    await cmd_mod.command_save()
+
+@cl.action_callback("persona")
+async def on_persona_action(action):
+    from src import commands as cmd_mod
+    await cmd_mod.command_persona("")
+
 @cl.on_message
 async def on_message(message: cl.Message):
     """Handle incoming user chat messages.
@@ -495,39 +541,7 @@ async def on_message(message: cl.Message):
         cl.user_session.set("state", state)
         return  # Skip normal message processing
 
-    # Handle Chainlit Actions (button clicks)
-    if hasattr(message, "action") and message.action:
-        action_id = message.action
-        # If action_id is a MagicMock (from test), treat as unknown command
-        if isinstance(action_id, str):
-            cl_logger.info(f"Action button selected: {action_id}")
-            from src import commands as cmd_mod
-            if action_id == "roll_again":
-                # Reuse last roll query if available, else empty
-                last_human = state.get_last_human_message()
-                last_query = ""
-                if last_human and last_human.content.startswith("/roll"):
-                    last_query = last_human.content[5:].strip()
-                await cmd_mod.command_roll(last_query)
-            elif action_id == "continue_story":
-                from src.agents.writer_agent import call_writer_agent
-                await call_writer_agent(state, from_oracle=False)
-            elif action_id == "search":
-                await cmd_mod.command_search("")
-            elif action_id == "todo":
-                await cmd_mod.command_todo("")
-            elif action_id == "write":
-                await cmd_mod.command_write("")
-            elif action_id == "storyboard":
-                await cmd_mod.command_storyboard("")
-            elif action_id == "help":
-                await cmd_mod.command_help()
-            else:
-                await cl.Message(content=f"Unknown action: {action_id}").send()
-        else:
-            # If action_id is a MagicMock (from test), treat as unknown command for test compatibility
-            await cl.Message(content="Unknown command: /unknowncmd").send()
-        return
+    # Remove action button handling here, as it is now handled by @cl.action_callback
 
     # Retrieve current user identifier from session
     current_user_identifier = None
