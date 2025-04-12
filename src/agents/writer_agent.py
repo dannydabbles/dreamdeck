@@ -43,19 +43,16 @@ class PersonaAgent:
 for persona in getattr(config.agents.writer_agent, "personas", {}).keys():
     persona_agent_registry[persona.lower()] = PersonaAgent(persona)
 
-# Default agent fallback (case-insensitive check, avoid duplicate registration)
-default_persona_keys = [k for k in persona_agent_registry if k.lower() == "default"]
-if not default_persona_keys:
+# Remove all duplicate "default" keys except the first one (case-insensitive)
+default_keys = [k for k in persona_agent_registry if k.lower() == "default"]
+if default_keys:
+    # Keep only the first occurrence, remove others
+    for k in default_keys[1:]:
+        del persona_agent_registry[k]
+    writer_agent = persona_agent_registry[default_keys[0]]
+else:
     writer_agent = PersonaAgent("Default")
     persona_agent_registry["default"] = writer_agent
-else:
-    # Use the already-registered "Default" persona agent, and remove any duplicates
-    # (should only be one, but just in case)
-    writer_agent = persona_agent_registry[default_persona_keys[0]]
-    # Remove any other keys that would cause duplicate registration
-    for k in list(persona_agent_registry.keys()):
-        if k.lower() == "default" and k != default_persona_keys[0]:
-            del persona_agent_registry[k]
 
 
 @cl.step(name="Writer Agent: Generate Story", type="tool")
