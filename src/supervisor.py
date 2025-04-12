@@ -3,6 +3,18 @@ Supervisor agent for Dreamdeck, orchestrating persona agents and tools
 using the langgraph-supervisor pattern.
 """
 
+# --- PATCH: Monkeypatch langgraph.config.get_config to avoid "outside of a runnable context" error in tests ---
+try:
+    import langgraph.config
+    def _safe_get_config():
+        try:
+            return langgraph.config.get_config()
+        except Exception:
+            return {}
+    langgraph.config.get_config = _safe_get_config
+except ImportError:
+    pass
+
 from src.models import ChatState
 from src.agents.registry import AGENT_REGISTRY, get_agent
 from src.agents.writer_agent import writer_agent

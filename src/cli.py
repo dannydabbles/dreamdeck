@@ -24,8 +24,8 @@ def run_async(coro):
     try:
         loop = asyncio.get_running_loop()
         if loop.is_running():
-            # In pytest-asyncio or Jupyter, just return the coroutine (let test handle it)
-            return coro
+            # In pytest-asyncio or Jupyter, run the coroutine in the current loop
+            return loop.run_until_complete(coro)
     except RuntimeError:
         # No running loop, safe to use asyncio.run
         return asyncio.run(coro)
