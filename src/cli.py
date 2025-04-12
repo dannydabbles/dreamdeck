@@ -18,6 +18,21 @@ from src.supervisor import supervisor
 # Import save_state for patching in tests
 from src.storage import save_state
 
+def run_async(coro):
+    """
+    Run an async coroutine in a way that works in both normal and test (event loop) environments.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        # In pytest or other running event loop, must be called from async context
+        # So, raise to let the test handle it, or use asyncio.ensure_future if needed
+        raise RuntimeError("Cannot use run_async from a running event loop. Use 'await' in tests.")
+    else:
+        return asyncio.run(coro)
+
 def main():
     parser = argparse.ArgumentParser(description="Dreamdeck CLI")
     subparsers = parser.add_subparsers(dest="command")
@@ -58,22 +73,9 @@ def main():
         from langchain_core.messages import HumanMessage
         state.messages.append(HumanMessage(content=args.input, name="Player"))
         try:
-            # Use asyncio.run only if not already in an event loop (for test compatibility)
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-            if loop and loop.is_running():
-                # If already in an event loop (e.g., pytest-asyncio), run as a task
-                import nest_asyncio
-                nest_asyncio.apply()
-                result = loop.run_until_complete(agent(state))
-            else:
-                result = asyncio.run(agent(state))
+            result = run_async(agent(state))
         except RuntimeError as e:
-            if "asyncio.run()" in str(e):
-                print(f"Error running agent: {e}")
-                raise
+            print(f"Error running agent: {e}")
             raise
         except Exception as e:
             print(f"Error running agent: {e}")
@@ -88,20 +90,9 @@ def main():
         from langchain_core.messages import HumanMessage
         state.messages.append(HumanMessage(content=args.input, name="Player"))
         try:
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-            if loop and loop.is_running():
-                import nest_asyncio
-                nest_asyncio.apply()
-                result = loop.run_until_complete(supervisor(state))
-            else:
-                result = asyncio.run(supervisor(state))
+            result = run_async(supervisor(state))
         except RuntimeError as e:
-            if "asyncio.run()" in str(e):
-                print(f"Error running workflow: {e}")
-                raise
+            print(f"Error running workflow: {e}")
             raise
         except Exception as e:
             print(f"Error running workflow: {e}")
