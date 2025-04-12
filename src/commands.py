@@ -2,9 +2,9 @@
 Slash command handlers for Dreamdeck.
 
 These commands bypass the decision agent and directly invoke the relevant tool or agent.
-They are registered as Chainlit slash commands for UI discoverability.
+They are registered as Chainlit actions and are available in the UI and slash menu.
 
-All commands are also exposed as action buttons and in the Chainlit slash menu.
+All commands are also exposed as action buttons and in the Chainlit chat settings.
 """
 
 import os

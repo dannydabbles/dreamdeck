@@ -162,19 +162,7 @@ async def on_chat_start():
     Sets up the user session, initializes the chat state, initializes agents and vector store,
     and sends initial messages. Agents and vector store are stored in the Chainlit user session.
     """
-    # Register available actions/commands for UI discoverability (as action buttons)
-    # Chainlit v2+: Use cl.ChatSettings and Action objects for UI
-    # (No cl.set_commands or cl.command decorator)
-
-    # Register slash commands for the UI's "/" menu
-    await cl.set_chat_commands([
-        {
-            "name": f"/{cmd['id']}",
-            "description": cmd["description"],
-            "parameters": [],
-        }
-        for cmd in COMMANDS
-    ])
+    # Chainlit v2+: Use ChatSettings and Action objects for UI. No cl.command, cl.set_chat_commands, or cl.set_commands.
 
     # Import load_knowledge_documents so it is defined in this scope
     global load_knowledge_documents
@@ -203,7 +191,7 @@ async def on_chat_start():
         cl_user_session.set("web_search_agent", web_search_agent)
 
         # Define Chat Settings with persona selector and LLM options
-        settings = await cl.ChatSettings(
+        chat_settings = cl.ChatSettings(
             [
                 Select(
                     id="persona",
@@ -244,7 +232,8 @@ async def on_chat_start():
                     initial=False,
                 ),
             ]
-        ).send()
+        )
+        settings = await chat_settings.send()
 
         # Defensive: if settings is None (e.g., in tests), replace with empty dict
         if settings is None:
@@ -316,16 +305,6 @@ async def on_chat_resume(thread: ThreadDict):
     Initializes agents and vector store, reconstructs chat state from thread history,
     and stores them in the Chainlit user session.
     """
-
-    # Register slash commands for the UI's "/" menu on resume as well
-    await cl.set_chat_commands([
-        {
-            "name": f"/{cmd['id']}",
-            "description": cmd["description"],
-            "parameters": [],
-        }
-        for cmd in COMMANDS
-    ])
 
     # Import load_knowledge_documents so it is defined in this scope
     global load_knowledge_documents
@@ -469,6 +448,11 @@ async def on_write_action(action: Action):
 async def on_storyboard_action(action: Action):
     from src import commands as cmd_mod
     await cmd_mod.command_storyboard("")
+
+@cl.action_callback("report")
+async def on_report_action(action: Action):
+    from src import commands as cmd_mod
+    await cmd_mod.command_report()
 
 @cl.action_callback("help")
 async def on_help_action(action: Action):
