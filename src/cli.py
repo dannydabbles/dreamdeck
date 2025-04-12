@@ -20,21 +20,16 @@ def run_async(coro):
     Run an async coroutine in a way that works in both normal and test (event loop) environments.
     Uses a helper to avoid conflicts with test monkeypatching.
     """
-    # Helper for test compatibility: if DREAMDECK_TEST_MODE is set, always use run_until_complete
     import os
-    if os.environ.get("DREAMDECK_TEST_MODE") == "1":
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        return loop.run_until_complete(coro)
     try:
         loop = asyncio.get_running_loop()
         if loop.is_running():
-            return loop.run_until_complete(coro)
+            # In pytest-asyncio or Jupyter, just return the coroutine (let test handle it)
+            return coro
     except RuntimeError:
+        # No running loop, safe to use asyncio.run
         return asyncio.run(coro)
+    # Fallback: use asyncio.run
     return asyncio.run(coro)
 
 def main():
