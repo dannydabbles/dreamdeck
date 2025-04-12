@@ -7,46 +7,45 @@ This version uses langgraph-supervisor's built-in routing, handoff, and message 
 from src.models import ChatState
 from src.agents.registry import AGENT_REGISTRY, get_agent
 from src.agents.writer_agent import writer_agent
-from langchain_openai import ChatOpenAI
-from langgraph_supervisor import create_supervisor
+from src.agents.dice_agent import dice_agent
+from src.agents.web_search_agent import web_search_agent
+from src.agents.todo_agent import todo_agent
+from src.agents.knowledge_agent import knowledge_agent
+from src.agents.report_agent import report_agent
+from src.agents.storyboard_editor_agent import storyboard_editor_agent
+from src.agents.persona_classifier_agent import persona_classifier_agent
+from src.agents.decision_agent import decision_agent
 
 import logging
+import chainlit as cl
 
 cl_logger = logging.getLogger("chainlit")
 
-# Gather all persona and tool agents, ensuring unique agent names (case-sensitive)
-if hasattr(writer_agent, "persona_agent_registry"):
-    persona_agents = list(writer_agent.persona_agent_registry.values())
-else:
-    persona_agents = [writer_agent]
-
-# Remove duplicate persona agents by name (case-sensitive)
-unique_persona_agents = {}
-for agent in persona_agents:
-    agent_name = getattr(agent, "name", None)
-    if agent_name and agent_name not in unique_persona_agents:
-        unique_persona_agents[agent_name] = agent
-persona_agents = list(unique_persona_agents.values())
-
-tool_agents = [entry["agent"] for tool, entry in AGENT_REGISTRY.items()]
-
-# Remove duplicate tool agents by name (case-sensitive)
-unique_tool_agents = {}
-for agent in tool_agents:
-    agent_name = getattr(agent, "name", None)
-    if agent_name and agent_name not in unique_tool_agents:
-        unique_tool_agents[agent_name] = agent
-tool_agents = list(unique_tool_agents.values())
-
-# Remove any tool agent whose name matches a persona agent (case-sensitive)
-persona_agent_names = set(getattr(agent, "name", None) for agent in persona_agents if getattr(agent, "name", None))
-tool_agents = [agent for agent in tool_agents if getattr(agent, "name", None) not in persona_agent_names]
-
-import chainlit as cl
+# Map tool/agent names to callables for routing
+AGENT_MAP = {
+    "dice": dice_agent,
+    "roll": dice_agent,
+    "web_search": web_search_agent,
+    "search": web_search_agent,
+    "todo": todo_agent,
+    "knowledge": knowledge_agent,
+    "report": report_agent,
+    "storyboard": storyboard_editor_agent,
+    "persona_classifier": persona_classifier_agent,
+    "decision": decision_agent,
+    "writer": writer_agent,
+    "storyteller_gm": writer_agent,
+    "therapist": get_agent("therapist"),
+    "secretary": get_agent("secretary"),
+    "coder": get_agent("coder"),
+    "friend": get_agent("friend"),
+    "lorekeeper": get_agent("lorekeeper"),
+    "dungeon_master": get_agent("dungeon_master"),
+    "default": writer_agent,
+}
 
 # Use the writer agent's LLM if available, else fallback to gpt-4o
 def get_dynamic_model():
-    # Try to get dynamic settings from Chainlit user session
     try:
         llm_temperature = cl.user_session.get("llm_temperature")
         llm_max_tokens = cl.user_session.get("llm_max_tokens")
@@ -61,40 +60,52 @@ def get_dynamic_model():
             kwargs["base_url"] = llm_endpoint
         return ChatOpenAI(model="gpt-4o", **kwargs)
     except Exception:
-        # Fallback to static model
         try:
             return writer_agent.llm
         except AttributeError:
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(model="gpt-4o")
 
-# Use langgraph-supervisor's built-in routing and handoff
-def get_supervisor_workflow():
-    model = get_dynamic_model()
-    return create_supervisor(
-        persona_agents + tool_agents,
-        model=model,
-    ).compile()
-
-# Entrypoint for Chainlit and tests
 async def supervisor(state: ChatState, **kwargs):
     """
-    Entrypoint for the Dreamdeck supervisor using langgraph-supervisor.
-    Uses dynamic LLM settings from Chainlit UI if available.
+    Entrypoint for the Dreamdeck supervisor.
+    Uses the decision agent (oracle) to decide which agent/tool/persona to call next,
+    then calls that agent, and (if it's a tool) follows up with the GM persona if appropriate.
     """
-    workflow = get_supervisor_workflow()
-    result = await workflow.ainvoke(state, **kwargs)
-    # Return just the messages list for test compatibility
-    return result["messages"]
+    # 1. Use the decision agent to decide what to do next
+    decision = await decision_agent(state)
+    route = decision.get("route", "writer")
+    cl_logger.info(f"Supervisor: decision agent routed to '{route}'")
+
+    # 2. Route to the correct agent/tool/persona
+    agent = AGENT_MAP.get(route)
+    if agent is None:
+        cl_logger.warning(f"Supervisor: unknown route '{route}', defaulting to writer agent")
+        agent = writer_agent
+
+    # 3. Call the agent/tool
+    if route in ("dice", "roll", "web_search", "search", "todo", "knowledge", "report", "storyboard"):
+        # Tool agent: call tool, then follow up with GM if appropriate
+        tool_result = await agent(state)
+        # If the tool result is not an error, follow up with the GM persona
+        if tool_result and getattr(tool_result[0], "name", "") != "error":
+            # Optionally, update state with tool result before calling GM
+            state.messages.extend(tool_result)
+            # Call the GM persona (writer agent) to narrate or react
+            gm_result = await writer_agent(state)
+            return tool_result + gm_result
+        else:
+            return tool_result
+    else:
+        # Persona agent: just call it
+        return await agent(state)
 
 # Patch: add .ainvoke for test compatibility (LangGraph expects this in tests)
 supervisor.ainvoke = supervisor
 
-# Patch: add dummy 'task' attribute for test compatibility (for unittest.mock.patch in tests)
 def _noop_task(x):
     return x
 supervisor.task = _noop_task
 
-# Patch: add dummy 'task' attribute at module level for test compatibility
 def task(x):
     return x
