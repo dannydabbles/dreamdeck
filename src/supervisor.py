@@ -24,7 +24,6 @@ async def dreamdeck_supervisor_agent(state: ChatState, **kwargs):
     if not last_human:
         cl_logger.warning("Supervisor: No user message found in state.")
         return {"route": "default"}
-dreamdeck_supervisor_agent.name = "dreamdeck_supervisor"
 
     user_input = last_human.content.strip().lower()
 
@@ -83,6 +82,8 @@ dreamdeck_supervisor_agent.name = "dreamdeck_supervisor"
     persona_key = _normalize_persona(persona)
     state.current_persona = persona_key.replace("_", " ").title()
     return {"route": f"persona:{persona_key}"}
+
+dreamdeck_supervisor_agent.name = "dreamdeck_supervisor"
 
 # Persona agents
 if hasattr(writer_agent, "persona_agent_registry"):
