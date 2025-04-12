@@ -15,7 +15,8 @@ from src.agents.persona_classifier_agent import persona_classifier_agent
 # Define Chainlit commands for UI buttons and slash menu
 from chainlit import Action
 
-commands = [
+# List of available commands/actions for UI (used for both slash and action buttons)
+COMMANDS = [
     {"id": "roll", "icon": "dice-5", "description": "Roll dice"},
     {"id": "search", "icon": "globe", "description": "Web search"},
     {"id": "todo", "icon": "list", "description": "Add a TODO"},
@@ -155,16 +156,15 @@ def auth_callback(username: str, password: str):
 
 @cl.on_chat_start
 async def on_chat_start():
-    # Register Chainlit commands for UI buttons and slash menu (per session, not global)
-    try:
-        await cl.set_commands(commands)
-    except Exception as e:
-        cl_logger.warning(f"Could not register commands in Chainlit UI: {e}")
-    """Initialize new chat session with Chainlit integration.
+    """
+    Initialize new chat session with Chainlit integration.
 
     Sets up the user session, initializes the chat state, initializes agents and vector store,
     and sends initial messages. Agents and vector store are stored in the Chainlit user session.
     """
+    # Register available actions/commands for UI discoverability (as action buttons)
+    # Chainlit v2+: Use cl.ChatSettings and Action objects for UI
+    # (No cl.set_commands or cl.command decorator)
 
     # Import load_knowledge_documents so it is defined in this scope
     global load_knowledge_documents
@@ -264,7 +264,7 @@ async def on_chat_start():
         # Use Chainlit Action objects for UI buttons (v1.0+)
         actions = [
             Action(id=cmd["id"], name=cmd["description"], icon=cmd.get("icon"), payload={})
-            for cmd in commands
+            for cmd in COMMANDS
         ]
         start_cl_msg = cl.Message(
             content=START_MESSAGE,
@@ -422,7 +422,6 @@ async def on_chat_resume(thread: ThreadDict):
     await load_knowledge_documents()
 
 
-# Register Chainlit action callbacks for UI buttons
 # Register Chainlit action callbacks for UI buttons using the modern API
 from chainlit import Action
 
@@ -603,7 +602,7 @@ async def on_message(message: cl.Message):
                 return
             # Extract command name after slash
             command_name = command_line[1:].split(maxsplit=1)[0].strip()
-            known_commands = {cmd["id"] for cmd in commands}
+            known_commands = {cmd["id"] for cmd in COMMANDS}
             # If command_name is empty, treat as unknown command "/"
             if not command_name:
                 await cl.Message(content="Unknown command: /").send()
@@ -632,62 +631,7 @@ async def on_message(message: cl.Message):
             },
         )
 
-        # Run persona classifier after user message
-        try:
-            from src.agents.persona_classifier_agent import persona_classifier_agent
-
-            try:
-                suggestion = await persona_classifier_agent(state)
-                cl.user_session.set("suggested_persona", suggestion)
-            except Exception as e:
-                cl_logger.error(f"Persona classifier error: {e}")
-                # If classifier fails, fallback to current persona and do not prompt user.
-                suggestion = {
-                    "persona": cl.user_session.get("current_persona", "default"),
-                    "reason": "classifier error",
-                }
-                cl.user_session.set("suggested_persona", suggestion)
-
-            current_persona = cl.user_session.get("current_persona", "default").lower()
-            suggested_persona = suggestion.get("persona", "").lower()
-
-            # Check suppression list to avoid nagging user repeatedly
-            suppressed = cl.user_session.get("suppressed_personas", {})
-            if suggested_persona in suppressed and suppressed[suggested_persona] > 0:
-                cl_logger.info(f"Suppressing persona switch prompt for '{suggested_persona}' ({suppressed[suggested_persona]} turns left)")
-                # Decrement counter and update
-                suppressed[suggested_persona] -= 1
-                if suppressed[suggested_persona] <= 0:
-                    suppressed.pop(suggested_persona)
-                cl.user_session.set("suppressed_personas", suppressed)
-                # If the user recently declined switching to this persona, suppress re-prompting for a few turns.
-                # This avoids nagging the user repeatedly with the same suggestion.
-                # Skip prompting user
-                suggested_persona = current_persona  # treat as no change
-
-            auto_switch_enabled = cl.user_session.get("auto_persona_switch", True)
-
-            if auto_switch_enabled:
-                # If suggestion is different and not default, prompt user
-                if (
-                    suggested_persona
-                    and suggested_persona != current_persona
-                    and suggested_persona != "default"
-                ):
-                    cl_logger.info(
-                        f"Persona switch suggested: {current_persona} -> {suggested_persona}"
-                    )
-                    cl.user_session.set("pending_persona_switch", suggested_persona)
-                    await cl.Message(
-                        content=f"🤖 The AI suggests switching persona to **{suggested_persona}**. Reply 'Yes' to switch or 'No' to keep current persona."
-                    ).send()
-            else:
-                cl_logger.info(
-                    "Auto persona switching disabled by user setting. Ignoring suggestion."
-                )
-        except Exception as e:
-            cl_logger.error(f"Persona classifier error: {e}")
-
+        # After user message, always call the supervisor to decide next step (unless a slash command or action was handled above)
         try:
             state.memories = [
                 str(m.page_content) for m in vector_memory.get(message.content)

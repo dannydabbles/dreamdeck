@@ -12,9 +12,8 @@ import sys
 import chainlit as cl
 import logging
 
-# NOTE: cl.register_commands is not available in all Chainlit versions.
-# If you want to expose commands in the UI, use the set_commands method in event_handlers.py.
-# This block is intentionally left blank to avoid KeyError on import.
+# NOTE: Chainlit v2+ does not use cl.command or cl.set_commands.
+# Commands and actions are registered via event_handlers.py using action_callback decorators and ChatSettings.
 from langchain_core.messages import HumanMessage, AIMessage
 from src.models import ChatState
 from src.stores import VectorStore
