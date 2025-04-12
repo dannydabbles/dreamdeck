@@ -39,17 +39,19 @@ class PersonaAgent:
         state.current_persona = self.persona_name
         return await generate_story(state, **kwargs)
 
-# Register persona agents for all configured personas
+# Register persona agents for all configured personas, but only keep the first "default" (case-insensitive)
+seen_default = False
 for persona in getattr(config.agents.writer_agent, "personas", {}).keys():
-    persona_agent_registry[persona.lower()] = PersonaAgent(persona)
+    if persona.lower() == "default":
+        if seen_default:
+            continue  # Skip duplicate "default"
+        seen_default = True
+        persona_agent_registry["default"] = PersonaAgent(persona)
+    else:
+        persona_agent_registry[persona.lower()] = PersonaAgent(persona)
 
-# Remove all duplicate "default" keys except the first one (case-insensitive)
-default_keys = [k for k in persona_agent_registry if k.lower() == "default"]
-if default_keys:
-    # Keep only the first occurrence, remove others
-    for k in default_keys[1:]:
-        del persona_agent_registry[k]
-    writer_agent = persona_agent_registry[default_keys[0]]
+if "default" in persona_agent_registry:
+    writer_agent = persona_agent_registry["default"]
 else:
     writer_agent = PersonaAgent("Default")
     persona_agent_registry["default"] = writer_agent
