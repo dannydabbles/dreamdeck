@@ -13,10 +13,25 @@ def _noop_decorator(*args, **kwargs):
         return func
     return wrapper
 
+import asyncio
+
 @pytest.fixture(autouse=True, scope="function")
 def patch_task_and_registry(monkeypatch):
-    # Patch langgraph.func.task to a no-op decorator for all tests
-    monkeypatch.setattr("langgraph.func.task", _noop_decorator, raising=False)
+    # Patch langgraph.func.task to a context-preserving decorator for all tests
+    def context_preserving_task(*args, **kwargs):
+        def decorator(func):
+            # Wrap the function to provide a dummy langgraph context if needed
+            async def wrapper(*w_args, **w_kwargs):
+                # Patch langgraph.config.get_config to not fail
+                try:
+                    import langgraph.config
+                    monkeypatch.setattr(langgraph.config, "get_config", lambda: {})
+                except ImportError:
+                    pass
+                return await func(*w_args, **w_kwargs)
+            return wrapper
+        return decorator
+    monkeypatch.setattr("langgraph.func.task", context_preserving_task, raising=False)
 
     # Patch chainlit.command, .profile, .step to no-op
     try:
@@ -49,6 +64,20 @@ def patch_task_and_registry(monkeypatch):
         return agent
 
     monkeypatch.setattr(registry, "get_agent", test_get_agent)
+
+    # Patch asyncio.run to work under pytest-asyncio (running event loop)
+    orig_asyncio_run = asyncio.run
+
+    def safe_asyncio_run(coro, *args, **kwargs):
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run
+            return orig_asyncio_run(coro, *args, **kwargs)
+        # Already in a running loop (pytest-asyncio), so just await
+        return loop.run_until_complete(coro) if not loop.is_running() else loop.create_task(coro)
+
+    monkeypatch.setattr(asyncio, "run", safe_asyncio_run)
 
     yield
 
