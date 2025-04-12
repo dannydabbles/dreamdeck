@@ -42,26 +42,48 @@ tool_agents = list(unique_tool_agents.values())
 persona_agent_names = set(getattr(agent, "name", None) for agent in persona_agents if getattr(agent, "name", None))
 tool_agents = [agent for agent in tool_agents if getattr(agent, "name", None) not in persona_agent_names]
 
+import chainlit as cl
+
 # Use the writer agent's LLM if available, else fallback to gpt-4o
-try:
-    model = writer_agent.llm
-except AttributeError:
-    model = ChatOpenAI(model="gpt-4o")
+def get_dynamic_model():
+    # Try to get dynamic settings from Chainlit user session
+    try:
+        llm_temperature = cl.user_session.get("llm_temperature")
+        llm_max_tokens = cl.user_session.get("llm_max_tokens")
+        llm_endpoint = cl.user_session.get("llm_endpoint")
+        from langchain_openai import ChatOpenAI
+        kwargs = {}
+        if llm_temperature is not None:
+            kwargs["temperature"] = llm_temperature
+        if llm_max_tokens is not None:
+            kwargs["max_tokens"] = llm_max_tokens
+        if llm_endpoint:
+            kwargs["base_url"] = llm_endpoint
+        return ChatOpenAI(model="gpt-4o", **kwargs)
+    except Exception:
+        # Fallback to static model
+        try:
+            return writer_agent.llm
+        except AttributeError:
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI(model="gpt-4o")
 
 # Use langgraph-supervisor's built-in routing and handoff
-supervisor_workflow = create_supervisor(
-    persona_agents + tool_agents,
-    model=model,
-    # Optionally, you can set output_mode, prompt, or custom tools here
-    # output_mode="last_message",
-).compile()
+def get_supervisor_workflow():
+    model = get_dynamic_model()
+    return create_supervisor(
+        persona_agents + tool_agents,
+        model=model,
+    ).compile()
 
 # Entrypoint for Chainlit and tests
 async def supervisor(state: ChatState, **kwargs):
     """
     Entrypoint for the Dreamdeck supervisor using langgraph-supervisor.
+    Uses dynamic LLM settings from Chainlit UI if available.
     """
-    result = await supervisor_workflow.ainvoke(state, **kwargs)
+    workflow = get_supervisor_workflow()
+    result = await workflow.ainvoke(state, **kwargs)
     # Return just the messages list for test compatibility
     return result["messages"]
 

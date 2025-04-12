@@ -3,12 +3,75 @@ Slash command handlers for Dreamdeck.
 
 These commands bypass the decision agent and directly invoke the relevant tool or agent.
 They are registered as Chainlit slash commands for UI discoverability.
+
+All commands are also exposed as action buttons and in the Chainlit slash menu.
 """
 
 import os
 import sys
 import chainlit as cl
 import logging
+
+# Register all slash commands for Chainlit UI discoverability
+cl.register_commands([
+    {
+        "name": "roll",
+        "description": "Roll dice (e.g., `/roll 2d6` or `/roll check perception`)",
+        "parameters": [],
+    },
+    {
+        "name": "search",
+        "description": "Perform a web search",
+        "parameters": [],
+    },
+    {
+        "name": "todo",
+        "description": "Add a TODO item",
+        "parameters": [],
+    },
+    {
+        "name": "write",
+        "description": "Directly prompt the writer agent",
+        "parameters": [],
+    },
+    {
+        "name": "storyboard",
+        "description": "Generate storyboard images for the last Game Master message",
+        "parameters": [],
+    },
+    {
+        "name": "report",
+        "description": "Generate a daily summary report",
+        "parameters": [],
+    },
+    {
+        "name": "persona",
+        "description": "Force switch to a specific persona",
+        "parameters": [
+            {
+                "name": "name",
+                "description": "Persona name",
+                "type": "string",
+                "required": True,
+            }
+        ],
+    },
+    {
+        "name": "help",
+        "description": "Show help message",
+        "parameters": [],
+    },
+    {
+        "name": "reset",
+        "description": "Reset the current story and start fresh",
+        "parameters": [],
+    },
+    {
+        "name": "save",
+        "description": "Export the current story as a markdown file",
+        "parameters": [],
+    },
+])
 from langchain_core.messages import HumanMessage, AIMessage
 from src.models import ChatState
 from src.stores import VectorStore

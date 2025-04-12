@@ -12,13 +12,15 @@ PERSONA_SUPPRESSION_TURNS = 3
 # Expose persona_classifier_agent for tests
 from src.agents.persona_classifier_agent import persona_classifier_agent
 
-# Define Chainlit commands for UI buttons
+# Define Chainlit commands for UI buttons and slash menu
 commands = [
     {"id": "roll", "icon": "dice-5", "description": "Roll dice"},
     {"id": "search", "icon": "globe", "description": "Web search"},
     {"id": "todo", "icon": "list", "description": "Add a TODO"},
     {"id": "write", "icon": "pen-line", "description": "Direct prompt to writer"},
     {"id": "storyboard", "icon": "image", "description": "Generate storyboard"},
+    {"id": "report", "icon": "bar-chart", "description": "Generate daily report"},
+    {"id": "persona", "icon": "user", "description": "Switch persona"},
     {"id": "help", "icon": "help-circle", "description": "Show help"},
     {"id": "reset", "icon": "refresh-ccw", "description": "Reset story"},
     {"id": "save", "icon": "save", "description": "Export story"},
@@ -196,55 +198,25 @@ async def on_chat_start():
                     initial="Storyteller GM",
                 ),
                 Slider(
-                    id="writer_temp",
-                    label="Writer Agent - Temperature",
+                    id="llm_temperature",
+                    label="LLM Temperature",
                     min=0.0,
                     max=2.0,
                     step=0.1,
-                    initial=config.WRITER_AGENT_TEMPERATURE,
+                    initial=config.LLM_TEMPERATURE,
                 ),
                 Slider(
-                    id="writer_max_tokens",
-                    label="Writer Agent - Max Tokens",
+                    id="llm_max_tokens",
+                    label="LLM Max Tokens",
                     min=100,
                     max=16000,
                     step=100,
-                    initial=config.WRITER_AGENT_MAX_TOKENS,
+                    initial=config.LLM_MAX_TOKENS,
                 ),
                 TextInput(
-                    id="writer_endpoint",
-                    label="Writer Agent - OpenAI Endpoint URL",
-                    initial=config.WRITER_AGENT_BASE_URL or "",
-                    placeholder="e.g., http://localhost:5000/v1",
-                ),
-                Slider(
-                    id="decision_temp",
-                    label="Decision Agent - Temperature",
-                    min=0.0,
-                    max=2.0,
-                    step=0.1,
-                    initial=config.DECISION_AGENT_TEMPERATURE,
-                ),
-                Slider(
-                    id="storyboard_temp",
-                    label="Storyboard Agent - Temperature",
-                    min=0.0,
-                    max=2.0,
-                    step=0.1,
-                    initial=config.STORYBOARD_EDITOR_AGENT_TEMPERATURE,
-                ),
-                Slider(
-                    id="storyboard_max_tokens",
-                    label="Storyboard Agent - Max Tokens",
-                    min=100,
-                    max=16000,
-                    step=100,
-                    initial=config.STORYBOARD_EDITOR_AGENT_MAX_TOKENS,
-                ),
-                TextInput(
-                    id="storyboard_endpoint",
-                    label="Storyboard Agent - OpenAI Endpoint URL",
-                    initial=config.STORYBOARD_EDITOR_AGENT_BASE_URL or "",
+                    id="llm_endpoint",
+                    label="LLM Endpoint URL",
+                    initial=config.OPENAI_SETTINGS.get("base_url", "") or "",
                     placeholder="e.g., http://localhost:5000/v1",
                 ),
                 Switch(
@@ -270,6 +242,15 @@ async def on_chat_start():
         )
         cl.user_session.set(
             "auto_persona_switch", settings.get("auto_persona_switch", True)
+        )
+        cl.user_session.set(
+            "llm_temperature", settings.get("llm_temperature", config.LLM_TEMPERATURE)
+        )
+        cl.user_session.set(
+            "llm_max_tokens", settings.get("llm_max_tokens", config.LLM_MAX_TOKENS)
+        )
+        cl.user_session.set(
+            "llm_endpoint", settings.get("llm_endpoint", config.OPENAI_SETTINGS.get("base_url", ""))
         )
 
         # Launch knowledge loading in the background
@@ -835,6 +816,15 @@ async def on_settings_update(settings):
     cl.user_session.set("current_persona", settings.get("persona", "Storyteller GM"))
     cl.user_session.set(
         "auto_persona_switch", settings.get("auto_persona_switch", True)
+    )
+    cl.user_session.set(
+        "llm_temperature", settings.get("llm_temperature", config.LLM_TEMPERATURE)
+    )
+    cl.user_session.set(
+        "llm_max_tokens", settings.get("llm_max_tokens", config.LLM_MAX_TOKENS)
+    )
+    cl.user_session.set(
+        "llm_endpoint", settings.get("llm_endpoint", config.OPENAI_SETTINGS.get("base_url", ""))
     )
     cl_logger.info(
         f"Persona changed via settings to: {settings.get('persona', 'Storyteller GM')}"
