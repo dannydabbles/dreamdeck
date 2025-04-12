@@ -441,47 +441,47 @@ async def on_chat_resume(thread: ThreadDict):
 
 # Register Chainlit action callbacks for UI buttons
 @cl.action_callback("roll")
-async def on_roll_action(action: cl.Action, ctx: cl.ActionCallbackContext):
+async def on_roll_action(action):
     from src import commands as cmd_mod
     await cmd_mod.command_roll("")
 
 @cl.action_callback("search")
-async def on_search_action(action: cl.Action, ctx: cl.ActionCallbackContext):
+async def on_search_action(action):
     from src import commands as cmd_mod
     await cmd_mod.command_search("")
 
 @cl.action_callback("todo")
-async def on_todo_action(action: cl.Action, ctx: cl.ActionCallbackContext):
+async def on_todo_action(action):
     from src import commands as cmd_mod
     await cmd_mod.command_todo("")
 
 @cl.action_callback("write")
-async def on_write_action(action: cl.Action, ctx: cl.ActionCallbackContext):
+async def on_write_action(action):
     from src import commands as cmd_mod
     await cmd_mod.command_write("")
 
 @cl.action_callback("storyboard")
-async def on_storyboard_action(action: cl.Action, ctx: cl.ActionCallbackContext):
+async def on_storyboard_action(action):
     from src import commands as cmd_mod
     await cmd_mod.command_storyboard("")
 
 @cl.action_callback("help")
-async def on_help_action(action: cl.Action, ctx: cl.ActionCallbackContext):
+async def on_help_action(action):
     from src import commands as cmd_mod
     await cmd_mod.command_help()
 
 @cl.action_callback("reset")
-async def on_reset_action(action: cl.Action, ctx: cl.ActionCallbackContext):
+async def on_reset_action(action):
     from src import commands as cmd_mod
     await cmd_mod.command_reset()
 
 @cl.action_callback("save")
-async def on_save_action(action: cl.Action, ctx: cl.ActionCallbackContext):
+async def on_save_action(action):
     from src import commands as cmd_mod
     await cmd_mod.command_save()
 
 @cl.action_callback("persona")
-async def on_persona_action(action: cl.Action, ctx: cl.ActionCallbackContext):
+async def on_persona_action(action):
     from src import commands as cmd_mod
     await cmd_mod.command_persona("")
 
