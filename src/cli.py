@@ -21,14 +21,14 @@ def run_async(coro):
     """
     try:
         loop = asyncio.get_running_loop()
+        if loop.is_running():
+            # In pytest or other running event loop, raise so tests can patch this
+            raise RuntimeError("asyncio.run() cannot be called from a running event loop")
     except RuntimeError:
-        loop = None
-    if loop and loop.is_running():
-        # In pytest or other running event loop, run the coroutine directly
-        # This allows tests to work without raising
-        return loop.run_until_complete(coro)
-    else:
+        # No running event loop, safe to use asyncio.run
         return asyncio.run(coro)
+    # Defensive fallback (should not reach here)
+    return asyncio.run(coro)
 
 def main():
     parser = argparse.ArgumentParser(description="Dreamdeck CLI")
