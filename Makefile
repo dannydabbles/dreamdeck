@@ -1,4 +1,4 @@
-.PHONY: install run start build test lint format restart stop log aider-sonnet aider backup restore cli
+.PHONY: install run start build test lint format restart stop log aider-sonnet aider backup restore cli docker-test
 
 # Need to specify bash in order for conda activate to work.
 SHELL=/bin/bash
@@ -56,6 +56,10 @@ stop:
 log:
 	@echo "Viewing logs in real-time..."
 	@docker-compose logs -f
+
+docker-test:
+	@echo "Running tests in Docker/CI environment (no conda)..."
+	PYTHONPATH=. poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
 
 aider-sonnet:
 	@echo "Running aider with sonnet..."
