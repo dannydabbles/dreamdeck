@@ -24,6 +24,7 @@ async def dreamdeck_supervisor_agent(state: ChatState, **kwargs):
     if not last_human:
         cl_logger.warning("Supervisor: No user message found in state.")
         return {"route": "default"}
+dreamdeck_supervisor_agent.name = "dreamdeck_supervisor"
 
     user_input = last_human.content.strip().lower()
 
