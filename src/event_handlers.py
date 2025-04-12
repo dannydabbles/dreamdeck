@@ -601,6 +601,10 @@ async def on_message(message: cl.Message):
             if not command_name:
                 await cl.Message(content="Unknown command: /").send()
                 return
+            # If the command is just a slash (e.g. "/ "), treat as unknown command "/"
+            if command_name == "":
+                await cl.Message(content="Unknown command: /").send()
+                return
             if command_name not in known_commands:
                 await cl.Message(content=f"Unknown command: /{command_name}").send()
                 return
