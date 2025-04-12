@@ -4,7 +4,55 @@ import os
 # Always set DREAMDECK_TEST_MODE=1 during tests to isolate ChromaDB
 os.environ["DREAMDECK_TEST_MODE"] = "1"
 
-# Patch chainlit.command to a dummy decorator during pytest collection and run
+import pytest
+
+# --- Centralized test monkeypatching for langgraph.func.task and agent registry ---
+
+def _noop_decorator(*args, **kwargs):
+    def wrapper(func):
+        return func
+    return wrapper
+
+@pytest.fixture(autouse=True, scope="session")
+def patch_task_and_registry(monkeypatch):
+    # Patch langgraph.func.task to a no-op decorator for all tests
+    monkeypatch.setattr("langgraph.func.task", _noop_decorator, raising=False)
+
+    # Patch chainlit.command, .profile, .step to no-op
+    try:
+        import chainlit as cl
+        cl.command = _noop_decorator
+        cl.profile = _noop_decorator
+        cl.step = _noop_decorator
+    except ImportError:
+        pass
+
+    # Patch src.agents.registry.get_agent to always return the undecorated function if available
+    import src.agents.registry as registry
+
+    orig_get_agent = registry.get_agent
+
+    def test_get_agent(name):
+        agent = orig_get_agent(name)
+        # If agent is a langgraph task, try to get the undecorated function
+        if hasattr(agent, "_dice_roll"):
+            return agent._dice_roll
+        if hasattr(agent, "_generate_storyboard"):
+            return agent._generate_storyboard
+        if hasattr(agent, "_manage_todo"):
+            return agent._manage_todo
+        if hasattr(agent, "_knowledge"):
+            return agent._knowledge
+        if hasattr(agent, "_generate_story"):
+            return agent._generate_story
+        # If agent is a dummy or already a mock, just return it
+        return agent
+
+    monkeypatch.setattr(registry, "get_agent", test_get_agent)
+
+    yield
+
+# Patch chainlit.command to a dummy decorator during pytest collection and run (legacy fallback)
 if (
     "pytest" in sys.modules
     or "PYTEST_CURRENT_TEST" in os.environ
@@ -20,8 +68,8 @@ if (
             return wrapper
 
         cl.command = _noop_decorator
-        cl.profile = _noop_decorator  # Add this line to patch cl.profile during tests
-        cl.step = _noop_decorator  # Add this line to patch cl.step during tests
+        cl.profile = _noop_decorator
+        cl.step = _noop_decorator
     except ImportError:
         pass
 
