@@ -293,6 +293,9 @@ async def on_chat_start():
         cl.user_session.set("image_generation_memory", [])
         cl_user_session.set("ai_message_id", None)
 
+        # Register commands for Chainlit UI (slash menu, etc.)
+        await cl.context.emitter.set_commands(COMMANDS)
+
     except Exception as e:
         cl_logger.error(f"Application failed to start: {e}", exc_info=True)
         raise
