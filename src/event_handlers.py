@@ -655,10 +655,12 @@ async def on_message(message: cl.Message):
                         metadata = getattr(msg, "metadata", None)
                         msg_id = metadata.get("message_id") if metadata else None
                         if not msg_id:
+                            # Attempt to generate a synthetic message_id to avoid skipping vector store save
+                            import uuid
+                            msg_id = str(uuid.uuid4())
                             cl_logger.warning(
-                                f"AIMessage missing message_id, skipping vector store save: {msg.content}"
+                                f"AIMessage missing message_id, generated synthetic ID: {msg_id} for content: {msg.content}"
                             )
-                            continue
 
                         # Defensive copy of metadata or empty dict
                         meta = dict(metadata) if metadata else {}
