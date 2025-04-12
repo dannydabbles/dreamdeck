@@ -29,7 +29,7 @@ def run_async(coro):
     except RuntimeError:
         # No running loop, safe to use asyncio.run
         return asyncio.run(coro)
-    # Fallback: use asyncio.run
+    # Defensive fallback: use asyncio.run
     return asyncio.run(coro)
 
 def main():

@@ -66,14 +66,16 @@ async def supervisor(state: ChatState, **kwargs):
                     None,
                 )
                 if gm_msg:
-                    if config is not None:
+                    # Only pass config if agent supports it (i.e., is a LangGraph Runnable)
+                    if config is not None and hasattr(agent, "ainvoke"):
                         return await agent(state, gm_message_id=gm_msg.metadata["message_id"], config=config)
                     else:
                         return await agent(state, gm_message_id=gm_msg.metadata["message_id"])
                 else:
                     cl_logger.warning("Supervisor: No GM message found for storyboard.")
                     return []
-            if config is not None:
+            # Only pass config if agent supports it (i.e., is a LangGraph Runnable)
+            if config is not None and hasattr(agent, "ainvoke"):
                 return await agent(state, config=config)
             else:
                 return await agent(state)
@@ -83,7 +85,8 @@ async def supervisor(state: ChatState, **kwargs):
     persona_key = _normalize_persona(persona)
     agent = getattr(writer_agent, "persona_agent_registry", {}).get(persona_key, writer_agent)
     cl_logger.info(f"Supervisor: Routing to persona agent '{persona_key}'.")
-    if config is not None:
+    # Only pass config if agent supports it (i.e., is a LangGraph Runnable)
+    if config is not None and hasattr(agent, "ainvoke"):
         return await agent(state, config=config)
     else:
         return await agent(state)
