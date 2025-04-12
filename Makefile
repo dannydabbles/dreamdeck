@@ -57,10 +57,6 @@ log:
 	@echo "Viewing logs in real-time..."
 	@docker-compose logs -f
 
-docker-test:
-	@echo "Running tests in Docker/CI environment (no conda)..."
-	PYTHONPATH=. poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
-
 aider-sonnet:
 	@echo "Running aider with sonnet..."
 	@aider --multiline --architect --sonnet --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
