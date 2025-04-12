@@ -476,11 +476,11 @@ async def on_persona_action(action: Action):
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    """Handle incoming user chat messages.
+    """
+    Handle incoming user chat messages.
 
-    Ignores slash commands (handled separately).
-    Adds user message to state and vector store.
-    Calls the chat workflow, which invokes the decision agent and relevant tools.
+    - If the message is a slash command (e.g. "/roll 2d6"), dispatch to the corresponding handler.
+    - Otherwise, treat as a normal speech turn and call the supervisor to decide which agent/tool/persona to use.
     """
     state: ChatState = cl.user_session.get("state")
     vector_memory: VectorStore = cl.user_session.get("vector_memory")
@@ -537,8 +537,6 @@ async def on_message(message: cl.Message):
         cl.user_session.set("state", state)
         return  # Skip normal message processing
 
-    # Remove action button handling here, as it is now handled by @cl.action_callback
-
     # Retrieve current user identifier from session
     current_user_identifier = None
     user_info = cl.user_session.get("user")
@@ -559,65 +557,58 @@ async def on_message(message: cl.Message):
                 f"Processing message from 'Player' author, but couldn't verify against session identifier '{current_user_identifier}'."
             )
 
-        # If the message is a command button click, handle it
-        if message.command is not None and message.command != "":
-            cl_logger.info(f"Command button selected: {message.command}")
-            try:
-                from src import commands as cmd_mod
-
-                cmd_name = message.command.lower()
-                arg = ""  # No argument from button click
-                if cmd_name == "roll":
-                    await cmd_mod.command_roll(arg)
-                elif cmd_name == "search":
-                    await cmd_mod.command_search(arg)
-                elif cmd_name == "todo":
-                    await cmd_mod.command_todo(arg)
-                elif cmd_name == "write":
-                    await cmd_mod.command_write(arg)
-                elif cmd_name == "storyboard":
-                    await cmd_mod.command_storyboard(arg)
-                elif cmd_name == "help":
-                    await cmd_mod.command_help()
-                elif cmd_name == "reset":
-                    await cmd_mod.command_reset()
-                elif cmd_name == "save":
-                    await cmd_mod.command_save()
-                elif cmd_name == "persona":
-                    await cmd_mod.command_persona(arg)
-                else:
-                    await cl.Message(content=f"Unknown command: {cmd_name}").send()
-            except Exception as e:
-                cl_logger.error(
-                    f"Error handling command button '{message.command}': {e}",
-                    exc_info=True,
-                )
-                await cl.Message(
-                    content=f"Error processing command '{message.command}': {e}"
-                ).send()
-            return  # Skip normal message processing
-
-        # Check if message starts with slash and is unknown command
+        # --- SLASH COMMAND HANDLING ---
         if message.content.strip().startswith("/"):
             command_line = message.content.strip()
             # Special case: if user just sends "/", treat as unknown command "/"
             if command_line == "/" or command_line.strip() == "/":
                 await cl.Message(content="Unknown command: /").send()
                 return
-            # Extract command name after slash
-            command_name = command_line[1:].split(maxsplit=1)[0].strip()
+            # Extract command name and argument
+            parts = command_line[1:].split(maxsplit=1)
+            command_name = parts[0].strip()
+            arg = parts[1] if len(parts) > 1 else ""
             known_commands = {cmd["id"] for cmd in COMMANDS}
-            # If command_name is empty, treat as unknown command "/"
             if not command_name:
-                await cl.Message(content="Unknown command: /").send()
-                return
-            # If the command is just a slash (e.g. "/ "), treat as unknown command "/"
-            if command_name == "":
                 await cl.Message(content="Unknown command: /").send()
                 return
             if command_name not in known_commands:
                 await cl.Message(content=f"Unknown command: /{command_name}").send()
                 return
+            # Dispatch to the corresponding command handler
+            try:
+                from src import commands as cmd_mod
+                if command_name == "roll":
+                    await cmd_mod.command_roll(arg)
+                elif command_name == "search":
+                    await cmd_mod.command_search(arg)
+                elif command_name == "todo":
+                    await cmd_mod.command_todo(arg)
+                elif command_name == "write":
+                    await cmd_mod.command_write(arg)
+                elif command_name == "storyboard":
+                    await cmd_mod.command_storyboard(arg)
+                elif command_name == "report":
+                    await cmd_mod.command_report()
+                elif command_name == "help":
+                    await cmd_mod.command_help()
+                elif command_name == "reset":
+                    await cmd_mod.command_reset()
+                elif command_name == "save":
+                    await cmd_mod.command_save()
+                elif command_name == "persona":
+                    await cmd_mod.command_persona(arg)
+                else:
+                    await cl.Message(content=f"Unknown command: /{command_name}").send()
+            except Exception as e:
+                cl_logger.error(
+                    f"Error handling slash command '/{command_name}': {e}",
+                    exc_info=True,
+                )
+                await cl.Message(
+                    content=f"Error processing command '/{command_name}': {e}"
+                ).send()
+            return  # Skip normal message processing
 
         # Add user message to state immediately
         user_msg = HumanMessage(
@@ -635,7 +626,7 @@ async def on_message(message: cl.Message):
             },
         )
 
-        # After user message, always call the supervisor to decide next step (unless a slash command or action was handled above)
+        # After user message, always call the supervisor to decide next step
         try:
             state.memories = [
                 str(m.page_content) for m in vector_memory.get(message.content)
