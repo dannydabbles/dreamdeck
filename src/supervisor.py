@@ -11,7 +11,7 @@ import logging
 import sys
 import os
 
-from langgraph_supervisor import SupervisorGraph, SupervisorNode, ToolNode, PersonaNode
+from langgraph_supervisor.graph import SupervisorGraph, SupervisorNode, ToolNode, PersonaNode
 
 cl_logger = logging.getLogger("chainlit")
 
