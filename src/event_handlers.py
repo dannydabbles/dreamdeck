@@ -265,7 +265,7 @@ async def on_chat_start():
         # Initialize thread in Chainlit with a start message
         # Use Chainlit Action objects for UI buttons (v1.0+)
         actions = [
-            Action(id=cmd["id"], name=cmd["description"], icon=cmd.get("icon"))
+            Action(id=cmd["id"], name=cmd["description"], icon=cmd.get("icon"), payload={})
             for cmd in commands
         ]
         start_cl_msg = cl.Message(
