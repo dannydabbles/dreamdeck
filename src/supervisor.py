@@ -71,17 +71,24 @@ async def supervisor(state: ChatState, **kwargs):
     Entrypoint for the Dreamdeck supervisor.
     Uses the decision agent (oracle) to decide which agent/tool/persona to call next,
     then calls that agent, and (if it's a tool) follows up with the GM persona if appropriate.
+
+    This version avoids langgraph context issues by always calling the agent's *_helper function
+    (if available) instead of the @task-decorated function.
     """
     # 1. Use the decision agent to decide what to do next
-    decision = await decision_agent(state)
+    # Always use the helper to avoid langgraph context issues
+    from src.agents.decision_agent import _decide_next_agent
+    decision = await _decide_next_agent(state)
     route = decision.get("route", "writer")
     cl_logger.info(f"Supervisor: decision agent routed to '{route}'")
 
-    # 2. Route to the correct agent/tool/persona
-    agent = AGENT_MAP.get(route)
+    # 2. Route to the correct agent/tool/persona, always using the helper if available
+    from src.agents.registry import get_agent
+    agent = get_agent(route, helper=True)
     if agent is None:
         cl_logger.warning(f"Supervisor: unknown route '{route}', defaulting to writer agent")
-        agent = writer_agent
+        from src.agents.writer_agent import writer_agent_helper
+        agent = writer_agent_helper
 
     # 3. Call the agent/tool
     if route in ("dice", "roll", "web_search", "search", "todo", "knowledge", "report", "storyboard"):
@@ -92,7 +99,8 @@ async def supervisor(state: ChatState, **kwargs):
             # Optionally, update state with tool result before calling GM
             state.messages.extend(tool_result)
             # Call the GM persona (writer agent) to narrate or react
-            gm_result = await writer_agent(state)
+            from src.agents.writer_agent import writer_agent_helper
+            gm_result = await writer_agent_helper(state)
             return tool_result + gm_result
         else:
             return tool_result
