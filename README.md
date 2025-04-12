@@ -171,7 +171,6 @@ Default users (matching password callback):
   - [ ] Sample `.env` file.
   - [ ] `CONTRIBUTING.md` guidelines.
   - [ ] `CHANGELOG.md`.
-  - [ ] `LICENSE` file (MIT or Apache-2.0).
 
 ---
 
