@@ -39,22 +39,26 @@ class PersonaAgent:
         state.current_persona = self.persona_name
         return await generate_story(state, **kwargs)
 
-# Register persona agents for all configured personas, but only keep the first "default" (case-insensitive)
-seen_default = False
+# Register persona agents for all configured personas, ensuring unique (case-sensitive) names.
+# Only one "Default" agent is allowed, and all names are unique.
+persona_names_seen = set()
 for persona in getattr(config.agents.writer_agent, "personas", {}).keys():
-    if persona.lower() == "default":
-        if seen_default:
-            continue  # Skip duplicate "default"
-        seen_default = True
-        persona_agent_registry["default"] = PersonaAgent(persona)
-    else:
-        persona_agent_registry[persona.lower()] = PersonaAgent(persona)
+    persona_key = persona
+    if persona_key in persona_names_seen:
+        continue  # Skip duplicate (case-sensitive)
+    persona_names_seen.add(persona_key)
+    persona_agent_registry[persona_key] = PersonaAgent(persona_key)
 
-if "default" in persona_agent_registry:
+# Prefer "Default" (case-sensitive) if present, else fallback to any "default" (case-insensitive), else first persona
+if "Default" in persona_agent_registry:
+    writer_agent = persona_agent_registry["Default"]
+elif "default" in persona_agent_registry:
     writer_agent = persona_agent_registry["default"]
+elif persona_agent_registry:
+    writer_agent = next(iter(persona_agent_registry.values()))
 else:
     writer_agent = PersonaAgent("Default")
-    persona_agent_registry["default"] = writer_agent
+    persona_agent_registry["Default"] = writer_agent
 
 
 @cl.step(name="Writer Agent: Generate Story", type="tool")

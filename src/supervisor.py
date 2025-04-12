@@ -14,32 +14,28 @@ import logging
 
 cl_logger = logging.getLogger("chainlit")
 
-# Gather all persona and tool agents, ensuring unique agent names (case-insensitive)
+# Gather all persona and tool agents, ensuring unique agent names (case-sensitive)
 if hasattr(writer_agent, "persona_agent_registry"):
     persona_agents = list(writer_agent.persona_agent_registry.values())
 else:
     persona_agents = [writer_agent]
 
-# Remove duplicate persona agents by name (case-insensitive)
+# Remove duplicate persona agents by name (case-sensitive)
 unique_persona_agents = {}
 for agent in persona_agents:
     agent_name = getattr(agent, "name", None)
-    if agent_name:
-        key = agent_name.lower()
-        if key not in unique_persona_agents:
-            unique_persona_agents[key] = agent
+    if agent_name and agent_name not in unique_persona_agents:
+        unique_persona_agents[agent_name] = agent
 persona_agents = list(unique_persona_agents.values())
 
 tool_agents = [entry["agent"] for tool, entry in AGENT_REGISTRY.items()]
 
-# Remove duplicate tool agents by name (case-insensitive)
+# Remove duplicate tool agents by name (case-sensitive)
 unique_tool_agents = {}
 for agent in tool_agents:
     agent_name = getattr(agent, "name", None)
-    if agent_name:
-        key = agent_name.lower()
-        if key not in unique_tool_agents:
-            unique_tool_agents[key] = agent
+    if agent_name and agent_name not in unique_tool_agents:
+        unique_tool_agents[agent_name] = agent
 tool_agents = list(unique_tool_agents.values())
 
 # Use the writer agent's LLM if available, else fallback to gpt-4o
