@@ -8,9 +8,12 @@ import sys
 @pytest.mark.asyncio
 async def test_supervisor_tool_routing(monkeypatch):
     # Patch get_agent to return the undecorated function to avoid langgraph context issues
-    from src.agents.dice_agent import _dice_roll
+    from src.agents.dice_agent import _dice_roll, dice_agent
     dummy_agent = AsyncMock(side_effect=_dice_roll)
-    with patch("src.agents.registry.get_agent", return_value=dummy_agent), patch("src.supervisor.task", lambda x: x):
+    # Patch the dice_agent symbol itself to the undecorated function
+    with patch("src.agents.dice_agent.dice_agent", new=_dice_roll), \
+         patch("src.agents.registry.get_agent", return_value=dummy_agent), \
+         patch("src.supervisor.task", lambda x: x):
         from src.supervisor import supervisor
         state = ChatState(messages=[HumanMessage(content="/dice", name="Player")], thread_id="t1")
         result = await supervisor(state)
@@ -21,9 +24,12 @@ async def test_supervisor_tool_routing(monkeypatch):
 @pytest.mark.asyncio
 async def test_supervisor_storyboard_routing(monkeypatch):
     # Patch get_agent to return the undecorated function to avoid langgraph context issues
-    from src.agents.storyboard_editor_agent import _generate_storyboard
+    from src.agents.storyboard_editor_agent import _generate_storyboard, storyboard_editor_agent
     dummy_agent = AsyncMock(side_effect=lambda state, gm_message_id=None: _generate_storyboard(state, gm_message_id or "gm1"))
-    with patch("src.agents.registry.get_agent", return_value=dummy_agent), patch("src.supervisor.task", lambda x: x):
+    # Patch the storyboard_editor_agent symbol itself to the undecorated function
+    with patch("src.agents.storyboard_editor_agent.storyboard_editor_agent", new=_generate_storyboard), \
+         patch("src.agents.registry.get_agent", return_value=dummy_agent), \
+         patch("src.supervisor.task", lambda x: x):
         from src.supervisor import supervisor
         # Add a GM message with message_id
         gm_msg = AIMessage(content="scene", name="Game Master", metadata={"message_id": "gm1"})
