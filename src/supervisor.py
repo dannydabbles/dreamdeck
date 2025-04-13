@@ -90,8 +90,8 @@ async def supervisor(state: ChatState, **kwargs):
         last_route = route
 
         # If the route is a persona (e.g., "persona:Therapist"), update state.current_persona accordingly
-        if route.startswith("persona:"):
-            persona_name = route.split(":", 1)[1]
+        if route.lower().startswith("persona:"):
+            persona_name = route.split(":", 1)[1].strip()
             cl_logger.info(f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision")
             state.current_persona = persona_name
             import chainlit as cl
