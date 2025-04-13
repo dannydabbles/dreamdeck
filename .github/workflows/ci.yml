@@ -17,18 +17,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Docker Compose
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y docker-compose
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Set up Docker Compose
+      uses: docker/setup-compose-action@v3
 
     - name: Build and start services with Docker Compose
-      run: docker-compose up -d --build
+      run: docker compose up -d --build
 
     - name: Wait for app to be ready
       run: |
         for i in {1..30}; do
-          if docker-compose logs dreamdeck | grep -q "Dreamdeck app loaded"; then
+          if docker compose logs dreamdeck | grep -q "Dreamdeck app loaded"; then
             echo "App is ready!"
             break
           fi
@@ -37,10 +38,10 @@ jobs:
         done
 
     - name: Run tests in Docker
-      run: docker-compose exec -T dreamdeck make docker-test
+      run: docker compose exec -T dreamdeck make docker-test
 
     - name: Lint with flake8 in Docker
-      run: docker-compose exec -T dreamdeck poetry run flake8 . tests/
+      run: docker compose exec -T dreamdeck poetry run flake8 . tests/
 
     - name: Check formatting with black in Docker
-      run: docker-compose exec -T dreamdeck poetry run black --check . tests/
+      run: docker compose exec -T dreamdeck poetry run black --check . tests/
