@@ -61,4 +61,5 @@ services:
       - ./knowledge:/app/knowledge  # Mount the knowledge directory
       - ./chroma_db:/app/chroma_db  # Add this line
       - ./helper:/app/helper
+      - ./Makefile:/app/Makefile
     network_mode: bridge
