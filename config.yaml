@@ -20,10 +20,7 @@ prompts:
   storyboard_generation_prompt: "storyboard_generation_prompt.j2"
   oracle_decision_prompt: "oracle_decision_prompt.j2"
   storyteller_gm_prompt: "ai_writer_prompt_storyteller.j2" # New prompt for Storyteller GM
-  director_prompt: "director_prompt.j2"
-  character_prompt: "character_prompt.j2"
   lore_prompt: "lore_prompt.j2"
-  puzzle_prompt: "puzzle_prompt.j2"
   default_writer_prompt: "ai_writer_prompt.j2" # Explicit key for default writer
   todo_prompt: "todo_prompt.j2"
   persona_classifier_prompt: "persona_classifier_prompt.j2"
