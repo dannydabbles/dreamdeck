@@ -81,6 +81,10 @@ aider-dual:
 	@echo "Running aider with local dual coder and reasoner models..."
 	@aider --multiline --architect --model openai/reasoner --editor-model openai/coder --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
 
+aider-local:
+	@echo "Running aider with local models..."
+	@aider --multiline --architect --model openai/coder --editor-model openai/coder --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
+
 aider:
 	@echo "Running aider with local llm..."
 	@aider --multiline --architect --o1-mini --openai-api-base http://192.168.1.111:5000/v1 --timeout 500 --model-settings-file .aider.model.settings.yml

@@ -1,7 +1,7 @@
 max_chain_length: 3
 
 llm:
-  model: "gpt-4o"
+  model: "coder"
   temperature: 0.6
   max_tokens: 8000
   streaming: true
