@@ -174,7 +174,6 @@ DATABASE_URL = os.getenv("DATABASE_URL", config.defaults.db_file)
 KNOWLEDGE_DIRECTORY = os.path.realpath(config.paths.get("knowledge", "./knowledge"))
 LLM_MAX_TOKENS = config.llm.max_tokens
 LLM_TEMPERATURE = config.llm.temperature
-LLM_MODEL_NAME = config.llm.model_name
 LLM_STREAMING = config.llm.streaming
 LLM_TIMEOUT = config.llm.timeout
 LLM_PRESENCE_PENALTY = config.llm.presence_penalty
@@ -255,7 +254,6 @@ cl_logger.info(
     f"LLM configuration loaded: "
     f"temperature={LLM_TEMPERATURE}, "
     f"max_tokens={LLM_MAX_TOKENS}, "
-    f"model_name={LLM_MODEL_NAME}, "
     f"streaming={LLM_STREAMING}, "
     f"timeout={LLM_TIMEOUT}, "
     f"presence_penalty={LLM_PRESENCE_PENALTY}, "
