@@ -25,9 +25,9 @@ def test_missing_required_config():
 def test_edge_case_configs():
     minimal_config = {
         "llm": {
+            "model": "gpt-4o",
             "temperature": 0.0,
             "max_tokens": 8000,
-            "model_name": "gpt-3.5-turbo",
             "streaming": True,
             "timeout": 300,
             "presence_penalty": 0.1,

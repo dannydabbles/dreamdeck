@@ -75,10 +75,8 @@ class DefaultsConfig(BaseModel):
 
 class LlmConfig(BaseModel):
     model: str
-    model_config = ConfigDict(extra="forbid")
     temperature: float
     max_tokens: int
-    model_name: str
     streaming: bool
     timeout: int
     presence_penalty: float
