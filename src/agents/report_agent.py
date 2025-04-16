@@ -87,6 +87,7 @@ async def _generate_report(state: ChatState, **kwargs) -> list[AIMessage]:
         final_max_tokens = user_settings.get("report_max_tokens", 500)
 
         llm = ChatOpenAI(
+            model=config.llm.model,
             base_url=final_endpoint,
             temperature=final_temp,
             max_tokens=final_max_tokens,

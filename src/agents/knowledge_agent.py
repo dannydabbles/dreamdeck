@@ -53,6 +53,7 @@ async def _knowledge(state: ChatState, knowledge_type: str, **kwargs) -> list[Ba
         )
 
         llm = ChatOpenAI(
+            model=config.llm.model,
             base_url=final_endpoint,
             temperature=final_temp,
             max_tokens=final_max_tokens,

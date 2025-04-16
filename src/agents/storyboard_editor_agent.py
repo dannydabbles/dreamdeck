@@ -58,6 +58,7 @@ async def _generate_storyboard(
 
         # Initialize the LLM with potentially overridden settings
         llm = ChatOpenAI(
+            model=config.llm.model,
             base_url=final_endpoint,
             temperature=final_temp,
             max_tokens=final_max_tokens,

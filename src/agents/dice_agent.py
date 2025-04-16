@@ -54,6 +54,7 @@ async def _dice_roll(
 
         # Invoke LLM to get structured output
         llm = ChatOpenAI(
+            model=config.llm.model,
             base_url=config.openai["base_url"],
             temperature=0.7,  # Adjust temperature as needed
             max_tokens=100,

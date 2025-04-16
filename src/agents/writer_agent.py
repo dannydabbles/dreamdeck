@@ -201,6 +201,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
         )
 
         llm = ChatOpenAI(
+            model=config.llm.model,
             base_url=final_endpoint,
             temperature=final_temp,
             max_tokens=final_max_tokens,

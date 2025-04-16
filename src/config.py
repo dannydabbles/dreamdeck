@@ -74,6 +74,7 @@ class DefaultsConfig(BaseModel):
 
 
 class LlmConfig(BaseModel):
+    model: str
     model_config = ConfigDict(extra="forbid")
     temperature: float
     max_tokens: int

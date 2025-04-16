@@ -43,6 +43,7 @@ async def _decide_next_agent(state: ChatState, **kwargs) -> dict:
         final_max_tokens = user_settings.get("decision_max_tokens", 100)
 
         llm = ChatOpenAI(
+            model=config.llm.model,
             base_url=final_endpoint,
             temperature=final_temp,
             max_tokens=final_max_tokens,

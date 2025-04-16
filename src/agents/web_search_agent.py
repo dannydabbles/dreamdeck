@@ -108,6 +108,7 @@ async def _web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
     )
 
     llm = ChatOpenAI(
+        model=config.llm.model,
         base_url=config.openai["base_url"],
         temperature=0.2,
         max_tokens=50,

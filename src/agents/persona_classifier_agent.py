@@ -53,6 +53,7 @@ async def _classify_persona(state: ChatState) -> dict:
         final_max_tokens = user_settings.get("persona_classifier_max_tokens", 200)
 
         llm = ChatOpenAI(
+            model=config.llm.model,
             base_url=final_endpoint,
             temperature=final_temp,
             max_tokens=final_max_tokens,
