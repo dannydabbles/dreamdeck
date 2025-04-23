@@ -139,6 +139,7 @@ async def test_on_chat_start(mock_cl_environment):
         assert isinstance(state.messages[0], AIMessage)
         assert state.messages[0].content == START_MESSAGE
         assert state.thread_id == "evt-test-thread"
+        assert state.current_persona == "Friend" # Verify state object has correct initial persona
 
         # Verify other session vars
         assert user_session_store.get("image_generation_memory") == []
