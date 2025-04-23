@@ -59,7 +59,7 @@ log:
 
 aider-gemma-local:
 	@echo "Running aider with gemma and local models..."
-	@aider --multiline --architect --model openrouter/google/gemini-2.5-pro-exp-03-25:free --editor-model openai/coder --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
+	@aider --multiline --architect --model openrouter/google/gemini-2.5-pro-exp-03-25:free --editor-model openai/coder --timeout 900 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --no-show-model-warnings
 
 aider-sonnet:
 	@echo "Running aider with sonnet..."
