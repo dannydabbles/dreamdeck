@@ -121,8 +121,8 @@ agents:
         prompt_key: "friend_writer_prompt"
       "Dungeon Master":
         prompt_key: "dungeon_master_writer_prompt"
-      "Default": # Changed to use the friend prompt by default
-        prompt_key: "friend_writer_prompt"
+      "Default":
+        prompt_key: "default_writer_prompt"
   todo_agent:
     personas:
       "Secretary":
