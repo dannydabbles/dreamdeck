@@ -12,14 +12,15 @@ How the app works:
 - If unsure, default to "writer".
 
 You can choose from:
-- "dice" — for dice rolling or random chance
-- "search" — for web search or external information
-- "todo" — for managing tasks or TODOs
-- "knowledge" — for lore, world info, or background
-- "report" — for daily summaries or progress reports
-- "storyboard" — for generating visual storyboards/images
-- "writer" — for continuing the story as the Game Master or narrator
-- "persona:Therapist", "persona:Secretary", "persona:Coder", "persona:Friend", "persona:Lorekeeper", "persona:Dungeon Master", "persona:Storyteller GM", "persona:Default" — to hand off to a specific persona
+- "dice" — for dice rolling
+- "search" — for web search
+- "todo" — for managing tasks
+- "knowledge" — for lore/world info
+- "report" — for daily summaries
+- "storyboard" — for generating images
+- "persona:Storyteller GM" — Default storyteller/narrator
+- "persona:Therapist", "persona:Secretary", "persona:Coder", "persona:Friend", "persona:Lorekeeper", "persona:Dungeon Master", "persona:Default" — Specific personas
+- "END" — If the previous agent successfully fulfilled the user's request and no further narrative response is needed.
 
 </goal>
 
@@ -28,9 +29,10 @@ You can choose from:
 - Do NOT include explanations, commentary, or markdown.
 - Do NOT call the same agent/tool twice in a row before the human speaks again, unless the user is explicitly requesting a tool output only.
 - Persona agents should generally speak last before returning to the user, unless the user is only seeking a tool result.
-- If unsure, default to {"route": "writer"}
+- If the most recent message is from a tool agent (dice, search, todo, report, storyboard, knowledge) fulfilling a direct user request, and the user's original input did not contain further narrative instructions, the route should be `END`.
+- If unsure, default to {"route": "persona:Storyteller GM"}
 - If the user input is best handled by a specific persona, use {"route": "persona:Therapist"} (or the appropriate persona).
-- If the user input is a slash command, route to the matching tool.
+- If the user input is a slash command (e.g., /roll), route to the matching tool (e.g., dice).
 </guidelines>
 
 <chat_history>
@@ -50,8 +52,8 @@ You can choose from:
 </user_preferences>
 
 Respond ONLY with the JSON object, e.g.:
-{"route": "writer"}
+{"route": "persona:Storyteller GM"}
 or
 {"route": "dice"}
 or
-{"route": "persona:Therapist"}
+{"route": "END"}

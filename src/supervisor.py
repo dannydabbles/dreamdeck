@@ -87,11 +87,17 @@ async def supervisor(state: ChatState, **kwargs):
         decision = await _decide_next_agent(state)
         route = decision.get("route", "writer")
         cl_logger.info(f"Supervisor: decision agent routed to '{route}'")
+
+        # --- Check for END route ---
+        if route == "END":
+            cl_logger.info("Supervisor: END route received, terminating turn.")
+            break
+
         last_route = route
 
         # If the route is a persona (e.g., "persona:Therapist"), update state.current_persona accordingly
         if route.lower().startswith("persona:"):
-            persona_name = route.split(":", 1)[1].strip()
+            persona_name = route.split(":", 1)[1].strip() or "Default"
             cl_logger.info(f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision")
             state.current_persona = persona_name
             import chainlit as cl
@@ -99,11 +105,13 @@ async def supervisor(state: ChatState, **kwargs):
             # Route to the persona agent (writer agent with correct persona)
             agent = get_agent("writer", helper=True)
             if agent is None:
-                from src.agents.writer_agent import writer_agent_helper
-                agent = writer_agent_helper
+                # Fallback if writer agent isn't registered correctly (shouldn't happen)
+                cl_logger.error("Supervisor: Could not find writer agent via get_agent('writer', helper=True)")
+                break
             # Always call the helper
             persona_result = await agent(state)
-            results.extend(persona_result)
+            if persona_result:
+                results.extend(persona_result)
             break  # Persona agent is always last
         else:
             # Route to the correct tool agent, always using the helper if available
