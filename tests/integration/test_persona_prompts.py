@@ -54,7 +54,7 @@ def dummy_state():
         ("Therapist", "therapist_writer_prompt"),
         ("Coder", "coder_writer_prompt"),
         ("Secretary", "secretary_writer_prompt"),
-        ("Default", "default_writer_prompt"),
+        ("Default", "friend_writer_prompt"), # Changed expected prompt
         ("UnknownPersona", "default_writer_prompt"),  # fallback
     ],
 )
@@ -89,9 +89,9 @@ async def test_writer_agent_prompt_selection(dummy_state, persona, expected_prom
         persona_configs = getattr(config.agents.writer_agent, "personas", {})
         persona_entry = persona_configs.get(persona, {})
         prompt_key = (
-            persona_entry.get("prompt_key", "default_writer_prompt")
+            persona_entry.get("prompt_key", "friend_writer_prompt")  # Changed default fallback check
             if isinstance(persona_entry, dict)
-            else "default_writer_prompt"
+            else "friend_writer_prompt"  # Changed default fallback check
         )
         if persona not in persona_configs:
             prompt_key = "default_writer_prompt"

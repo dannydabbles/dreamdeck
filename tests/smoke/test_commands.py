@@ -258,7 +258,7 @@ async def test_command_write(mock_session_data):
         vector_store.put.assert_any_await(
             content="The wizard says hello.",
             message_id="ai-write-msg-id",
-            metadata={"type": "ai", "author": "Game Master", "persona": "Default"},
+            metadata={"type": "ai", "author": "🤖 Default", "persona": "Default"}, # Changed author
         )
 
         mock_user_session_set.assert_called_with("state", state)

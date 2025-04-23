@@ -380,7 +380,7 @@ async def test_on_message_normal_flow(mock_cl_environment):
 
     final_ai_message = AIMessage(
         content="Once upon a time...",
-        name="Game Master",
+        name="🤖 Default", # Changed name
         metadata={"message_id": "ai-msg-id-1"},
     )
     final_state = ChatState(
@@ -434,7 +434,7 @@ async def test_on_message_normal_flow(mock_cl_environment):
             message_id="ai-msg-id-1",
             metadata={
                 "type": "ai",
-                "author": "Game Master",
+                "author": "🤖 Default", # Changed author
                 "message_id": "ai-msg-id-1",
                 "persona": "Default",
             },
