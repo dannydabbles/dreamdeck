@@ -23,15 +23,20 @@ import chainlit as cl
 cl_logger = logging.getLogger("chainlit")
 
 @cl.step(name="Decision Agent", type="tool")
-async def _decide_next_agent(state: ChatState, **kwargs) -> dict:
+async def _decide_next_agent(state: ChatState, tool_results_this_turn: list = None, **kwargs) -> dict:
     """
     Uses an LLM to decide which agent/persona/tool should handle the next turn.
     Returns a dict: {"route": "dice"|"search"|"writer"|"persona:Therapist"|...}
     """
     try:
         template = Template(config.loaded_prompts["oracle_decision_prompt"])
+        # Prepare context string for tool results this turn
+        tool_results_this_turn_str = ""
+        if tool_results_this_turn:
+            tool_results_this_turn_str = "\n".join([f"{msg.name}: {msg.content}" for msg in tool_results_this_turn])
         prompt = template.render(
             recent_chat_history=state.get_recent_history_str(),
+            tool_results_this_turn=tool_results_this_turn_str,
             memories=state.get_memories_str(),
             tool_results=state.get_tool_results_str(),
             user_preferences=state.user_preferences,
@@ -84,4 +89,5 @@ async def _decide_next_agent(state: ChatState, **kwargs) -> dict:
 # Refactored: decision_agent is now a stateless, LLM-backed function (task)
 @task
 async def decision_agent(state: ChatState, **kwargs) -> dict:
-    return await _decide_next_agent(state, **kwargs)
+    # Note: tool_results_this_turn is passed by the supervisor directly
+    return await _decide_next_agent(state, tool_results_this_turn=state.tool_results_this_turn, **kwargs)

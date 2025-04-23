@@ -55,15 +55,18 @@ class ChatState(BaseModel):
         return "\n".join([f"{msg.name}: {msg.content}" for msg in filtered])
 
     def get_tool_results_str(self) -> str:
-        recent_messages = self.messages[-500:]
-        # Go through recent messages and find the last AIMessage with name in ["dice_roll", "web_search"]
-        recent_agent_messages = [
-            msg
-            for msg in reversed(recent_messages)
-            if isinstance(msg, AIMessage) and msg.name in ["dice_roll", "web_search"]
-        ]
-        # Set tool_msgs to the last 3 agent messages if they exist
-        tool_msgs = recent_agent_messages[:3]
+        """Return formatted string of recent tool results, prioritizing current turn."""
+        tool_msgs = []
+        # Prioritize results from the current turn
+        if self.tool_results_this_turn:
+            tool_msgs = self.tool_results_this_turn[-3:] # Get last 3 from current turn
+        else:
+            # Fallback: Look back through message history for last 3 tool messages
+            recent_messages = self.messages[-500:]
+            tool_msgs = [
+                msg for msg in reversed(recent_messages)
+                if isinstance(msg, (ToolMessage, AIMessage)) and msg.name in ["dice_roll", "web_search", "todo", "report", "knowledge", "storyboard"]
+            ][:3]
         return (
             "\n".join([f"{msg.name}: {msg.content}" for msg in tool_msgs])
             if tool_msgs

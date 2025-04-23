@@ -152,18 +152,16 @@ async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
         except Exception as e:
             cl_logger.warning(f"Failed to write todo file {file_path}: {e}")
 
-        cl_msg = CLMessage(
-            content=f"📝 Updated TODO list:\n{updated_markdown}",
-            parent_id=None,
-        )
-        await cl_msg.send()
+        # Generate a unique ID for the message metadata
+        import uuid
+        message_id = str(uuid.uuid4())
 
         # Return an AIMessage with fixed name 'todo' for test compatibility
         return [
             AIMessage(
                 content=f"Updated TODO list:\n{updated_markdown}",
                 name="todo",
-                metadata={"message_id": cl_msg.id},
+                metadata={"message_id": message_id},
             )
         ]
 

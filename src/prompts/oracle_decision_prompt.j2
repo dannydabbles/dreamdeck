@@ -28,8 +28,9 @@ You can choose from:
 - Output a JSON object: {"route": "agent_or_persona_name"}
 - Do NOT include explanations, commentary, or markdown.
 - Do NOT call the same agent/tool twice in a row before the human speaks again, unless the user is explicitly requesting a tool output only.
-- Persona agents should generally speak last before returning to the user, unless the user is only seeking a tool result.
-- If the most recent message is from a tool agent (dice, search, todo, report, storyboard, knowledge) fulfilling a direct user request, and the user's original input did not contain further narrative instructions, the route should be `END`.
+- **Crucially:** If the previous step was a tool (dice, search, todo, report, storyboard, knowledge), consider if the user's original request requires summarization or further action. If so, route to an appropriate persona (e.g., `persona:Secretary` for TODO/report summaries, `persona:Default` for search/dice summaries) instead of `END`.
+- Only route to `END` if the *entirety* of the user's last request seems fulfilled by the *immediately preceding* agent/tool action AND no summarization/narrative response appears necessary.
+- If the user asks for multiple actions (e.g., "search for X and add Y to todo"), route to the first logical tool. The supervisor will call the oracle again to handle subsequent steps.
 - If unsure, default to {"route": "persona:Storyteller GM"}
 - If the user input is best handled by a specific persona, use {"route": "persona:Therapist"} (or the appropriate persona).
 - If the user input is a slash command (e.g., /roll), route to the matching tool (e.g., dice).
@@ -46,6 +47,10 @@ You can choose from:
 <tool_results>
 {{ tool_results }}
 </tool_results>
+
+<tool_results_this_turn>
+{{ tool_results_this_turn }}
+</tool_results_this_turn>
 
 <user_preferences>
 {{ user_preferences }}
