@@ -106,6 +106,10 @@ async def test_on_chat_start(mock_cl_environment):
         # Verify ChatSettings sent
         mock_chat_settings.assert_called_once()
         mock_chat_settings_instance.send.assert_awaited_once()
+        # Verify the correct initial persona is set in the session based on settings
+        # Find the call to set 'current_persona'
+        set_calls = [c for c in user_session_store_mock_set.call_args_list if c.args[0] == 'current_persona']
+        assert set_calls[-1].args[1] == "Friend" # Check the last call sets it to Friend
 
         # Verify knowledge loading task created
         mock_create_task.assert_called_once()

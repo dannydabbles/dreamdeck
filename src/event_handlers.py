@@ -197,7 +197,7 @@ async def on_chat_start():
                     id="persona",
                     label="Persona",
                     values=["Storyteller GM", "Friend", "Therapist", "Secretary", "Coder", "Dungeon Master", "Default"],
-                    initial="Storyteller GM",
+                    initial="Friend", # Changed default persona for new chats
                 ),
                 Slider(
                     id="llm_temperature",
