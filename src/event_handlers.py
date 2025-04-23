@@ -168,7 +168,7 @@ async def on_chat_start():
     global load_knowledge_documents
 
     # Determine active persona from profile selection, default if none
-    persona = cl.user_session.get("current_persona", "Default")
+    persona = cl.user_session.get("current_persona", "Friend")
 
     try:
         # Fetch current user identifier
@@ -241,7 +241,7 @@ async def on_chat_start():
 
         cl.user_session.set("chat_settings", settings)
         cl.user_session.set(
-            "current_persona", settings.get("persona", "Storyteller GM")
+            "current_persona", settings.get("persona", "Friend")
         )
         cl.user_session.set(
             "auto_persona_switch", settings.get("auto_persona_switch", True)
