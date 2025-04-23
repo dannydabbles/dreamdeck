@@ -81,12 +81,16 @@ async def supervisor(state: ChatState, **kwargs):
     max_hops = 5  # Prevent infinite loops
     hops = 0
     results = []
+    # Clear tool results from previous turns at the start of a new supervisor invocation
+    state.tool_results_this_turn = []
     last_route = None
 
     while hops < max_hops:
-        decision = await _decide_next_agent(state)
+        # Pass current turn's tool results to the decision agent
+        decision = await _decide_next_agent(state, tool_results_this_turn=state.tool_results_this_turn)
         route = decision.get("route", "writer")
         cl_logger.info(f"Supervisor: decision agent routed to '{route}'")
+        state.last_agent_called = route # Track the agent being called
 
         # --- Check for END route ---
         if route == "END":
@@ -153,8 +157,8 @@ async def supervisor(state: ChatState, **kwargs):
 
             tool_result = await agent_to_call(state)
             if tool_result:
-                results.extend(tool_result)
-                # Optionally, update state with tool result before next hop
+                results.extend(tool_result) # Accumulate results for final return
+                state.tool_results_this_turn.extend(tool_result) # Track results within this turn for Oracle context
                 state.messages.extend(tool_result)
             # After tool, loop to call decision agent again for next step
         hops += 1
