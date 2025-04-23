@@ -77,7 +77,7 @@ refusal_list:
   - "I'm not comfortable"
   - "I am not comfortable"
   - |
-    **Game Master**: Hello! What kind of story would you like to create today?
+    **Game Master**: Hello! What can I do for you?
 
 defaults:
   db_file: "chainlit.db"
@@ -214,4 +214,4 @@ chainlit:
   db: "sqlite:///./chainlit.db"
 
 chat:
-  start_message: "Hello! What kind of story would you like to create today?"
+  start_message: "Hello! What can I do for you?"
