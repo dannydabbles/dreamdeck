@@ -106,14 +106,18 @@ async def supervisor(state: ChatState, **kwargs):
             state.current_persona = persona_name
             import chainlit as cl
             cl.user_session.set("current_persona", persona_name)
-            # Route to the persona agent (writer agent with correct persona)
-            agent = get_agent("writer", helper=True)
-            if agent is None:
-                # Fallback if writer agent isn't registered correctly (shouldn't happen)
-                cl_logger.error("Supervisor: Could not find writer agent via get_agent('writer', helper=True)")
+            # --- Correctly select the specific PersonaAgent instance ---
+            from src.agents.writer_agent import writer_agent
+            agent_to_call = None
+            if hasattr(writer_agent, 'persona_agent_registry') and persona_name in writer_agent.persona_agent_registry:
+                agent_to_call = writer_agent.persona_agent_registry[persona_name]
+            else:
+                cl_logger.warning(f"Supervisor: Persona '{persona_name}' not found in writer_agent registry, falling back to default writer.")
+                agent_to_call = writer_agent
+            if agent_to_call is None:
+                cl_logger.error(f"Supervisor: Could not find agent for persona '{persona_name}'")
                 break
-            # Always call the helper
-            persona_result = await agent(state)
+            persona_result = await agent_to_call(state)
             if persona_result:
                 results.extend(persona_result)
             break  # Persona agent is always last
