@@ -55,7 +55,7 @@ def dummy_state():
         ("Coder", "coder_writer_prompt"),
         ("Secretary", "secretary_writer_prompt"),
         ("Default", "friend_writer_prompt"), # Changed expected prompt
-        ("UnknownPersona", "default_writer_prompt"),  # fallback
+        ("UnknownPersona", "friend_writer_prompt"),  # fallback should use the "Default" persona's configured prompt
     ],
 )
 async def test_writer_agent_prompt_selection(dummy_state, persona, expected_prompt_key):
@@ -89,12 +89,13 @@ async def test_writer_agent_prompt_selection(dummy_state, persona, expected_prom
         persona_configs = getattr(config.agents.writer_agent, "personas", {})
         persona_entry = persona_configs.get(persona, {})
         prompt_key = (
-            persona_entry.get("prompt_key", "friend_writer_prompt")  # Changed default fallback check
+            persona_entry.get("prompt_key", "friend_writer_prompt")  # Fallback uses "Default" persona's key
             if isinstance(persona_entry, dict)
-            else "friend_writer_prompt"  # Changed default fallback check
+            else "friend_writer_prompt"  # Fallback uses "Default" persona's key
         )
         if persona not in persona_configs:
-            prompt_key = "default_writer_prompt"
+            # If persona unknown, use the configured key for the "Default" persona
+            prompt_key = persona_configs.get("Default", {}).get("prompt_key", "friend_writer_prompt")
 
         assert prompt_key == expected_prompt_key
 
