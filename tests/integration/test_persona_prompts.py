@@ -94,7 +94,10 @@ async def test_writer_agent_prompt_selection(dummy_state, persona, expected_prom
 
         # If no specific key found, use the global default writer prompt key from config
         if not resolved_prompt_key:
+            # Strip .j2 extension if present for test comparison
             resolved_prompt_key = config.prompt_files.get("default_writer_prompt")
+            if resolved_prompt_key and resolved_prompt_key.endswith(".j2"):
+                resolved_prompt_key = resolved_prompt_key[:-3]
 
         assert resolved_prompt_key == expected_prompt_key
 
