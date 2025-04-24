@@ -55,7 +55,7 @@ def dummy_state():
         ("Coder", "coder_writer_prompt"),
         ("Secretary", "secretary_writer_prompt"),
         ("Default", "friend_writer_prompt"), # Changed expected prompt
-        ("UnknownPersona", "friend_writer_prompt"),  # fallback should use the "Default" persona's configured prompt
+        ("UnknownPersona", "default_writer_prompt"),  # Fallback now uses the global default_writer_prompt key
     ],
 )
 async def test_writer_agent_prompt_selection(dummy_state, persona, expected_prompt_key):
@@ -88,16 +88,15 @@ async def test_writer_agent_prompt_selection(dummy_state, persona, expected_prom
         # Check prompt key resolved
         persona_configs = getattr(config.agents.writer_agent, "personas", {})
         persona_entry = persona_configs.get(persona, {})
-        prompt_key = (
-            persona_entry.get("prompt_key", "friend_writer_prompt")  # Fallback uses "Default" persona's key
-            if isinstance(persona_entry, dict)
-            else "friend_writer_prompt"  # Fallback uses "Default" persona's key
-        )
-        if persona not in persona_configs:
-            # If persona unknown, use the configured key for the "Default" persona
-            prompt_key = persona_configs.get("Default", {}).get("prompt_key", "friend_writer_prompt")
+        resolved_prompt_key = None
+        if isinstance(persona_entry, dict):
+            resolved_prompt_key = persona_entry.get("prompt_key")
 
-        assert prompt_key == expected_prompt_key
+        # If no specific key found, use the global default writer prompt key from config
+        if not resolved_prompt_key:
+            resolved_prompt_key = config.prompt_files.get("default_writer_prompt")
+
+        assert resolved_prompt_key == expected_prompt_key
 
 
 @pytest.mark.asyncio

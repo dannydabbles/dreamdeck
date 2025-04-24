@@ -167,15 +167,19 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
 
         # Normal (non-test) mode
         # Determine the prompt key based on persona
-        prompt_key = "default_writer_prompt"
+        prompt_key = None
         try:
             persona_configs = getattr(config.agents.writer_agent, "personas", {})
             if isinstance(persona_configs, dict):
                 persona_entry = persona_configs.get(persona)
                 if persona_entry and isinstance(persona_entry, dict):
-                    prompt_key = persona_entry.get("prompt_key", prompt_key)
+                    prompt_key = persona_entry.get("prompt_key")
         except Exception:
-            pass  # Defensive: fallback to default_writer_prompt
+            pass  # Ignore errors during lookup
+
+        # If no specific key found, use the global default writer prompt key from config
+        if not prompt_key:
+            prompt_key = config.prompt_files.get("default_writer_prompt")
 
         cl_logger.info(f"Writer agent resolved prompt key: {prompt_key}")
 
