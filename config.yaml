@@ -21,7 +21,7 @@ prompts:
   oracle_decision_prompt: "oracle_decision_prompt.j2"
   storyteller_gm_prompt: "ai_writer_prompt_storyteller.j2" # New prompt for Storyteller GM
   lore_prompt: "lore_prompt.j2"
-  default_writer_prompt: "ai_writer_prompt.j2" # Explicit key for default writer
+  default_writer_prompt: "friend_writer_prompt.j2" # Explicit key for default writer, now points to friend
   todo_prompt: "todo_prompt.j2"
   persona_classifier_prompt: "persona_classifier_prompt.j2"
   therapist_writer_prompt: "therapist_writer_prompt.j2"
