@@ -32,6 +32,10 @@ torchaudio = "^2.6.0"
 tzdata = "^2025.2"
 langgraph-supervisor = "^0.0.16"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"  # Use a recent version
+pytest-cov = "^5.0.0" # For coverage reporting
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
