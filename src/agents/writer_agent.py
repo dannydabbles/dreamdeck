@@ -179,7 +179,8 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
 
         # If no specific key found, use the global default writer prompt key from config
         if not prompt_key:
-            prompt_key = config.prompt_files.get("default_writer_prompt")
+            # Use the *key* from config.prompt_files, not the filename
+            prompt_key = "default_writer_prompt"
 
         cl_logger.info(f"Writer agent resolved prompt key: {prompt_key}")
 
