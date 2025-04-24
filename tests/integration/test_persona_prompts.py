@@ -55,7 +55,7 @@ def dummy_state():
         ("Coder", "coder_writer_prompt"),
         ("Secretary", "secretary_writer_prompt"),
         ("Default", "friend_writer_prompt"), # Changed expected prompt
-        ("UnknownPersona", "default_writer_prompt"),  # Fallback now uses the global default_writer_prompt key
+        ("UnknownPersona", "friend_writer_prompt"),  # Fallback now uses the friend prompt key via default_writer_prompt
     ],
 )
 async def test_writer_agent_prompt_selection(dummy_state, persona, expected_prompt_key):
