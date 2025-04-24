@@ -217,7 +217,7 @@ async def test_command_write(mock_session_data):
     query = "the wizard speaks"
     ai_response_msg = AIMessage(
         content="The wizard says hello.",
-        name="Game Master",
+        name="🤖 Default", # Changed name to match expected default persona format
         metadata={"message_id": "ai-write-msg-id"},
     )
 
