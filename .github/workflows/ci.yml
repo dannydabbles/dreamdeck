@@ -41,7 +41,7 @@ jobs:
       run: poetry install --no-interaction --no-root
 
     - name: Run tests
-      run: make test
+      run: make ci-test
 
     - name: Lint with flake8
       run: poetry run flake8 . tests/

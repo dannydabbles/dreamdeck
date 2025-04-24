@@ -146,3 +146,6 @@ restore:
 	cp -r "$$RESTORE_DIR/chroma_db" ./chroma_db || true; \
 	mv restore_temp /tmp/; \
 	echo "Restored from $$LATEST_BACKUP";
+# Add this new target for CI
+ci-test:
+	PYTHONPATH=src poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
