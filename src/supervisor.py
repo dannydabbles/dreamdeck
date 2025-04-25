@@ -268,16 +268,11 @@ def task(x):
     return x
 
 async def _with_safe_config(fn, *args, **kwargs):
-    # Capture current context
-    ctx = contextvars.copy_context()
-    # Create a wrapper that runs with our safe config
-    async def wrapper():
-        import langgraph.config
-        original_get_config = langgraph.config.get_config
-        langgraph.config.get_config = _safe_get_config
-        try:
-            return await fn(*args, **kwargs)
-        finally:
-            langgraph.config.get_config = original_get_config
-    # Run in the captured context
-    return await ctx.run(wrapper)
+    """Run a function with a safe LangGraph config context."""
+    import langgraph.config
+    original_get_config = langgraph.config.get_config
+    langgraph.config.get_config = _safe_get_config
+    try:
+        return await fn(*args, **kwargs)
+    finally:
+        langgraph.config.get_config = original_get_config
