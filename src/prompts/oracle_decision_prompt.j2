@@ -36,6 +36,7 @@ You can choose from:
 - If unsure about the *next* step (and the previous step was NOT a tool needing summarization), default to {"route": "persona:Storyteller GM"}.
 - If the user input is best handled by a specific persona, use {"route": "persona:Therapist"} (or the appropriate persona).
 - If the user input is a slash command (e.g., /roll), route to the matching tool (e.g., dice).
+- After a persona or writer agent has summarized or provided narrative context for a tool's output, route to {"route": "END"} to end the turn.
 </guidelines>
 
 <chat_history>
