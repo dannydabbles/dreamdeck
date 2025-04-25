@@ -7,7 +7,8 @@ CONDA_ACTIVATE=source $$(conda info --base)/etc/profile.d/conda.sh ; conda activ
 
 install:
 	@echo "Installing dependencies..."
-	@poetry install
+	@echo "If using conda, ensure you have activated your environment (e.g., 'conda activate dd') before running this."
+	@poetry install --with dev
 
 run:
 	@echo "Running the app locally..."
@@ -29,6 +30,7 @@ integration:
 
 test:
 	$(CONDA_ACTIVATE) dd && cd $(CURDIR) && PYTHONPATH=. poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
+	@echo "If you see dependency errors, try running 'conda activate dd' and then 'poetry install --with dev' to ensure dependencies are installed in your conda environment."
 
 docker-test:
 	@echo "Running tests in Docker/CI environment (no conda)..."
