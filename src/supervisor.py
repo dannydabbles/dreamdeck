@@ -221,16 +221,16 @@ async def supervisor(state: ChatState, **kwargs):
                     state.messages.extend(tool_result)
         # After processing all routes in this turn, if a persona agent was called, end the turn.
         if persona_called:
-            # --- BEGIN: Storyboard background task trigger after Storyteller GM response ---
+            # Generate storyboard if current persona is Storyteller GM
             if state.current_persona == "Storyteller GM":
-                # Find the most recent Game Master message
+                # Find the most recent Game Master message using exact name match
                 last_gm_msg = next(
-                    (msg for msg in reversed(state.messages)
-                     if isinstance(msg, AIMessage) and (msg.name == "Game Master" or msg.name == "🎭 Game Master")),
+                    (msg for msg in reversed(state.messages) 
+                     if isinstance(msg, AIMessage) and msg.name == "Game Master"),
                     None
                 )
-                if last_gm_msg and last_gm_msg.metadata and last_gm_msg.metadata.get("message_id"):
-                    # Run storyboard generation in background with context
+                if last_gm_msg and last_gm_msg.metadata.get("message_id"):
+                    # Run storyboard generation in background
                     current_context = contextvars.copy_context()
                     task = asyncio.create_task(
                         current_context.run(
@@ -240,8 +240,7 @@ async def supervisor(state: ChatState, **kwargs):
                             gm_message_id=last_gm_msg.metadata["message_id"]
                         )
                     )
-                    state.background_tasks.append(task)  # Keep track of background tasks
-            # --- END: Storyboard background task trigger ---
+                    state.background_tasks.append(task)
             break
         hops += 1
 

@@ -264,7 +264,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
 
         story_segment = AIMessage(
             content=gm_message.content.strip(),
-            name=f"{persona_icon} {display_name}",
+            name="Game Master",  # Fixed name without icon
             metadata={"message_id": gm_message.id},
         )
 
