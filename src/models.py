@@ -28,8 +28,12 @@ class ChatState(BaseModel):
     thread_data: dict = Field(default_factory=dict)
     current_persona: str = "Default"  # Default persona if none selected/resumed
     last_agent_called: Optional[str] = None  # Track last agent that added a message
-    tool_results_this_turn: List[BaseMessage] = Field(default_factory=list) # Phase 3: Track results within a turn
-    background_tasks: List[asyncio.Task] = Field(default_factory=list) # List of background asyncio tasks to track
+    tool_results_this_turn: List[BaseMessage] = Field(
+        default_factory=list
+    )  # Phase 3: Track results within a turn
+    background_tasks: List[asyncio.Task] = Field(
+        default_factory=list
+    )  # List of background asyncio tasks to track
 
     def increment_error_count(self) -> None:
         self.error_count += 1
@@ -59,13 +63,23 @@ class ChatState(BaseModel):
         tool_msgs = []
         # Prioritize results from the current turn
         if self.tool_results_this_turn:
-            tool_msgs = self.tool_results_this_turn[-3:] # Get last 3 from current turn
+            tool_msgs = self.tool_results_this_turn[-3:]  # Get last 3 from current turn
         else:
             # Fallback: Look back through message history for last 3 tool messages
             recent_messages = self.messages[-500:]
             tool_msgs = [
-                msg for msg in reversed(recent_messages)
-                if isinstance(msg, (ToolMessage, AIMessage)) and msg.name in ["dice_roll", "web_search", "todo", "report", "knowledge", "storyboard"]
+                msg
+                for msg in reversed(recent_messages)
+                if isinstance(msg, (ToolMessage, AIMessage))
+                and msg.name
+                in [
+                    "dice_roll",
+                    "web_search",
+                    "todo",
+                    "report",
+                    "knowledge",
+                    "storyboard",
+                ]
             ][:3]
         return (
             "\n".join([f"{msg.name}: {msg.content}" for msg in tool_msgs])

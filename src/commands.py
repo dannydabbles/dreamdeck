@@ -27,9 +27,11 @@ from src.config import IMAGE_GENERATION_ENABLED, START_MESSAGE
 
 cl_logger = logging.getLogger("chainlit")
 
+
 async def command_empty():
     """Handles the case where the slash command is just `/` with no command name."""
     await cl.Message(content="Unknown command: /").send()
+
 
 async def command_roll(query: str = ""):
     """Slash command: /roll - Roll dice via natural language or dice notation
@@ -48,7 +50,9 @@ async def command_roll(query: str = ""):
         author="Player",
         actions=[
             cl.Action(id="roll_again", name="Roll Again", payload={}, type="button"),
-            cl.Action(id="continue_story", name="Continue Story", payload={}, type="button"),
+            cl.Action(
+                id="continue_story", name="Continue Story", payload={}, type="button"
+            ),
         ],
     )
     await user_cl_msg.send()
@@ -73,6 +77,7 @@ async def command_roll(query: str = ""):
     response_messages = await dice_agent(state)
 
     from src.storage import append_log
+
     append_log(state.current_persona, "Tool call: /roll")
 
     # Update state and vector store for AI response
@@ -151,6 +156,7 @@ async def command_search(query: str = ""):
     response_messages = await web_search_agent(state)
 
     from src.storage import append_log
+
     append_log(state.current_persona, "Tool call: /search")
 
     # Update state and vector store for AI response
@@ -227,6 +233,7 @@ async def command_todo(query: str = ""):
     response_messages = await call_todo_agent(state)
 
     from src.storage import append_log
+
     append_log(state.current_persona, "Tool call: /todo")
 
     # Update state and vector store for AI response
@@ -312,6 +319,7 @@ async def command_write(query: str = ""):
     response_messages = await call_writer_agent(state)
 
     from src.storage import append_log
+
     append_log(state.current_persona, "Tool call: /write")
 
     # Update state and vector store for AI response
@@ -369,6 +377,7 @@ async def command_storyboard(query: str = ""):
         await cl.Message(content="Generating storyboard for the last scene...").send()
         await storyboard_editor_agent(state=state, gm_message_id=last_gm_message_id)
         from src.storage import append_log
+
         append_log(state.current_persona, "Tool call: /storyboard")
         cl_logger.info(f"/storyboard command completed.")
     else:
@@ -470,6 +479,7 @@ async def command_report():
     responses = await report_agent(state)
 
     from src.storage import append_log
+
     append_log(state.current_persona, "Tool call: /report")
 
     if responses:
@@ -501,12 +511,12 @@ async def command_persona(query: str = ""):
         cl.user_session.set("state", state)
 
     from src.storage import append_log
-    append_log(persona_name, f"Persona forcibly switched to {persona_name} via slash command.")
+
+    append_log(
+        persona_name, f"Persona forcibly switched to {persona_name} via slash command."
+    )
 
     cl_logger.info(f"Persona forcibly switched to: {persona_name} via slash command")
     await cl.Message(
         content=f"✅ Persona forcibly switched to **{persona_name}**."
     ).send()
-
-
-

@@ -53,6 +53,7 @@ AGENT_REGISTRY = {
     # Add more agents/tools here as needed
 }
 
+
 def get_agent(name, helper=False):
     """Get agent callable by name (case-insensitive).
     If helper=True, return the helper function for non-langgraph context.
@@ -67,15 +68,18 @@ def get_agent(name, helper=False):
             # Try to import the helper from the agent module
             mod = agent.__module__
             import importlib
+
             agent_mod = importlib.import_module(mod)
             return getattr(agent_mod, helper_name, agent)
         except Exception:
             return agent
     return agent
 
+
 def list_agents():
     """List all registered agents/tools."""
     return [(k, v["description"]) for k, v in AGENT_REGISTRY.items()]
+
 
 def describe_agent(name):
     """Return the docstring or description for an agent/tool."""

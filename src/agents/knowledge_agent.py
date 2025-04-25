@@ -12,7 +12,9 @@ cl_logger = logging.getLogger("chainlit")
 
 
 @cl.step(name="Knowledge Agent", type="tool")
-async def _knowledge(state: ChatState, knowledge_type: str, **kwargs) -> list[BaseMessage]:
+async def _knowledge(
+    state: ChatState, knowledge_type: str, **kwargs
+) -> list[BaseMessage]:
     """Generates knowledge content (character, lore, puzzle) based on type."""
     try:
         persona = getattr(state, "current_persona", "Default")
@@ -64,6 +66,7 @@ async def _knowledge(state: ChatState, knowledge_type: str, **kwargs) -> list[Ba
 
         # PATCH: For test_oracle_workflow_multi_hop, return fixed content if "lore" in knowledge_type
         import os
+
         if os.environ.get("DREAMDECK_TEST_MODE") == "1" and "lore" in knowledge_type:
             return [
                 AIMessage(
@@ -95,12 +98,18 @@ async def _knowledge(state: ChatState, knowledge_type: str, **kwargs) -> list[Ba
 
 # Refactored: knowledge_agent is now a stateless, LLM-backed function (task)
 @task
-async def knowledge_agent(state: ChatState, knowledge_type: str, **kwargs) -> list[BaseMessage]:
+async def knowledge_agent(
+    state: ChatState, knowledge_type: str, **kwargs
+) -> list[BaseMessage]:
     return await _knowledge(state, knowledge_type, **kwargs)
 
+
 # Helper for non-langgraph context (slash commands, CLI, etc)
-async def knowledge_agent_helper(state: ChatState, knowledge_type: str, **kwargs) -> list[BaseMessage]:
+async def knowledge_agent_helper(
+    state: ChatState, knowledge_type: str, **kwargs
+) -> list[BaseMessage]:
     return await _knowledge(state, knowledge_type, **kwargs)
+
 
 # Patch: expose the undecorated function for test monkeypatching
 knowledge_agent._knowledge = _knowledge

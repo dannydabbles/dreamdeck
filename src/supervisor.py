@@ -44,6 +44,7 @@ AGENT_MAP = {
     "default": writer_agent,
 }
 
+
 # Use the writer agent's LLM if available, else fallback to gpt-4o
 def get_dynamic_model():
     try:
@@ -51,6 +52,7 @@ def get_dynamic_model():
         llm_max_tokens = cl.user_session.get("llm_max_tokens")
         llm_endpoint = cl.user_session.get("llm_endpoint")
         from langchain_openai import ChatOpenAI
+
         kwargs = {}
         if llm_temperature is not None:
             kwargs["temperature"] = llm_temperature
@@ -64,7 +66,9 @@ def get_dynamic_model():
             return writer_agent.llm
         except AttributeError:
             from langchain_openai import ChatOpenAI
+
             return ChatOpenAI(model="gpt-4o")
+
 
 async def supervisor(state: ChatState, **kwargs):
     """
@@ -87,10 +91,12 @@ async def supervisor(state: ChatState, **kwargs):
 
     while hops < max_hops:
         # Pass current turn's tool results to the decision agent
-        decision = await _decide_next_agent(state, tool_results_this_turn=state.tool_results_this_turn)
+        decision = await _decide_next_agent(
+            state, tool_results_this_turn=state.tool_results_this_turn
+        )
         route = decision.get("route", "writer")
         cl_logger.info(f"Supervisor: decision agent routed to '{route}'")
-        state.last_agent_called = route # Track the agent being called
+        state.last_agent_called = route  # Track the agent being called
 
         # --- Check for END route ---
         if route == "END":
@@ -102,20 +108,31 @@ async def supervisor(state: ChatState, **kwargs):
         # If the route is a persona (e.g., "persona:Therapist"), update state.current_persona accordingly
         if route.lower().startswith("persona:"):
             persona_name = route.split(":", 1)[1].strip() or "Default"
-            cl_logger.info(f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision")
+            cl_logger.info(
+                f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision"
+            )
             state.current_persona = persona_name
             import chainlit as cl
+
             cl.user_session.set("current_persona", persona_name)
             # --- Correctly select the specific PersonaAgent instance ---
             from src.agents.writer_agent import writer_agent
+
             agent_to_call = None
-            if hasattr(writer_agent, 'persona_agent_registry') and persona_name in writer_agent.persona_agent_registry:
+            if (
+                hasattr(writer_agent, "persona_agent_registry")
+                and persona_name in writer_agent.persona_agent_registry
+            ):
                 agent_to_call = writer_agent.persona_agent_registry[persona_name]
             else:
-                cl_logger.warning(f"Supervisor: Persona '{persona_name}' not found in writer_agent registry, falling back to default writer.")
+                cl_logger.warning(
+                    f"Supervisor: Persona '{persona_name}' not found in writer_agent registry, falling back to default writer."
+                )
                 agent_to_call = writer_agent
             if agent_to_call is None:
-                cl_logger.error(f"Supervisor: Could not find agent for persona '{persona_name}'")
+                cl_logger.error(
+                    f"Supervisor: Could not find agent for persona '{persona_name}'"
+                )
                 break
             persona_result = await agent_to_call(state)
             if persona_result:
@@ -125,8 +142,11 @@ async def supervisor(state: ChatState, **kwargs):
             # Route to the correct tool agent, always using the helper if available
             agent = get_agent(route, helper=True)
             if agent is None:
-                cl_logger.warning(f"Supervisor: unknown route '{route}', defaulting to writer agent")
+                cl_logger.warning(
+                    f"Supervisor: unknown route '{route}', defaulting to writer agent"
+                )
                 from src.agents.writer_agent import writer_agent_helper
+
                 agent = writer_agent_helper
 
             # Always call the agent's "_helper" function if it exists, else the agent itself
@@ -134,6 +154,7 @@ async def supervisor(state: ChatState, **kwargs):
             if hasattr(agent, "__module__"):
                 try:
                     import importlib
+
                     agent_mod = importlib.import_module(agent.__module__)
                     helper_name = getattr(agent, "__name__", None)
                     if helper_name and helper_name.endswith("_agent"):
@@ -142,16 +163,28 @@ async def supervisor(state: ChatState, **kwargs):
                     # Fallback: try common helper names
                     if not agent_helper and hasattr(agent_mod, "dice_agent_helper"):
                         agent_helper = getattr(agent_mod, "dice_agent_helper", None)
-                    if not agent_helper and hasattr(agent_mod, "web_search_agent_helper"):
-                        agent_helper = getattr(agent_mod, "web_search_agent_helper", None)
+                    if not agent_helper and hasattr(
+                        agent_mod, "web_search_agent_helper"
+                    ):
+                        agent_helper = getattr(
+                            agent_mod, "web_search_agent_helper", None
+                        )
                     if not agent_helper and hasattr(agent_mod, "todo_agent_helper"):
                         agent_helper = getattr(agent_mod, "todo_agent_helper", None)
                     if not agent_helper and hasattr(agent_mod, "writer_agent_helper"):
                         agent_helper = getattr(agent_mod, "writer_agent_helper", None)
-                    if not agent_helper and hasattr(agent_mod, "storyboard_editor_agent_helper"):
-                        agent_helper = getattr(agent_mod, "storyboard_editor_agent_helper", None)
-                    if not agent_helper and hasattr(agent_mod, "knowledge_agent_helper"):
-                        agent_helper = getattr(agent_mod, "knowledge_agent_helper", None)
+                    if not agent_helper and hasattr(
+                        agent_mod, "storyboard_editor_agent_helper"
+                    ):
+                        agent_helper = getattr(
+                            agent_mod, "storyboard_editor_agent_helper", None
+                        )
+                    if not agent_helper and hasattr(
+                        agent_mod, "knowledge_agent_helper"
+                    ):
+                        agent_helper = getattr(
+                            agent_mod, "knowledge_agent_helper", None
+                        )
                     if not agent_helper and hasattr(agent_mod, "report_agent_helper"):
                         agent_helper = getattr(agent_mod, "report_agent_helper", None)
                 except Exception:
@@ -161,23 +194,32 @@ async def supervisor(state: ChatState, **kwargs):
 
             tool_result = await agent_to_call(state)
             if tool_result:
-                results.extend(tool_result) # Accumulate results for final return
-                state.tool_results_this_turn.extend(tool_result) # Track results within this turn for Oracle context
+                results.extend(tool_result)  # Accumulate results for final return
+                state.tool_results_this_turn.extend(
+                    tool_result
+                )  # Track results within this turn for Oracle context
                 state.messages.extend(tool_result)
             # After tool, loop to call decision agent again for next step
         hops += 1
 
     if hops >= max_hops:
-        cl_logger.warning("Supervisor: max hops reached, ending turn with current results.")
+        cl_logger.warning(
+            "Supervisor: max hops reached, ending turn with current results."
+        )
 
     return results
+
 
 # Patch: add .ainvoke for test compatibility (LangGraph expects this in tests)
 supervisor.ainvoke = supervisor
 
+
 def _noop_task(x):
     return x
+
+
 supervisor.task = _noop_task
+
 
 def task(x):
     return x

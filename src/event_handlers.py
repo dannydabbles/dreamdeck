@@ -196,8 +196,16 @@ async def on_chat_start():
                 Select(
                     id="persona",
                     label="Persona",
-                    values=["Storyteller GM", "Friend", "Therapist", "Secretary", "Coder", "Dungeon Master", "Default"],
-                    initial="Friend", # Changed default persona for new chats
+                    values=[
+                        "Storyteller GM",
+                        "Friend",
+                        "Therapist",
+                        "Secretary",
+                        "Coder",
+                        "Dungeon Master",
+                        "Default",
+                    ],
+                    initial="Friend",  # Changed default persona for new chats
                 ),
                 Slider(
                     id="llm_temperature",
@@ -240,9 +248,7 @@ async def on_chat_start():
             settings = {}
 
         cl.user_session.set("chat_settings", settings)
-        cl.user_session.set(
-            "current_persona", settings.get("persona", "Friend")
-        )
+        cl.user_session.set("current_persona", settings.get("persona", "Friend"))
         cl.user_session.set(
             "auto_persona_switch", settings.get("auto_persona_switch", True)
         )
@@ -253,7 +259,8 @@ async def on_chat_start():
             "llm_max_tokens", settings.get("llm_max_tokens", config.LLM_MAX_TOKENS)
         )
         cl.user_session.set(
-            "llm_endpoint", settings.get("llm_endpoint", config.OPENAI_SETTINGS.get("base_url", ""))
+            "llm_endpoint",
+            settings.get("llm_endpoint", config.OPENAI_SETTINGS.get("base_url", "")),
         )
 
         # Launch knowledge loading in the background
@@ -262,7 +269,9 @@ async def on_chat_start():
         # Initialize thread in Chainlit with a start message
         # Use Chainlit Action objects for UI buttons (v1.0+)
         actions = [
-            Action(id=cmd["id"], name=cmd["description"], icon=cmd.get("icon"), payload={})
+            Action(
+                id=cmd["id"], name=cmd["description"], icon=cmd.get("icon"), payload={}
+            )
             for cmd in COMMANDS
         ]
         start_cl_msg = cl.Message(
@@ -427,55 +436,76 @@ async def on_chat_resume(thread: ThreadDict):
 # Register Chainlit action callbacks for UI buttons using the modern API
 from chainlit import Action
 
+
 @cl.action_callback("roll")
 async def on_roll_action(action: Action):
     from src import commands as cmd_mod
+
     await cmd_mod.command_roll("")
+
 
 @cl.action_callback("search")
 async def on_search_action(action: Action):
     from src import commands as cmd_mod
+
     await cmd_mod.command_search("")
+
 
 @cl.action_callback("todo")
 async def on_todo_action(action: Action):
     from src import commands as cmd_mod
+
     await cmd_mod.command_todo("")
+
 
 @cl.action_callback("write")
 async def on_write_action(action: Action):
     from src import commands as cmd_mod
+
     await cmd_mod.command_write("")
+
 
 @cl.action_callback("storyboard")
 async def on_storyboard_action(action: Action):
     from src import commands as cmd_mod
+
     await cmd_mod.command_storyboard("")
+
 
 @cl.action_callback("report")
 async def on_report_action(action: Action):
     from src import commands as cmd_mod
+
     await cmd_mod.command_report()
+
 
 @cl.action_callback("help")
 async def on_help_action(action: Action):
     from src import commands as cmd_mod
+
     await cmd_mod.command_help()
+
 
 @cl.action_callback("reset")
 async def on_reset_action(action: Action):
     from src import commands as cmd_mod
+
     await cmd_mod.command_reset()
+
 
 @cl.action_callback("save")
 async def on_save_action(action: Action):
     from src import commands as cmd_mod
+
     await cmd_mod.command_save()
+
 
 @cl.action_callback("persona")
 async def on_persona_action(action: Action):
     from src import commands as cmd_mod
+
     await cmd_mod.command_persona("")
+
 
 @cl.on_message
 async def on_message(message: cl.Message):
@@ -515,7 +545,11 @@ async def on_message(message: cl.Message):
             if hasattr(state, "current_persona"):
                 state.current_persona = pending_persona
             from src.storage import append_log
-            append_log(pending_persona, f"Persona switched to {pending_persona} by user confirmation.")
+
+            append_log(
+                pending_persona,
+                f"Persona switched to {pending_persona} by user confirmation.",
+            )
             await cl.Message(
                 content=f"🔄 Switching persona to **{pending_persona}** to better assist you."
             ).send()
@@ -581,6 +615,7 @@ async def on_message(message: cl.Message):
             # Dispatch to the corresponding command handler
             try:
                 from src import commands as cmd_mod
+
                 if command_name == "roll":
                     await cmd_mod.command_roll(arg)
                 elif command_name == "search":
@@ -640,13 +675,19 @@ async def on_message(message: cl.Message):
             try:
                 ai_messages = await supervisor(state)
                 import os
+
                 # Always ensure at least one AIMessage is appended, even if supervisor returns nothing
                 if not ai_messages or len(ai_messages) == 0:
                     from langchain_core.messages import AIMessage
+
                     fallback_msg = AIMessage(
                         content="Sorry, I couldn't process your request.",
                         name="Game Master",
-                        metadata={"type": "ai", "author": "Game Master", "persona": state.current_persona},
+                        metadata={
+                            "type": "ai",
+                            "author": "Game Master",
+                            "persona": state.current_persona,
+                        },
                     )
                     ai_messages = [fallback_msg]
                 if ai_messages:
@@ -657,6 +698,7 @@ async def on_message(message: cl.Message):
                         if not msg_id:
                             # Attempt to generate a synthetic message_id to avoid skipping vector store save
                             import uuid
+
                             msg_id = str(uuid.uuid4())
                             cl_logger.warning(
                                 f"AIMessage missing message_id, generated synthetic ID: {msg_id} for content: {msg.content}"
@@ -774,7 +816,8 @@ async def on_settings_update(settings):
         "llm_max_tokens", settings.get("llm_max_tokens", config.LLM_MAX_TOKENS)
     )
     cl.user_session.set(
-        "llm_endpoint", settings.get("llm_endpoint", config.OPENAI_SETTINGS.get("base_url", ""))
+        "llm_endpoint",
+        settings.get("llm_endpoint", config.OPENAI_SETTINGS.get("base_url", "")),
     )
     cl_logger.info(
         f"Persona changed via settings to: {settings.get('persona', 'Storyteller GM')}"

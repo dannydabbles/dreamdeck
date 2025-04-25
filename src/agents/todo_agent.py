@@ -21,6 +21,7 @@ TODO_FILE_NAME = config.todo_file_name
 async def todo_agent(state: ChatState, **kwargs) -> list[AIMessage]:
     return await _manage_todo(state, **kwargs)
 
+
 # Helper for non-langgraph context (slash commands, CLI, etc)
 async def todo_agent_helper(state: ChatState, **kwargs) -> list[AIMessage]:
     return await _manage_todo(state, **kwargs)
@@ -154,6 +155,7 @@ async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
 
         # Generate a unique ID for the message metadata
         import uuid
+
         message_id = str(uuid.uuid4())
 
         # Return an AIMessage with fixed name 'todo' for test compatibility

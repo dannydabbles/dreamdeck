@@ -54,8 +54,11 @@ def dummy_state():
         ("Therapist", "therapist_writer_prompt"),
         ("Coder", "coder_writer_prompt"),
         ("Secretary", "secretary_writer_prompt"),
-        ("Default", "friend_writer_prompt"), # Changed expected prompt
-        ("UnknownPersona", "friend_writer_prompt"),  # Fallback now uses the friend prompt key via default_writer_prompt
+        ("Default", "friend_writer_prompt"),  # Changed expected prompt
+        (
+            "UnknownPersona",
+            "friend_writer_prompt",
+        ),  # Fallback now uses the friend prompt key via default_writer_prompt
     ],
 )
 async def test_writer_agent_prompt_selection(dummy_state, persona, expected_prompt_key):
@@ -67,6 +70,7 @@ async def test_writer_agent_prompt_selection(dummy_state, persona, expected_prom
 
         # Setup mock message streaming
         from unittest.mock import AsyncMock
+
         mock_cl_msg.return_value.stream_token = AsyncMock(return_value=None)
         mock_cl_msg.return_value.send = AsyncMock(return_value=None)
         mock_cl_msg.return_value.content = "Generated story"

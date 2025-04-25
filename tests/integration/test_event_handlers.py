@@ -1,7 +1,9 @@
 import pytest
 
 pytestmark = [
-    pytest.mark.filterwarnings("ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited"),
+    pytest.mark.filterwarnings(
+        "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited"
+    ),
     pytest.mark.filterwarnings("ignore:datetime.datetime.utcnow() is deprecated"),
     pytest.mark.filterwarnings("ignore:Support for class-based `config` is deprecated"),
 ]
@@ -108,7 +110,9 @@ async def test_on_chat_start(mock_cl_environment):
         mock_chat_settings_instance.send.assert_awaited_once()
         # Verify the correct initial persona is set in the session based on settings
         # Check the value in the user_session_store directly
-        assert user_session_store.get("current_persona") == "Friend"  # Check the last set value
+        assert (
+            user_session_store.get("current_persona") == "Friend"
+        )  # Check the last set value
 
         # Verify knowledge loading task created
         mock_create_task.assert_called_once()
@@ -138,7 +142,9 @@ async def test_on_chat_start(mock_cl_environment):
         assert isinstance(state.messages[0], AIMessage)
         assert state.messages[0].content == START_MESSAGE
         assert state.thread_id == "evt-test-thread"
-        assert state.current_persona == "Friend" # Verify state object has correct initial persona
+        assert (
+            state.current_persona == "Friend"
+        )  # Verify state object has correct initial persona
 
         # Verify other session vars
         assert user_session_store.get("image_generation_memory") == []
@@ -384,7 +390,7 @@ async def test_on_message_normal_flow(mock_cl_environment):
 
     final_ai_message = AIMessage(
         content="Once upon a time...",
-        name="🤖 Default", # Changed name
+        name="🤖 Default",  # Changed name
         metadata={"message_id": "ai-msg-id-1"},
     )
     final_state = ChatState(
@@ -438,7 +444,7 @@ async def test_on_message_normal_flow(mock_cl_environment):
             message_id="ai-msg-id-1",
             metadata={
                 "type": "ai",
-                "author": "🤖 Default", # Changed author
+                "author": "🤖 Default",  # Changed author
                 "message_id": "ai-msg-id-1",
                 "persona": "Default",
             },

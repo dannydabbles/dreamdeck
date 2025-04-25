@@ -8,12 +8,16 @@ import pytest
 
 # --- Centralized test monkeypatching for langgraph.func.task and agent registry ---
 
+
 def _noop_decorator(*args, **kwargs):
     def wrapper(func):
         return func
+
     return wrapper
 
+
 import asyncio
+
 
 @pytest.fixture(autouse=True, scope="function")
 def patch_task_and_registry(monkeypatch):
@@ -25,17 +29,22 @@ def patch_task_and_registry(monkeypatch):
                 # Patch langgraph.config.get_config to not fail
                 try:
                     import langgraph.config
+
                     monkeypatch.setattr(langgraph.config, "get_config", lambda: {})
                 except ImportError:
                     pass
                 return await func(*w_args, **w_kwargs)
+
             return wrapper
+
         return decorator
+
     monkeypatch.setattr("langgraph.func.task", context_preserving_task, raising=False)
 
     # Patch chainlit.command, .profile, .step to no-op
     try:
         import chainlit as cl
+
         cl.command = _noop_decorator
         cl.profile = _noop_decorator
         cl.step = _noop_decorator
@@ -74,6 +83,7 @@ def patch_task_and_registry(monkeypatch):
             if loop.is_running():
                 # In a running event loop (pytest-asyncio), run as a task and wait for result
                 import nest_asyncio
+
                 nest_asyncio.apply()
                 task = loop.create_task(coro)
                 return loop.run_until_complete(task)
@@ -86,6 +96,7 @@ def patch_task_and_registry(monkeypatch):
     monkeypatch.setattr(asyncio, "run", safe_asyncio_run)
 
     yield
+
 
 # Patch chainlit.command to a dummy decorator during pytest collection and run (legacy fallback)
 if (
@@ -177,6 +188,4 @@ def pytest_sessionfinish(session, exitstatus):
         "ignore", message=".*Task was destroyed but it is pending.*"
     )
     # Suppress unawaited coroutine warnings in test output
-    warnings.filterwarnings(
-        "ignore", message="coroutine '.*' was never awaited"
-    )
+    warnings.filterwarnings("ignore", message="coroutine '.*' was never awaited")

@@ -217,7 +217,7 @@ async def test_command_write(mock_session_data):
     query = "the wizard speaks"
     ai_response_msg = AIMessage(
         content="The wizard says hello.",
-        name="🤖 Default", # Changed name to match expected default persona format
+        name="🤖 Default",  # Changed name to match expected default persona format
         metadata={"message_id": "ai-write-msg-id"},
     )
 
@@ -258,7 +258,11 @@ async def test_command_write(mock_session_data):
         vector_store.put.assert_any_await(
             content="The wizard says hello.",
             message_id="ai-write-msg-id",
-            metadata={"type": "ai", "author": "🤖 Default", "persona": "Default"}, # Changed author
+            metadata={
+                "type": "ai",
+                "author": "🤖 Default",
+                "persona": "Default",
+            },  # Changed author
         )
 
         mock_user_session_set.assert_called_with("state", state)
@@ -505,8 +509,6 @@ async def test_unknown_slash_command():
 
         mock_cl_message_cls.assert_called_with(content="Unknown command: /unknowncmd")
         mock_cl_message_instance.send.assert_awaited_once()
-
-
 
 
 @pytest.mark.asyncio

@@ -5,11 +5,13 @@ from jinja2 import Template
 # --- PATCH: Monkeypatch langgraph.config.get_config to avoid "outside of a runnable context" error ---
 try:
     import langgraph.config
+
     def _safe_get_config():
         try:
             return langgraph.config.get_config()
         except Exception:
             return {}
+
     langgraph.config.get_config = _safe_get_config
 except ImportError:
     pass
@@ -148,6 +150,7 @@ async def _classify_persona(state: ChatState) -> dict:
 @task
 async def persona_classifier_agent(state: ChatState, **kwargs) -> dict:
     return await _classify_persona(state)
+
 
 # Expose internal function for patching in tests
 persona_classifier_agent._classify_persona = _classify_persona

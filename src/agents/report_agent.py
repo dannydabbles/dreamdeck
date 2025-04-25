@@ -129,6 +129,7 @@ async def _generate_report(state: ChatState, **kwargs) -> list[AIMessage]:
 async def report_agent(state: ChatState, **kwargs) -> list[AIMessage]:
     return await _generate_report(state, **kwargs)
 
+
 # Helper for non-langgraph context (slash commands, CLI, etc)
 async def report_agent_helper(state: ChatState, **kwargs) -> list[AIMessage]:
     return await _generate_report(state, **kwargs)

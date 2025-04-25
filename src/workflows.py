@@ -6,6 +6,7 @@ import chainlit as cl
 app = supervisor
 app_without_checkpoint = supervisor
 
+
 # Legacy alias for backward compatibility with old tests (calls supervisor)
 async def _chat_workflow(*args, **kwargs):
     """
@@ -22,6 +23,7 @@ async def _chat_workflow(*args, **kwargs):
     else:
         raise ValueError("No ChatState found in arguments to _chat_workflow")
     return await supervisor(state, **kwargs)
+
 
 # Dummy stubs for test monkeypatching
 agents_map = {}

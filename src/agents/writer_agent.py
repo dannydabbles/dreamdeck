@@ -29,6 +29,7 @@ cl_logger = logging.getLogger("chainlit")
 # Persona agent registry for supervisor handoff
 persona_agent_registry = {}
 
+
 class PersonaAgent:
     def __init__(self, persona_name: str):
         self.persona_name = persona_name
@@ -38,6 +39,7 @@ class PersonaAgent:
         # Set the current persona in state for this agent
         state.current_persona = self.persona_name
         return await generate_story(state, **kwargs)
+
 
 # Register persona agents for all configured personas, ensuring unique (case-sensitive) names.
 # Only one "Default" agent is allowed, and all names are unique.
@@ -70,13 +72,19 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
 
         # PATCH: Test mode shortcut for test compatibility
         import os
+
         if os.environ.get("DREAMDECK_TEST_MODE") == "1":
             # Simulate test outputs for test_simple_turn_tool_then_persona and test_direct_persona_turn
             # Check for test prompt triggers in recent chat or tool results
             recent_chat = state.get_recent_history_str(n=20).lower()
             tool_results = state.get_tool_results_str().lower()
             persona_name = state.current_persona
-            gm_persona_aliases = ["storyteller_gm", "dungeon_master", "continue_story", "default"]
+            gm_persona_aliases = [
+                "storyteller_gm",
+                "dungeon_master",
+                "continue_story",
+                "default",
+            ]
             if persona_name and persona_name.lower() in gm_persona_aliases:
                 display_name = "Game Master"
             else:
@@ -102,7 +110,9 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 "default": "Default prompt text",
             }
             persona_key = persona.lower() if persona else "default"
-            prompt_template_str = persona_prompt_map.get(persona_key, "Default prompt text")
+            prompt_template_str = persona_prompt_map.get(
+                persona_key, "Default prompt text"
+            )
             template_instance = TemplateClass(str(prompt_template_str))
             try:
                 template_instance.render(
@@ -114,7 +124,9 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             except Exception:
                 pass
 
-            if (persona_name and persona_name.lower() in gm_persona_aliases) and "dragon" in recent_chat:
+            if (
+                persona_name and persona_name.lower() in gm_persona_aliases
+            ) and "dragon" in recent_chat:
                 story_segment = AIMessage(
                     content="The dragon appears!",
                     name=f"{persona_icon} {display_name}",
@@ -123,7 +135,9 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
-            if (persona_name and persona_name.lower() in gm_persona_aliases) and "once upon a time" in recent_chat:
+            if (
+                persona_name and persona_name.lower() in gm_persona_aliases
+            ) and "once upon a time" in recent_chat:
                 story_segment = AIMessage(
                     content="Once upon a time...",
                     name=f"{persona_icon} {display_name}",
@@ -287,11 +301,15 @@ writer_agent.generate_story = generate_story  # <-- Add this attribute for patch
 # Expose persona agent registry for supervisor
 writer_agent.persona_agent_registry = persona_agent_registry
 
+
 # Helper for non-langgraph context (slash commands, CLI, etc)
 async def writer_agent_helper(state: ChatState, **kwargs) -> list[BaseMessage]:
     return await _generate_story(state, **kwargs)
 
-async def call_writer_agent(state: ChatState, from_oracle: bool = True) -> list[BaseMessage]:
+
+async def call_writer_agent(
+    state: ChatState, from_oracle: bool = True
+) -> list[BaseMessage]:
     """Call the writer agent outside of LangGraph workflows (e.g., slash commands).
 
     Args:
@@ -300,5 +318,6 @@ async def call_writer_agent(state: ChatState, from_oracle: bool = True) -> list[
                             If False, treat as called from slash command (do NOT append to state.messages in test mode).
     """
     return await _generate_story(state, from_oracle=from_oracle)
+
 
 writer_agent.call_writer_agent = call_writer_agent

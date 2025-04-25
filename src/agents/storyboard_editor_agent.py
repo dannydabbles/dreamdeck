@@ -139,9 +139,14 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
 
 # Refactored: storyboard_editor_agent is now a stateless, LLM-backed function (task)
 @task
-async def storyboard_editor_agent(state: ChatState, gm_message_id: str, **kwargs) -> list[BaseMessage]:
+async def storyboard_editor_agent(
+    state: ChatState, gm_message_id: str, **kwargs
+) -> list[BaseMessage]:
     return await _generate_storyboard(state, gm_message_id, **kwargs)
 
+
 # Helper for non-langgraph context (slash commands, CLI, etc)
-async def storyboard_editor_agent_helper(state: ChatState, gm_message_id: str, **kwargs) -> list[BaseMessage]:
+async def storyboard_editor_agent_helper(
+    state: ChatState, gm_message_id: str, **kwargs
+) -> list[BaseMessage]:
     return await _generate_storyboard(state, gm_message_id, **kwargs)

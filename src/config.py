@@ -26,6 +26,7 @@ with open(CONFIG_FILE, "r") as f:
 
 class DiceConfig(BaseModel):
     """Pydantic model for dice configuration."""
+
     model_config = ConfigDict(extra="forbid")
     sides: int = Field(default=20, description="Number of sides for dice rolls")
 

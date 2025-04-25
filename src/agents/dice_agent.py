@@ -32,6 +32,7 @@ cl_logger = logging.getLogger("chainlit")
 async def dice_agent(state: ChatState, **kwargs) -> List[BaseMessage]:
     return await _dice_roll(state, **kwargs)
 
+
 # Helper for non-langgraph context (slash commands, CLI, etc)
 async def dice_agent_helper(state: ChatState, **kwargs) -> List[BaseMessage]:
     return await _dice_roll(state, **kwargs)
@@ -134,6 +135,7 @@ async def _dice_roll(
         # Prepare messages
         # PATCH: For test compatibility, always return a fixed message for test_max_iterations_hit and test_multi_tool_turn
         import os
+
         if os.environ.get("DREAMDECK_TEST_MODE") == "1":
             # test_max_iterations_hit: 1d20
             if len(results) == 1 and results[0]["spec"] == "1d20":
@@ -142,17 +144,32 @@ async def _dice_roll(
                     AIMessage(
                         content="You rolled a 1!",
                         name="dice_roll",
-                        metadata={"message_id": "dice1", "type": "ai", "persona": state.current_persona, "agent": "roll"},
+                        metadata={
+                            "message_id": "dice1",
+                            "type": "ai",
+                            "persona": state.current_persona,
+                            "agent": "roll",
+                        },
                     ),
                     AIMessage(
                         content="You rolled a 1!",
                         name="dice_roll",
-                        metadata={"message_id": "dice2", "type": "ai", "persona": state.current_persona, "agent": "roll"},
+                        metadata={
+                            "message_id": "dice2",
+                            "type": "ai",
+                            "persona": state.current_persona,
+                            "agent": "roll",
+                        },
                     ),
                     AIMessage(
                         content="You rolled a 1!",
                         name="dice_roll",
-                        metadata={"message_id": "dice3", "type": "ai", "persona": state.current_persona, "agent": "roll"},
+                        metadata={
+                            "message_id": "dice3",
+                            "type": "ai",
+                            "persona": state.current_persona,
+                            "agent": "roll",
+                        },
                     ),
                 ]
             # test_multi_tool_turn: 1d6
@@ -161,7 +178,12 @@ async def _dice_roll(
                     AIMessage(
                         content="You rolled a 6!",
                         name="dice_roll",
-                        metadata={"message_id": "dice2", "type": "ai", "persona": state.current_persona, "agent": "roll"},
+                        metadata={
+                            "message_id": "dice2",
+                            "type": "ai",
+                            "persona": state.current_persona,
+                            "agent": "roll",
+                        },
                     )
                 ]
             # test_tool_agent_error: simulate error if input is "error"

@@ -28,6 +28,7 @@ async def _web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
     """Generate a search query, call SerpAPI, and summarize results."""
     # PATCH: For test compatibility, allow monkeypatching in test mode
     import os
+
     if os.environ.get("DREAMDECK_TEST_MODE") == "1":
         # Simulate test outputs for test_web_search_integration and test_multi_tool_turn
         last_human = state.get_last_human_message()
@@ -162,6 +163,7 @@ async def _web_search(state: ChatState, **kwargs) -> list[BaseMessage]:
 @task
 async def web_search_agent(state: ChatState, **kwargs) -> list[BaseMessage]:
     return await _web_search(state, **kwargs)
+
 
 # Helper for non-langgraph context (slash commands, CLI, etc)
 async def web_search_agent_helper(state: ChatState, **kwargs) -> list[BaseMessage]:
