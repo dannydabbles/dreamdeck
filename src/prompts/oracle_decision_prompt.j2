@@ -25,20 +25,15 @@ You can choose from:
 </goal>
 
 <guidelines>
-- Output a JSON object: {"route": "agent_or_persona_name"}
+- Output a JSON object: {"route": "agent_or_persona_name"} or {"route": ["agent1", "agent2", ...]}
 - Do NOT include explanations, commentary, or markdown.
-- Do NOT call the same agent/tool twice in a row before the human speaks again, unless the user is explicitly requesting a tool output only.
-- **Crucially:** If the most recent message in the chat history is from a tool (dice, search, todo, report, storyboard, knowledge), you MUST consider if summarization or narrative context is needed.
-    - If summarization/context IS needed (most common case after a tool runs), route to an appropriate persona (e.g., `persona:Secretary` for TODO/report summaries, `persona:Default` or `persona:Storyteller GM` for search/dice summaries) to present the tool's results conversationally. **Do NOT route to END in this case.**
-    - Only route to `END` if the tool output is explicitly requested *by itself* and requires absolutely no further comment or integration into the narrative.
-- Only route to `END` if the *entirety* of the user's last request seems fulfilled by the *immediately preceding* agent/tool action AND no summarization/narrative response appears necessary.
-- If the most recent message in the chat history is from a persona agent (e.g., "persona:Secretary", "persona:Therapist", "persona:Coder", "persona:Friend", "persona:Lorekeeper", "persona:Dungeon Master", "persona:Default") or the writer agent, you MUST route to {"route": "END"} to end the turn. Do NOT call any other agent or persona after a persona/writer agent has responded.
-- If the user input requests multiple actions (e.g., "add X to my todo and search for Y"), output a JSON object with a "route" key whose value is a list of agent/persona names in the order they should be called. For example: {"route": ["todo", "search", "persona:Secretary"]}.
-- After all tools have run, always route to the appropriate persona/writer agent to summarize or provide narrative context, then to {"route": "END"}.
-- If the user asks for multiple actions (e.g., "search for X and add Y to todo"), route to the first logical tool. The supervisor will call the oracle again to handle subsequent steps.
-- If unsure about the *next* step (and the previous step was NOT a tool needing summarization), default to {"route": "persona:Storyteller GM"}.
-- If the user input is best handled by a specific persona, use {"route": "persona:Therapist"} (or the appropriate persona).
-- If the user input is a slash command (e.g., /roll), route to the matching tool (e.g., dice).
+- You may call any number of non-persona tools/agents (e.g., dice, search, todo, knowledge, report, storyboard) before or after a persona agent, but you must NOT call more than one persona agent in a single turn.
+- If a persona agent is called, you may call tools/agents before or after it, but do not call another persona agent until the next user input.
+- Only route to {"route": "END"} if the user's request is fully satisfied and no further tool or persona response is needed.
+- If the user input requests multiple actions (e.g., "add X to my todo and search for Y and have the secretary summarize"), output a JSON object with a "route" key whose value is a list of agent/persona names in the order they should be called. For example: {"route": ["todo", "search", "persona:Secretary"]}.
+- If a persona agent is included in the route, do not include any other persona agent in the same list.
+- After all tools and a single persona agent (if needed) have run, always end the turn with {"route": "END"}.
+- If unsure about the *next* step, default to {"route": "persona:Storyteller GM"}.
 </guidelines>
 
 <chat_history>
