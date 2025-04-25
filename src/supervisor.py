@@ -20,6 +20,7 @@ from src.agents.todo_agent import todo_agent
 from src.agents.web_search_agent import web_search_agent
 from src.agents.writer_agent import writer_agent
 from src.models import ChatState
+from langchain_core.messages import AIMessage  # <-- Add this import
 
 cl_logger = logging.getLogger("chainlit")
 
