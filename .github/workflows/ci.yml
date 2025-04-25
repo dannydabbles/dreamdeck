@@ -34,14 +34,16 @@ jobs:
       uses: actions/cache@v4
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock', '**/pyproject.toml') }}
+        restore-keys: |
+          venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
     - name: Install dependencies
       # The 'if' condition has been removed, so this step always runs
       run: poetry install --no-interaction --with dev
 
     - name: Run tests
-      run: make ci-test
+      run: PYTHONPATH=. poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
 
     - name: Lint with flake8
       run: poetry run flake8 . tests/
