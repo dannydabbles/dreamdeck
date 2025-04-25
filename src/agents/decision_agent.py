@@ -97,6 +97,19 @@ async def _decide_next_agent(
         elif isinstance(route, str) and " and " in route:
             route = [r.strip() for r in route.split(" and ") if r.strip()]
 
+        # --- FALLBACK: Add web_search if user intent is obvious ---
+        last_human = state.get_last_human_message()
+        if last_human:
+            user_text = last_human.content.lower()
+            search_keywords = ["look up", "search", "research"]
+            if any(kw in user_text for kw in search_keywords):
+                # If route is a string, make it a list
+                if isinstance(route, str):
+                    route = [route]
+                # If web_search/search not already in the route, add it
+                if not any(r in ["web_search", "search"] for r in route):
+                    route = ["web_search"] + route
+
         if not route:
             route = "writer"
 
