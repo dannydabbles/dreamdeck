@@ -209,6 +209,9 @@ async def supervisor(state: ChatState, **kwargs):
                     results.extend(tool_result)
                     state.tool_results_this_turn.extend(tool_result)
                     state.messages.extend(tool_result)
+        # After processing all routes in this turn, if a persona agent was called, end the turn.
+        if persona_called:
+            break
         hops += 1
 
     if hops >= max_hops:
