@@ -40,7 +40,7 @@ jobs:
 
     - name: Install dependencies
       # The 'if' condition has been removed, so this step always runs
-      run: poetry install --no-interaction --with dev
+      run: poetry install --no-interaction --with dev --no-root
 
     - name: Run tests
       run: PYTHONPATH=. poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
