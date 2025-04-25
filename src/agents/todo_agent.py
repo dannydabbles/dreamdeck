@@ -43,7 +43,7 @@ async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
             ]
         original_user_input = last_human.content.strip()
 
-        # Special case: if original_user_input is empty or just "/todo", treat as empty task
+        # Only handle explicit /todo slash command at the start
         if original_user_input.startswith("/todo"):
             task_text = original_user_input[5:].strip()
             if not task_text:
@@ -54,10 +54,11 @@ async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
                         metadata={"message_id": None},
                     )
                 ]
+            # For slash command, pass only the task text to the prompt
+            user_input_for_prompt = task_text
         else:
-            task_text = (
-                original_user_input  # fallback, e.g., if user didn't use slash command
-            )
+            # For all other cases, pass the full user input to the prompt
+            user_input_for_prompt = original_user_input
 
         # Pass the *full* original user input (including slash command) to the prompt for clarity
 
@@ -92,13 +93,13 @@ async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
         if not prompt_template_str:
             cl_logger.error("Todo prompt template is empty!")
             prompt = (
-                f"User input: {original_user_input}\nExisting TODO:\n{existing_content}"
+                f"User input: {user_input_for_prompt}\nExisting TODO:\n{existing_content}"
             )
         else:
             template = Template(prompt_template_str)
             prompt = template.render(
                 existing_todo_file=existing_content,
-                user_input=original_user_input,
+                user_input=user_input_for_prompt,
                 recent_chat_history=state.get_recent_history_str(),
                 tool_results=state.get_tool_results_str(),
             )
