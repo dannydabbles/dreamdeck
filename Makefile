@@ -67,7 +67,7 @@ log:
 
 aider-gpt4.1:
 	@echo "Running aider with gpt4.1..."
-	@aider --multiline --architect --model gpt-4.1-2025-04-14 --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test --lint-cmd "make lint"
+	@aider --multiline --architect --model gpt-4.1-2025-04-14 --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test
 
 aider-gemma-gpt4.1:
 	@echo "Running aider with gemma and gpt4.1..."
