@@ -108,6 +108,8 @@ async def supervisor(state: ChatState, **kwargs):
 
         # --- MULTI-INTENT PATCH: handle list of routes ---
         routes = route if isinstance(route, list) else [route]
+        from src.agents.writer_agent import writer_agent
+
         for single_route in routes:
             if isinstance(single_route, str) and single_route.lower().startswith("persona:"):
                 persona_name = single_route.split(":", 1)[1].strip() or "Default"
@@ -115,11 +117,7 @@ async def supervisor(state: ChatState, **kwargs):
                     f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision"
                 )
                 state.current_persona = persona_name
-                import chainlit as cl
-
                 cl.user_session.set("current_persona", persona_name)
-                from src.agents.writer_agent import writer_agent
-
                 agent_to_call = None
                 if (
                     hasattr(writer_agent, "persona_agent_registry")
@@ -139,7 +137,8 @@ async def supervisor(state: ChatState, **kwargs):
                 persona_result = await agent_to_call(state)
                 if persona_result:
                     results.extend(persona_result)
-                break  # Persona agent is always last
+                # After calling a persona agent, always break (persona should be last)
+                break
             else:
                 # Route to the correct tool agent, always using the helper if available
                 agent = get_agent(single_route, helper=True)
@@ -205,10 +204,13 @@ async def supervisor(state: ChatState, **kwargs):
                     results.extend(tool_result)
                     state.tool_results_this_turn.extend(tool_result)
                     state.messages.extend(tool_result)
-                # Defensive: If the agent called was the writer agent (i.e., a persona/narrative agent), break the loop
-                from src.agents.writer_agent import writer_agent
-                if agent_to_call == writer_agent or getattr(agent_to_call, "__class__", None) == writer_agent.__class__:
-                    cl_logger.info("Supervisor: Writer agent called, ending turn to prevent repeated narrative responses.")
+                # Defensive: If the agent called was the writer agent or any persona agent, break the loop
+                if (
+                    agent_to_call == writer_agent
+                    or getattr(agent_to_call, "__class__", None) == writer_agent.__class__
+                    or getattr(agent_to_call, "persona_name", None) in getattr(writer_agent, "persona_agent_registry", {})
+                ):
+                    cl_logger.info("Supervisor: Writer or persona agent called, ending turn to prevent repeated narrative responses.")
                     break
         hops += 1
 
