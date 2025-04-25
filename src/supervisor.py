@@ -223,10 +223,11 @@ async def supervisor(state: ChatState, **kwargs):
         if persona_called:
             # Generate storyboard if current persona is Storyteller GM
             if state.current_persona == "Storyteller GM":
-                # Find the most recent Game Master message using exact name match
+                # Find the most recent Game Master message using metadata
                 last_gm_msg = next(
                     (msg for msg in reversed(state.messages) 
-                     if isinstance(msg, AIMessage) and msg.name == "Game Master"),
+                     if isinstance(msg, AIMessage) 
+                     and msg.metadata.get("persona") == "Game Master"),  # Check metadata instead of name
                     None
                 )
                 if last_gm_msg and last_gm_msg.metadata.get("message_id"):

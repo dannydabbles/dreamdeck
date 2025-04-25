@@ -252,20 +252,23 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
         display_name = persona_name
 
         persona_icon = {
+            "Storyteller GM": "🎭",
             "Therapist": "🧠",
             "Secretary": "🗒️",
             "Coder": "💻",
             "Friend": "🤝",
             "Lorekeeper": "📚",
             "Dungeon Master": "🎲",
-            "Storyteller GM": "🎭",
             "Default": "🤖",
         }.get(display_name, "🤖")
 
         story_segment = AIMessage(
             content=gm_message.content.strip(),
-            name="Game Master",  # Fixed name without icon
-            metadata={"message_id": gm_message.id},
+            name=f"{persona_icon} {display_name}",  # Restore icon + name
+            metadata={
+                "message_id": gm_message.id,
+                "persona": "Game Master"  # Add persona type to metadata
+            },
         )
 
         if os.environ.get("DREAMDECK_TEST_MODE") == "1" and hasattr(state, "messages"):
