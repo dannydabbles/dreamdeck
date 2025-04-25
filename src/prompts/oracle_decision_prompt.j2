@@ -32,11 +32,13 @@ You can choose from:
     - If summarization/context IS needed (most common case after a tool runs), route to an appropriate persona (e.g., `persona:Secretary` for TODO/report summaries, `persona:Default` or `persona:Storyteller GM` for search/dice summaries) to present the tool's results conversationally. **Do NOT route to END in this case.**
     - Only route to `END` if the tool output is explicitly requested *by itself* and requires absolutely no further comment or integration into the narrative.
 - Only route to `END` if the *entirety* of the user's last request seems fulfilled by the *immediately preceding* agent/tool action AND no summarization/narrative response appears necessary.
+- If the most recent message in the chat history is from a persona agent (e.g., "persona:Secretary", "persona:Storyteller GM", "persona:Default") or the writer agent, you MUST route to {"route": "END"} to end the turn. Do NOT call any other agent or persona after a persona/writer agent has responded.
+- If the user input requests multiple actions (e.g., "add X to my todo and search for Y"), output a JSON object with a "route" key whose value is a list of agent/persona names in the order they should be called. For example: {"route": ["todo", "search", "persona:Secretary"]}.
+- After all tools have run, always route to the appropriate persona/writer agent to summarize or provide narrative context, then to {"route": "END"}.
 - If the user asks for multiple actions (e.g., "search for X and add Y to todo"), route to the first logical tool. The supervisor will call the oracle again to handle subsequent steps.
 - If unsure about the *next* step (and the previous step was NOT a tool needing summarization), default to {"route": "persona:Storyteller GM"}.
 - If the user input is best handled by a specific persona, use {"route": "persona:Therapist"} (or the appropriate persona).
 - If the user input is a slash command (e.g., /roll), route to the matching tool (e.g., dice).
-- After a persona or writer agent has summarized or provided narrative context for a tool's output, route to {"route": "END"} to end the turn.
 </guidelines>
 
 <chat_history>
@@ -65,3 +67,14 @@ or
 {"route": "dice"}
 or
 {"route": "END"}
+
+<examples>
+Example 1: User input: "Add buy milk to my todo and search for the latest research on black holes."
+Output: {"route": ["todo", "search", "persona:Secretary"]}
+
+Example 2: User input: "Roll 2d6 and then tell me a story."
+Output: {"route": ["dice", "persona:Storyteller GM"]}
+
+Example 3: After persona:Secretary has summarized, output:
+{"route": "END"}
+</examples>
