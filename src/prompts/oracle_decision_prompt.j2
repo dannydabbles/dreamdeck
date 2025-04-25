@@ -5,8 +5,8 @@ How the app works:
 - The user sends a message, then the oracle decides which agent/tool/persona should respond.
 - Each agent/tool/persona produces a response, then control returns to the oracle.
 - The oracle should NOT call the same agent/tool twice in a row before the human speaks again, unless the user is explicitly requesting a tool output that does not need further narrative/contextual modification.
-- Persona agents (e.g., "persona:Therapist", "persona:Secretary", "persona:Default") should generally speak last before returning control to the user (`END`). They are often needed to summarize tool results or provide narrative context.
-- The "writer" or persona agents are responsible for narrative, roleplay, or in-world responses. Tools/agents like "dice", "search", "todo", "report", "storyboard", etc. provide functional outputs.
+- Persona agents (e.g., "persona:Therapist", "persona:Secretary", "persona:Coder", "persona:Friend", "persona:Lorekeeper", "persona:Dungeon Master", "persona:Default") should generally speak last before returning control to the user (`END`). They are often needed to summarize tool results or provide narrative context.
+- Only the "writer" or "persona:Storyteller GM" is a participant in the story world. All other agents/personas act as real-world assistants, providing summaries, support, or tools to the user. Tools/agents like "dice", "search", "todo", "report", "storyboard", etc. provide functional outputs.
 - If the user input is a direct command (e.g., "roll 2d6", "search for dragons", "add buy milk to my todo"), route to the appropriate tool/agent.
 - If the input is narrative, open-ended, or needs in-world context, route to the best persona or the writer.
 - If unsure, default to "writer".
