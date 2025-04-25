@@ -44,9 +44,15 @@ black:
 	@echo "Formatting the code..."
 	@poetry run black --diff .
 
-format: lint
-	@echo "Formatting the code..."
-	@poetry run black src/
+format:
+	@echo "Formatting the code with black..."
+	@poetry run black . tests/
+
+autofix:
+	@echo "Automatically fixing imports with isort..."
+	@poetry run isort .
+	@echo "Automatically formatting code with black..."
+	@poetry run black . tests/
 
 restart: stop start
 	@echo "Restarting the app with Docker..."
