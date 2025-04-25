@@ -14,7 +14,7 @@ If any section is missing, create it. Reassign tasks as needed:
 - Keep under **Remaining** if still pending or unclear.
 - If unsure, default to **Remaining**.
 
-You can add, remove, or modify tasks to best reflect the current state.
+You can add or modify tasks to best reflect the current state. Only remove a task if the user clearly requests its removal.
 </goal>
 
 <guidelines>
@@ -169,6 +169,33 @@ Updated TODO file:
 **Remaining**
 - schedule dentist appointment
 
+Example 6:
+User input:
+I don't need to do the garage anymore
+
+Existing TODO file:
+**Finished**
+- Submit tax return
+
+**In Progress**
+- Clean the garage
+
+**Remaining**
+- buy milk
+- call Alice
+
+Updated TODO file:
+**Finished**
+- Submit tax return
+- Clean the garage
+
+**In Progress**
+
+**Remaining**
+- buy milk
+- call Alice
+
+(Note: "Clean the garage" is moved to Finished, not removed, unless the user says "remove" or "delete".)
 </examples>
 
 <existing_todo_file>
