@@ -5,6 +5,7 @@ This version uses langgraph-supervisor's built-in routing, handoff, and message 
 """
 
 import logging
+import asyncio
 
 import chainlit as cl
 
@@ -89,6 +90,7 @@ async def supervisor(state: ChatState, **kwargs):
     # Clear tool results from previous turns at the start of a new supervisor invocation
     state.tool_results_this_turn = []
     last_route = None
+    persona_called = False  # Track if a persona agent has been called in this turn
 
     while hops < max_hops:
         # Pass current turn's tool results to the decision agent
@@ -109,8 +111,6 @@ async def supervisor(state: ChatState, **kwargs):
         # --- MULTI-INTENT PATCH: handle list of routes ---
         routes = route if isinstance(route, list) else [route]
         from src.agents.writer_agent import writer_agent
-
-        persona_called = False  # Track if a persona agent has been called in this turn
 
         for single_route in routes:
             if isinstance(single_route, str) and single_route.lower().startswith("persona:"):
@@ -211,6 +211,23 @@ async def supervisor(state: ChatState, **kwargs):
                     state.messages.extend(tool_result)
         # After processing all routes in this turn, if a persona agent was called, end the turn.
         if persona_called:
+            # --- BEGIN: Storyboard background task trigger after Storyteller GM response ---
+            if state.current_persona == "Storyteller GM":
+                # Find the most recent Game Master message
+                last_gm_msg = next(
+                    (msg for msg in reversed(state.messages)
+                     if isinstance(msg, AIMessage) and (msg.name == "Game Master" or msg.name == "🎭 Game Master")),
+                    None
+                )
+                if last_gm_msg and last_gm_msg.metadata and last_gm_msg.metadata.get("message_id"):
+                    # Run storyboard generation in background
+                    asyncio.create_task(
+                        storyboard_editor_agent(
+                            state,
+                            gm_message_id=last_gm_msg.metadata["message_id"]
+                        )
+                    )
+            # --- END: Storyboard background task trigger ---
             break
         hops += 1
 
