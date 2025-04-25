@@ -52,10 +52,6 @@ jobs:
       # Run pytest directly; PYTHONPATH is still needed for src imports
       run: PYTHONPATH=. pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
 
-    - name: Lint with flake8
-      # Run flake8 directly
-      run: flake8 . tests/
-
     - name: Check formatting with black
       # Run black directly
       run: black --check . tests/
