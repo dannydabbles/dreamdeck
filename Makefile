@@ -148,4 +148,4 @@ restore:
 	echo "Restored from $$LATEST_BACKUP";
 # Add this new target for CI
 ci-test:
-	PYTHONPATH=src poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
+	PYTHONPATH=. poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
