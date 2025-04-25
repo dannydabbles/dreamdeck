@@ -137,6 +137,14 @@ async def supervisor(state: ChatState, **kwargs):
                 persona_result = await agent_to_call(state)
                 if persona_result:
                     results.extend(persona_result)
+                # If a persona or writer agent was just called, always end the workflow.
+                # This prevents repeated narrative/summarization loops regardless of LLM output.
+                if (
+                    agent_to_call == writer_agent
+                    or agent_to_call in getattr(writer_agent, "persona_agent_registry", {}).values()
+                ):
+                    cl_logger.info("Supervisor: Persona or writer agent called, ending turn to prevent repeated narrative responses.")
+                    return results  # End the workflow immediately after a persona/writer agent
                 # After calling a persona agent, always break (persona should be last)
                 break
             else:
@@ -204,14 +212,14 @@ async def supervisor(state: ChatState, **kwargs):
                     results.extend(tool_result)
                     state.tool_results_this_turn.extend(tool_result)
                     state.messages.extend(tool_result)
-                # Defensive: If the agent called was the writer agent or any persona agent, break the loop
+                # If a persona or writer agent was just called, always end the workflow.
+                # This prevents repeated narrative/summarization loops regardless of LLM output.
                 if (
                     agent_to_call == writer_agent
-                    or getattr(agent_to_call, "__class__", None) == writer_agent.__class__
-                    or getattr(agent_to_call, "persona_name", None) in getattr(writer_agent, "persona_agent_registry", {})
+                    or agent_to_call in getattr(writer_agent, "persona_agent_registry", {}).values()
                 ):
-                    cl_logger.info("Supervisor: Writer or persona agent called, ending turn to prevent repeated narrative responses.")
-                    break
+                    cl_logger.info("Supervisor: Persona or writer agent called, ending turn to prevent repeated narrative responses.")
+                    return results  # End the workflow immediately after a persona/writer agent
         hops += 1
 
     if hops >= max_hops:
