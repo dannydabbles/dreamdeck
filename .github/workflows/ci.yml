@@ -37,7 +37,7 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
     - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      # The 'if' condition has been removed, so this step always runs
       run: poetry install --no-interaction --with dev
 
     - name: Run tests
