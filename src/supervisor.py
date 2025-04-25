@@ -6,6 +6,7 @@ This version uses langgraph-supervisor's built-in routing, handoff, and message 
 
 import logging
 import asyncio
+import contextvars  # <-- Add this import
 
 import chainlit as cl
 
@@ -229,14 +230,17 @@ async def supervisor(state: ChatState, **kwargs):
                     None
                 )
                 if last_gm_msg and last_gm_msg.metadata and last_gm_msg.metadata.get("message_id"):
-                    # Run storyboard generation in background
-                    asyncio.create_task(
-                        _with_safe_config(
+                    # Run storyboard generation in background with context
+                    current_context = contextvars.copy_context()
+                    task = asyncio.create_task(
+                        current_context.run(
+                            _with_safe_config,
                             storyboard_editor_agent,
                             state,
                             gm_message_id=last_gm_msg.metadata["message_id"]
                         )
                     )
+                    state.background_tasks.append(task)  # Keep track of background tasks
             # --- END: Storyboard background task trigger ---
             break
         hops += 1
@@ -264,10 +268,16 @@ def task(x):
     return x
 
 async def _with_safe_config(fn, *args, **kwargs):
-    import langgraph.config
-    original_get_config = langgraph.config.get_config
-    langgraph.config.get_config = _safe_get_config
-    try:
-        return await fn(*args, **kwargs)
-    finally:
-        langgraph.config.get_config = original_get_config
+    # Capture current context
+    ctx = contextvars.copy_context()
+    # Create a wrapper that runs with our safe config
+    async def wrapper():
+        import langgraph.config
+        original_get_config = langgraph.config.get_config
+        langgraph.config.get_config = _safe_get_config
+        try:
+            return await fn(*args, **kwargs)
+        finally:
+            langgraph.config.get_config = original_get_config
+    # Run in the captured context
+    return await ctx.run(wrapper)
