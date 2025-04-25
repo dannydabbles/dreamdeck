@@ -1,15 +1,17 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import chainlit as cl  # Keep this import
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
-from langchain_core.messages import HumanMessage, AIMessage
-from src.models import ChatState
+from langchain_core.messages import AIMessage, HumanMessage
+
 from src.commands import (
     command_roll,
     command_search,
+    command_storyboard,
     command_todo,
     command_write,
-    command_storyboard,
 )
-import chainlit as cl  # Keep this import
+from src.models import ChatState
 
 
 async def mock_send(*args, **kwargs):

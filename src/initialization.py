@@ -2,9 +2,10 @@
 Initializes and manages the Chainlit database pool.
 """
 
-import os
 import logging
+import os
 from typing import Optional
+
 from chainlit.data.chainlit_data_layer import ChainlitDataLayer
 
 # Initialize logging

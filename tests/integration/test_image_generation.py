@@ -1,8 +1,10 @@
-import pytest
-from unittest.mock import patch, AsyncMock, MagicMock  # <-- ADD THIS IMPORT
-from src.image_generation import generate_image_async, generate_image_generation_prompts
 import base64  # Import base64
+from unittest.mock import AsyncMock, MagicMock, patch  # <-- ADD THIS IMPORT
+
 import httpx
+import pytest
+
+from src.image_generation import generate_image_async, generate_image_generation_prompts
 
 
 @pytest.mark.asyncio

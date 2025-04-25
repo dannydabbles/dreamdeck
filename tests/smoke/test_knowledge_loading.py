@@ -1,10 +1,12 @@
 import os
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from langchain_core.documents import Document
+
+from src.config import KNOWLEDGE_DIRECTORY
 from src.event_handlers import load_knowledge_documents
 from src.stores import VectorStore
-from langchain_core.documents import Document
-from src.config import KNOWLEDGE_DIRECTORY
 
 
 @pytest.mark.asyncio

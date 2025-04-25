@@ -11,8 +11,9 @@ Usage examples:
 import argparse
 import asyncio
 import sys
-from src.models import ChatState
+
 from src.agents.registry import get_agent, list_agents
+from src.models import ChatState
 from src.supervisor import supervisor
 
 

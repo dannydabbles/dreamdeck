@@ -1,12 +1,13 @@
-import pytest
+import datetime as dt_module
 import os
 import shutil
-from unittest.mock import patch, AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from langchain_core.messages import HumanMessage
+
 from src.agents.todo_agent import _manage_todo
 from src.models import ChatState
-from langchain_core.messages import HumanMessage
-import datetime as dt_module
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,7 @@
 import pytest
-from src.config import load_config, ConfigSchema
 from pydantic import ValidationError
+
+from src.config import ConfigSchema, load_config
 
 
 def test_valid_config():

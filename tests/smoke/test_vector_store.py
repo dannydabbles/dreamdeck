@@ -1,10 +1,12 @@
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
-import chainlit as cl
-from src.stores import VectorStore
-from langchain_core.documents import Document
 import asyncio
-from chainlit.context import context_var, ChainlitContext
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import chainlit as cl
+import pytest
+from chainlit.context import ChainlitContext, context_var
+from langchain_core.documents import Document
+
+from src.stores import VectorStore
 
 
 @pytest.fixture

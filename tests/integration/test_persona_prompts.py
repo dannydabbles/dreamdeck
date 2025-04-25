@@ -1,7 +1,9 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock
-from src.models import ChatState
+
 from src.config import config
+from src.models import ChatState
 
 
 @pytest.fixture(autouse=True, scope="module")

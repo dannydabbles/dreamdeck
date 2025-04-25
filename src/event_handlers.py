@@ -1,19 +1,20 @@
-import os
-import logging
 import asyncio
-import random
 import base64
-import httpx
+import logging
+import os
+import random
 from typing import List, Optional
+
+import httpx
 
 # Number of turns to suppress re-suggesting a declined persona
 PERSONA_SUPPRESSION_TURNS = 3
 
-# Expose persona_classifier_agent for tests
-from src.agents.persona_classifier_agent import persona_classifier_agent
-
 # Define Chainlit commands for UI buttons and slash menu
 from chainlit import Action
+
+# Expose persona_classifier_agent for tests
+from src.agents.persona_classifier_agent import persona_classifier_agent
 
 # List of available commands/actions for UI (used for both slash and action buttons)
 COMMANDS = [
@@ -28,77 +29,75 @@ COMMANDS = [
     {"id": "reset", "icon": "refresh-ccw", "description": "Reset story"},
     {"id": "save", "icon": "save", "description": "Export story"},
 ]
+import chainlit as cl
+from chainlit import Action  # Import Action for buttons
+from chainlit import user_session as cl_user_session  # Import cl_user_session
+from chainlit.input_widget import (
+    Select,  # Import widgets including Switch
+    Slider,
+    Switch,
+    TextInput,
+)
 from chainlit.types import ThreadDict
-from tenacity import (
-    retry,
-    wait_exponential,
-    stop_after_attempt,
-    retry_if_exception_type,
-)
-from langchain_core.messages import (
-    SystemMessage,
-    HumanMessage,
-    AIMessage,
-    FunctionMessage,
-    ToolMessage,
-)
+from langchain.schema.runnable import RunnableConfig  # Import RunnableConfig
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     PyMuPDFLoader,
     TextLoader,
     UnstructuredMarkdownLoader,
 )
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema.runnable import RunnableConfig  # Import RunnableConfig
-from src.config import (
-    NEGATIVE_PROMPT,
-    STEPS,
-    SAMPLER_NAME,
-    SCHEDULER,
-    CFG_SCALE,
-    WIDTH,
-    HEIGHT,
-    HR_UPSCALER,
-    DENOISING_STRENGTH,
-    HR_SECOND_PASS_STEPS,
-    IMAGE_GENERATION_TIMEOUT,
-    REFUSAL_LIST,
-    KNOWLEDGE_DIRECTORY,
-    STORYBOARD_GENERATION_PROMPT_PREFIX,
-    STORYBOARD_GENERATION_PROMPT_POSTFIX,
-    AI_WRITER_PROMPT,
-    IMAGE_GENERATION_ENABLED,
-    WEB_SEARCH_ENABLED,
-    DICE_ROLLING_ENABLED,
-    START_MESSAGE,
-)
-from src.initialization import init_db, DatabasePool
-from src.models import ChatState
-from src.workflows import app as chat_workflow
-from src.initialization import DatabasePool  # Import DatabasePool
-
-from src.stores import VectorStore  # Import VectorStore
-from src.agents.writer_agent import writer_agent
-from src.agents.storyboard_editor_agent import storyboard_editor_agent
-from src.agents.dice_agent import dice_roll_agent, dice_agent
-from src.agents.web_search_agent import web_search_agent
-from src.agents.todo_agent import todo_agent
-from src.supervisor import supervisor  # <-- Add this import
-from chainlit import user_session as cl_user_session  # Import cl_user_session
 from langchain_core.callbacks.manager import (
     CallbackManagerForChainRun,
 )  # Import CallbackManagerForChainRun
-
+from langchain_core.messages import (
+    AIMessage,
+    FunctionMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langchain_core.stores import BaseStore
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
-import chainlit as cl
-from chainlit.input_widget import (
-    Slider,
-    TextInput,
-    Select,
-    Switch,
-)  # Import widgets including Switch
 from src import config  # Import your config
-from chainlit import Action  # Import Action for buttons
+from src.agents.dice_agent import dice_agent, dice_roll_agent
+from src.agents.storyboard_editor_agent import storyboard_editor_agent
+from src.agents.todo_agent import todo_agent
+from src.agents.web_search_agent import web_search_agent
+from src.agents.writer_agent import writer_agent
+from src.config import (
+    AI_WRITER_PROMPT,
+    CFG_SCALE,
+    DENOISING_STRENGTH,
+    DICE_ROLLING_ENABLED,
+    HEIGHT,
+    HR_SECOND_PASS_STEPS,
+    HR_UPSCALER,
+    IMAGE_GENERATION_ENABLED,
+    IMAGE_GENERATION_TIMEOUT,
+    KNOWLEDGE_DIRECTORY,
+    NEGATIVE_PROMPT,
+    REFUSAL_LIST,
+    SAMPLER_NAME,
+    SCHEDULER,
+    START_MESSAGE,
+    STEPS,
+    STORYBOARD_GENERATION_PROMPT_POSTFIX,
+    STORYBOARD_GENERATION_PROMPT_PREFIX,
+    WEB_SEARCH_ENABLED,
+    WIDTH,
+)
+from src.initialization import DatabasePool  # Import DatabasePool
+from src.initialization import init_db
+from src.models import ChatState
+from src.stores import VectorStore  # Import VectorStore
+from src.supervisor import supervisor  # <-- Add this import
+from src.workflows import app as chat_workflow
 
 # Centralized logging configuration
 logging.basicConfig(

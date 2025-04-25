@@ -1,37 +1,39 @@
+import asyncio
 import base64
 import random
-import asyncio
 from typing import List, Optional
+
+import httpx  # Import httpx
+from chainlit import Image as CLImage  # Import Image from Chainlit
+from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
+from chainlit import element as cl_element  # Import cl_element
+from langgraph.func import task  # Import task from langgraph
 from tenacity import (
     retry,
-    wait_exponential,
-    stop_after_attempt,
     retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
-from chainlit import element as cl_element  # Import cl_element
-from chainlit import Message as CLMessage  # Import CLMessage from Chainlit
-from chainlit import Image as CLImage  # Import Image from Chainlit
+
 from .config import (
-    DENOISING_STRENGTH,
     CFG_SCALE,
+    DENOISING_STRENGTH,
+    HEIGHT,
     HR_SECOND_PASS_STEPS,
     HR_UPSCALER,
+    IMAGE_GENERATION_ENABLED,
+    IMAGE_GENERATION_TIMEOUT,
+    KNOWLEDGE_DIRECTORY,
     NEGATIVE_PROMPT,
-    STEPS,
+    REFUSAL_LIST,
     SAMPLER_NAME,
     SCHEDULER,
-    WIDTH,
-    HEIGHT,
-    IMAGE_GENERATION_TIMEOUT,
-    REFUSAL_LIST,
-    KNOWLEDGE_DIRECTORY,
     STABLE_DIFFUSION_API_URL,
-    IMAGE_GENERATION_ENABLED,
-    STORYBOARD_GENERATION_PROMPT_PREFIX,
+    STEPS,
     STORYBOARD_GENERATION_PROMPT_POSTFIX,
+    STORYBOARD_GENERATION_PROMPT_PREFIX,
+    WIDTH,
 )
-from langgraph.func import task  # Import task from langgraph
-import httpx  # Import httpx
 
 
 # Define an asynchronous range generator

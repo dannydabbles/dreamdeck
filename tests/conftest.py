@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 # Always set DREAMDECK_TEST_MODE=1 during tests to isolate ChromaDB
 os.environ["DREAMDECK_TEST_MODE"] = "1"
@@ -119,8 +119,9 @@ if (
     except ImportError:
         pass
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
 
 
 @pytest.fixture
@@ -137,15 +138,15 @@ def mock_chainlit_context():
 
 import pytest
 from src.config import (
-    config,
+    AgentsConfig,
+    DecisionAgentConfig,
     DefaultsConfig,
-    LlmConfig,
     DiceConfig,
     FeatureConfig,
-    DecisionAgentConfig,
-    WriterAgentConfig,
+    LlmConfig,
     StoryboardEditorAgentConfig,
-    AgentsConfig,
+    WriterAgentConfig,
+    config,
 )
 
 
@@ -158,6 +159,7 @@ def mock_env_vars(monkeypatch):
 
 
 import logging
+
 import pytest
 
 

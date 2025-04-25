@@ -8,23 +8,27 @@ pytestmark = [
     pytest.mark.filterwarnings("ignore:Support for class-based `config` is deprecated"),
 ]
 
-from unittest.mock import patch, AsyncMock, MagicMock, call
+import asyncio
+import os
+from pathlib import Path  # Add missing import
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
+import chainlit as cl
+from langchain_core.messages import AIMessage, HumanMessage
+
+from src.config import KNOWLEDGE_DIRECTORY, START_MESSAGE
 from src.event_handlers import (
-    on_chat_start,
-    on_chat_resume,
-    on_message,
+    _load_document,
+)  # Keep if testing directly, otherwise mock
+from src.event_handlers import (
     load_knowledge_documents,
-    _load_document,  # Keep if testing directly, otherwise mock
+    on_chat_resume,
+    on_chat_start,
+    on_message,
 )
 from src.initialization import DatabasePool  # Import DatabasePool
 from src.models import ChatState
 from src.stores import VectorStore
-from src.config import START_MESSAGE, KNOWLEDGE_DIRECTORY
-from langchain_core.messages import HumanMessage, AIMessage
-import chainlit as cl
-import asyncio
-import os
-from pathlib import Path  # Add missing import
 
 
 async def mock_send(*args, **kwargs):
@@ -32,7 +36,7 @@ async def mock_send(*args, **kwargs):
     return None
 
 
-from chainlit.context import context_var, ChainlitContext
+from chainlit.context import ChainlitContext, context_var
 
 
 # Mock Chainlit context and user session globally for this module

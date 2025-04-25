@@ -1,20 +1,21 @@
 import os  # Import os at the top
-
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from langchain_core.messages import HumanMessage, AIMessage
+
+import chainlit as cl
+import pytest
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.outputs import Generation
-from src.models import ChatState
+
+from src.agents.dice_agent import _dice_roll
+from src.agents.storyboard_editor_agent import _generate_storyboard
 from src.agents.web_search_agent import _web_search
 from src.agents.writer_agent import _generate_story
-from src.agents.storyboard_editor_agent import _generate_storyboard
+from src.event_handlers import on_chat_start
 from src.image_generation import (
     generate_image_generation_prompts,
     process_storyboard_images,
 )
-from src.agents.dice_agent import _dice_roll
-from src.event_handlers import on_chat_start
-import chainlit as cl
+from src.models import ChatState
 
 
 @pytest.mark.asyncio
@@ -75,9 +76,10 @@ async def test_web_search_integration():
 
 @pytest.mark.asyncio
 async def test_dice_roll_invalid_json(monkeypatch):
-    from src.agents.dice_agent import _dice_roll, ChatOpenAI
-    from src.models import ChatState
     from langchain_core.messages import HumanMessage
+
+    from src.agents.dice_agent import ChatOpenAI, _dice_roll
+    from src.models import ChatState
 
     state = ChatState(
         messages=[HumanMessage(content="roll 2d6", name="Player")], thread_id="test"
@@ -97,9 +99,10 @@ async def test_dice_roll_invalid_json(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_dice_roll_invalid_specs(monkeypatch):
-    from src.agents.dice_agent import _dice_roll, ChatOpenAI
-    from src.models import ChatState
     from langchain_core.messages import HumanMessage
+
+    from src.agents.dice_agent import ChatOpenAI, _dice_roll
+    from src.models import ChatState
 
     state = ChatState(
         messages=[HumanMessage(content="roll 2d6", name="Player")], thread_id="test"

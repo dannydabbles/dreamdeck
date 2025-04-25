@@ -1,6 +1,7 @@
 import pytest
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+
 from src.models import ChatState
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 
 
 def test_chat_state_initialization():

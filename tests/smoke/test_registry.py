@@ -1,5 +1,6 @@
 import pytest
-from src.agents.registry import get_agent, list_agents, AGENT_REGISTRY
+
+from src.agents.registry import AGENT_REGISTRY, get_agent, list_agents
 
 
 def test_get_agent_known():

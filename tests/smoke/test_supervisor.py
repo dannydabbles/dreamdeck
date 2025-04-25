@@ -1,13 +1,11 @@
-import pytest
-from src.models import ChatState
-from langchain_core.messages import HumanMessage, AIMessage
+import sys
 from unittest.mock import AsyncMock, patch
 
-import sys
-
+import pytest
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 
-import pytest
+from src.models import ChatState
 
 
 @pytest.mark.skip(

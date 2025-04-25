@@ -1,6 +1,7 @@
+import chainlit as cl
+
 from src.models import ChatState
 from src.supervisor import supervisor
-import chainlit as cl
 
 # The main app is now the supervisor agent (langgraph-supervisor based)
 app = supervisor

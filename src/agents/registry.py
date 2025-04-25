@@ -3,15 +3,15 @@ Central registry for all agents and tools in Dreamdeck.
 This enables CLI access, dynamic routing, and auto-generated help.
 """
 
-from src.agents.writer_agent import writer_agent
+from src.agents.decision_agent import decision_agent
 from src.agents.dice_agent import dice_agent
-from src.agents.web_search_agent import web_search_agent
-from src.agents.todo_agent import todo_agent
 from src.agents.knowledge_agent import knowledge_agent
+from src.agents.persona_classifier_agent import persona_classifier_agent
 from src.agents.report_agent import report_agent
 from src.agents.storyboard_editor_agent import storyboard_editor_agent
-from src.agents.persona_classifier_agent import persona_classifier_agent
-from src.agents.decision_agent import decision_agent
+from src.agents.todo_agent import todo_agent
+from src.agents.web_search_agent import web_search_agent
+from src.agents.writer_agent import writer_agent
 
 AGENT_REGISTRY = {
     "writer": {

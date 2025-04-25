@@ -4,20 +4,21 @@ Dreamdeck Supervisor: Leverage langgraph-supervisor for agent orchestration.
 This version uses langgraph-supervisor's built-in routing, handoff, and message management.
 """
 
-from src.models import ChatState
-from src.agents.registry import AGENT_REGISTRY, get_agent
-from src.agents.writer_agent import writer_agent
+import logging
+
+import chainlit as cl
+
+from src.agents.decision_agent import decision_agent
 from src.agents.dice_agent import dice_agent
-from src.agents.web_search_agent import web_search_agent
-from src.agents.todo_agent import todo_agent
 from src.agents.knowledge_agent import knowledge_agent
+from src.agents.persona_classifier_agent import persona_classifier_agent
+from src.agents.registry import AGENT_REGISTRY, get_agent
 from src.agents.report_agent import report_agent
 from src.agents.storyboard_editor_agent import storyboard_editor_agent
-from src.agents.persona_classifier_agent import persona_classifier_agent
-from src.agents.decision_agent import decision_agent
-
-import logging
-import chainlit as cl
+from src.agents.todo_agent import todo_agent
+from src.agents.web_search_agent import web_search_agent
+from src.agents.writer_agent import writer_agent
+from src.models import ChatState
 
 cl_logger = logging.getLogger("chainlit")
 

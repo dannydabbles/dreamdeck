@@ -7,23 +7,25 @@ They are registered as Chainlit actions and are available in the UI and slash me
 All commands are also exposed as action buttons and in the Chainlit chat settings.
 """
 
+import logging
 import os
 import sys
+
 import chainlit as cl
-import logging
 
 # NOTE: Chainlit v2+ does not use cl.command or cl.set_commands.
 # Commands and actions are registered via event_handlers.py using action_callback decorators and ChatSettings.
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
+
+from src.agents.dice_agent import dice_agent
+from src.agents.report_agent import report_agent
+from src.agents.storyboard_editor_agent import storyboard_editor_agent
+from src.agents.todo_agent import call_todo_agent, todo_agent
+from src.agents.web_search_agent import web_search_agent
+from src.agents.writer_agent import writer_agent
+from src.config import IMAGE_GENERATION_ENABLED, START_MESSAGE
 from src.models import ChatState
 from src.stores import VectorStore
-from src.agents.dice_agent import dice_agent
-from src.agents.web_search_agent import web_search_agent
-from src.agents.todo_agent import todo_agent, call_todo_agent
-from src.agents.writer_agent import writer_agent
-from src.agents.storyboard_editor_agent import storyboard_editor_agent
-from src.agents.report_agent import report_agent
-from src.config import IMAGE_GENERATION_ENABLED, START_MESSAGE
 
 cl_logger = logging.getLogger("chainlit")
 

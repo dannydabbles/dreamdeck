@@ -1,23 +1,25 @@
-from langchain_core.documents import Document
-from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
-from chromadb import PersistentClient, Client  # Import both clients
-from typing import (
-    Dict,
-    Any,
-    List,
-    Sequence,
-    Tuple,
-    Optional,
-    Iterator,
-)  # Import Optional and Iterator
-import uuid
-import chainlit as cl
 import asyncio
 import os  # Add os for env var check
-from src.config import (
-    parse_size,
+import uuid
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,  # Import Optional and Iterator
+    Optional,
+    Sequence,
+    Tuple,
+)
+
+import chainlit as cl
+from chromadb import Client, PersistentClient  # Import both clients
+from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+from langchain_core.documents import Document
+
+from src.config import (  # Import parse_size and CACHING_SETTINGS
     CACHING_SETTINGS,
-)  # Import parse_size and CACHING_SETTINGS
+    parse_size,
+)
 
 
 class VectorStore:
