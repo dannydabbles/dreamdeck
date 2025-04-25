@@ -89,6 +89,14 @@ async def _decide_next_agent(
             # fallback: treat as string
             route = content
 
+        # --- MULTI-INTENT PATCH ---
+        # If the route is a comma-separated string, split into a list
+        if isinstance(route, str) and "," in route:
+            route = [r.strip() for r in route.split(",") if r.strip()]
+        # If the route is a string containing " and ", split as well
+        elif isinstance(route, str) and " and " in route:
+            route = [r.strip() for r in route.split(" and ") if r.strip()]
+
         if not route:
             route = "writer"
 
