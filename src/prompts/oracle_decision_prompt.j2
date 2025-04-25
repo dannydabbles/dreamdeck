@@ -69,12 +69,12 @@ or
 {"route": "END"}
 
 <examples>
-Example 1: User input: "Add buy milk to my todo and search for the latest research on black holes."
+Example 1: User input: "Add buy milk to my todo and search for the latest research on black holes, then have the secretary summarize."
 Output: {"route": ["todo", "search", "persona:Secretary"]}
 
-Example 2: User input: "Roll 2d6 and then tell me a story."
-Output: {"route": ["dice", "persona:Storyteller GM"]}
+Example 2: User input: "Roll 2d6, then update my todo, then have the secretary summarize, then generate a report."
+Output: {"route": ["dice", "todo", "persona:Secretary", "report"]}
 
-Example 3: After persona:Secretary has summarized, output:
-{"route": "END"}
+Example 3: If a persona agent has already been called in this turn, do not call another persona agent before END.
+Output: {"route": "END"}
 </examples>

@@ -110,8 +110,14 @@ async def supervisor(state: ChatState, **kwargs):
         routes = route if isinstance(route, list) else [route]
         from src.agents.writer_agent import writer_agent
 
+        persona_called = False  # Track if a persona agent has been called in this turn
+
         for single_route in routes:
             if isinstance(single_route, str) and single_route.lower().startswith("persona:"):
+                if persona_called:
+                    cl_logger.warning("Supervisor: Multiple persona agents in one turn are not allowed. Skipping additional persona agent.")
+                    continue  # Skip additional persona agents
+                persona_called = True
                 persona_name = single_route.split(":", 1)[1].strip() or "Default"
                 cl_logger.info(
                     f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision"
@@ -133,20 +139,11 @@ async def supervisor(state: ChatState, **kwargs):
                     cl_logger.error(
                         f"Supervisor: Could not find agent for persona '{persona_name}'"
                     )
-                    break
+                    continue
                 persona_result = await agent_to_call(state)
                 if persona_result:
                     results.extend(persona_result)
-                # If a persona or writer agent was just called, always end the workflow.
-                # This prevents repeated narrative/summarization loops regardless of LLM output.
-                if (
-                    agent_to_call == writer_agent
-                    or agent_to_call in getattr(writer_agent, "persona_agent_registry", {}).values()
-                ):
-                    cl_logger.info("Supervisor: Persona or writer agent called, ending turn to prevent repeated narrative responses.")
-                    return results  # End the workflow immediately after a persona/writer agent
-                # After calling a persona agent, always break (persona should be last)
-                break
+                # Do NOT break here; allow tools after persona agent
             else:
                 # Route to the correct tool agent, always using the helper if available
                 agent = get_agent(single_route, helper=True)
@@ -212,14 +209,6 @@ async def supervisor(state: ChatState, **kwargs):
                     results.extend(tool_result)
                     state.tool_results_this_turn.extend(tool_result)
                     state.messages.extend(tool_result)
-                # If a persona or writer agent was just called, always end the workflow.
-                # This prevents repeated narrative/summarization loops regardless of LLM output.
-                if (
-                    agent_to_call == writer_agent
-                    or agent_to_call in getattr(writer_agent, "persona_agent_registry", {}).values()
-                ):
-                    cl_logger.info("Supervisor: Persona or writer agent called, ending turn to prevent repeated narrative responses.")
-                    return results  # End the workflow immediately after a persona/writer agent
         hops += 1
 
     if hops >= max_hops:
