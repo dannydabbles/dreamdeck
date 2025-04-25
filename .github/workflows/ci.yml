@@ -38,15 +38,21 @@ jobs:
         restore-keys: |
           venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
-    - name: Install dependencies
-      # The 'if' condition has been removed, so this step always runs
-      run: poetry install --no-interaction --with dev --no-root
+    - name: Install dependencies via pip
+      run: |
+        # Export dependencies including dev group to requirements.txt
+        poetry export --with dev --format requirements.txt --output requirements.txt
+        # Install using pip into the Python environment set up by actions/setup-python
+        pip install -r requirements.txt
 
     - name: Run tests
-      run: PYTHONPATH=. poetry run pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
+      # Run pytest directly; PYTHONPATH is still needed for src imports
+      run: PYTHONPATH=. pytest --tb=short tests/smoke tests/integration --cov=src --cov-report term-missing
 
     - name: Lint with flake8
-      run: poetry run flake8 . tests/
+      # Run flake8 directly
+      run: flake8 . tests/
 
     - name: Check formatting with black
-      run: poetry run black --check . tests/
+      # Run black directly
+      run: black --check . tests/
