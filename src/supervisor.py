@@ -152,44 +152,54 @@ async def supervisor(state: ChatState, **kwargs):
 
             # Always call the agent's "_helper" function if it exists, else the agent itself
             agent_helper = None
-            if hasattr(agent, "__module__"):
-                try:
-                    import importlib
+            # --- MULTI-TOOL ROUTING FIX: always call the undecorated function if present ---
+            # This ensures that if the agent is a @task-decorated function, we call the underlying function for correct multi-tool routing.
+            if hasattr(agent, "_manage_todo"):
+                agent_helper = getattr(agent, "_manage_todo", None)
+            elif hasattr(agent, "_web_search"):
+                agent_helper = getattr(agent, "_web_search", None)
+            elif hasattr(agent, "__wrapped__"):
+                agent_helper = getattr(agent, "__wrapped__", None)
+            else:
+                # Fallback to previous importlib-based helper lookup
+                if hasattr(agent, "__module__"):
+                    try:
+                        import importlib
 
-                    agent_mod = importlib.import_module(agent.__module__)
-                    helper_name = getattr(agent, "__name__", None)
-                    if helper_name and helper_name.endswith("_agent"):
-                        helper_func_name = helper_name + "_helper"
-                        agent_helper = getattr(agent_mod, helper_func_name, None)
-                    # Fallback: try common helper names
-                    if not agent_helper and hasattr(agent_mod, "dice_agent_helper"):
-                        agent_helper = getattr(agent_mod, "dice_agent_helper", None)
-                    if not agent_helper and hasattr(
-                        agent_mod, "web_search_agent_helper"
-                    ):
-                        agent_helper = getattr(
-                            agent_mod, "web_search_agent_helper", None
-                        )
-                    if not agent_helper and hasattr(agent_mod, "todo_agent_helper"):
-                        agent_helper = getattr(agent_mod, "todo_agent_helper", None)
-                    if not agent_helper and hasattr(agent_mod, "writer_agent_helper"):
-                        agent_helper = getattr(agent_mod, "writer_agent_helper", None)
-                    if not agent_helper and hasattr(
-                        agent_mod, "storyboard_editor_agent_helper"
-                    ):
-                        agent_helper = getattr(
-                            agent_mod, "storyboard_editor_agent_helper", None
-                        )
-                    if not agent_helper and hasattr(
-                        agent_mod, "knowledge_agent_helper"
-                    ):
-                        agent_helper = getattr(
-                            agent_mod, "knowledge_agent_helper", None
-                        )
-                    if not agent_helper and hasattr(agent_mod, "report_agent_helper"):
-                        agent_helper = getattr(agent_mod, "report_agent_helper", None)
-                except Exception:
-                    agent_helper = None
+                        agent_mod = importlib.import_module(agent.__module__)
+                        helper_name = getattr(agent, "__name__", None)
+                        if helper_name and helper_name.endswith("_agent"):
+                            helper_func_name = helper_name + "_helper"
+                            agent_helper = getattr(agent_mod, helper_func_name, None)
+                        # Fallback: try common helper names
+                        if not agent_helper and hasattr(agent_mod, "dice_agent_helper"):
+                            agent_helper = getattr(agent_mod, "dice_agent_helper", None)
+                        if not agent_helper and hasattr(
+                            agent_mod, "web_search_agent_helper"
+                        ):
+                            agent_helper = getattr(
+                                agent_mod, "web_search_agent_helper", None
+                            )
+                        if not agent_helper and hasattr(agent_mod, "todo_agent_helper"):
+                            agent_helper = getattr(agent_mod, "todo_agent_helper", None)
+                        if not agent_helper and hasattr(agent_mod, "writer_agent_helper"):
+                            agent_helper = getattr(agent_mod, "writer_agent_helper", None)
+                        if not agent_helper and hasattr(
+                            agent_mod, "storyboard_editor_agent_helper"
+                        ):
+                            agent_helper = getattr(
+                                agent_mod, "storyboard_editor_agent_helper", None
+                            )
+                        if not agent_helper and hasattr(
+                            agent_mod, "knowledge_agent_helper"
+                        ):
+                            agent_helper = getattr(
+                                agent_mod, "knowledge_agent_helper", None
+                            )
+                        if not agent_helper and hasattr(agent_mod, "report_agent_helper"):
+                            agent_helper = getattr(agent_mod, "report_agent_helper", None)
+                    except Exception:
+                        agent_helper = None
 
             agent_to_call = agent_helper if agent_helper else agent
 
