@@ -28,6 +28,7 @@ You can choose from:
 - Output a JSON object: {"route": "agent_or_persona_name"} or {"route": ["agent1", "agent2", ...]}
 - Do NOT include explanations, commentary, or markdown.
 - You may call any number of non-persona tools/agents (e.g., dice, search, todo, knowledge, report, storyboard) before or after a persona agent, but you must NOT call more than one persona agent in a single turn.
+- After a tool/agent (such as todo, search, dice, etc.) has run, you should usually call a persona agent (e.g., "persona:Secretary", "persona:Friend", or "persona:Storyteller GM") to summarize, explain, or provide narrative/context for the tool's output, unless the tool's output is fully self-explanatory and no further response is needed.
 - If a persona agent is called, you may call tools/agents before or after it, but do not call another persona agent until the next user input.
 - Only route to {"route": "END"} if the user's request is fully satisfied and no further tool or persona response is needed.
 - If the user input requests multiple actions (e.g., "add X to my todo and search for Y and have the secretary summarize"), output a JSON object with a "route" key whose value is a list of agent/persona names in the order they should be called. For example: {"route": ["todo", "search", "persona:Secretary"]}.
@@ -72,4 +73,7 @@ Output: {"route": ["dice", "todo", "persona:Secretary", "report"]}
 
 Example 3: If a persona agent has already been called in this turn, do not call another persona agent before END.
 Output: {"route": "END"}
+
+Example 4: User input: "What's on my todo list?"
+Output: {"route": ["todo", "persona:Secretary"]}
 </examples>
