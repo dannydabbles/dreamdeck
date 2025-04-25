@@ -9,6 +9,14 @@ import asyncio
 
 import chainlit as cl
 
+import langgraph.config
+
+def _safe_get_config():
+    try:
+        return langgraph.config.get_config()
+    except RuntimeError:
+        return {}
+
 from src.agents.decision_agent import decision_agent
 from src.agents.dice_agent import dice_agent
 from src.agents.knowledge_agent import knowledge_agent
@@ -223,7 +231,8 @@ async def supervisor(state: ChatState, **kwargs):
                 if last_gm_msg and last_gm_msg.metadata and last_gm_msg.metadata.get("message_id"):
                     # Run storyboard generation in background
                     asyncio.create_task(
-                        storyboard_editor_agent(
+                        _with_safe_config(
+                            storyboard_editor_agent,
                             state,
                             gm_message_id=last_gm_msg.metadata["message_id"]
                         )
@@ -253,3 +262,12 @@ supervisor.task = _noop_task
 
 def task(x):
     return x
+
+async def _with_safe_config(fn, *args, **kwargs):
+    import langgraph.config
+    original_get_config = langgraph.config.get_config
+    langgraph.config.get_config = _safe_get_config
+    try:
+        return await fn(*args, **kwargs)
+    finally:
+        langgraph.config.get_config = original_get_config
