@@ -33,13 +33,19 @@ cl_logger = logging.getLogger("chainlit")
 async def _generate_storyboard(
     state: ChatState, gm_message_id: str, **kwargs
 ) -> list[BaseMessage]:
-    """Generate a storyboard prompt from recent chat, then asynchronously generate images."""
-    messages = state.messages
+    """Generate a storyboard prompt from recent chat, then generate images."""
     try:
-        # Format STORYBOARD_GENERATION_PROMPT as jinja2
-        template = Template(STORYBOARD_GENERATION_PROMPT)
+        # Get the specific GM message content
+        gm_message = next(
+            msg for msg in state.messages 
+            if isinstance(msg, AIMessage) 
+            and msg.metadata.get("message_id") == gm_message_id
+        )
+        
+        # Format prompt using the GM's message content
+        template = Template(config.loaded_prompts["storyboard_generation_prompt"])
         formatted_prompt = template.render(
-            recent_chat_history=state.get_recent_history_str(),
+            recent_chat_history=gm_message.content,  # Use GM's message directly
             memories=state.get_memories_str(),
             tool_results=state.get_tool_results_str(),
             user_preferences=state.user_preferences,
@@ -72,8 +78,16 @@ async def _generate_storyboard(
         storyboard_response = await llm.ainvoke([("system", formatted_prompt)])
         storyboard = storyboard_response.content.strip()
 
+        # Process images after generating storyboard
         await process_storyboard_images(storyboard, message_id=gm_message_id)
-        return []
+        
+        return [
+            AIMessage(
+                content=f"🎨 Generated storyboard for: {gm_message.content[:50]}...",
+                name="storyboard",
+                metadata={"message_id": gm_message_id},
+            )
+        ]
     except Exception as e:
         cl_logger.error(f"Storyboard generation failed: {e}")
         return [

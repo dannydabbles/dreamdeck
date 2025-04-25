@@ -230,7 +230,7 @@ async def supervisor(state: ChatState, **kwargs):
                     None
                 )
                 if last_gm_msg and last_gm_msg.metadata.get("message_id"):
-                    # Run storyboard generation in background
+                    # Run storyboard generation in background with error handling
                     current_context = contextvars.copy_context()
                     task = asyncio.create_task(
                         current_context.run(
@@ -240,6 +240,13 @@ async def supervisor(state: ChatState, **kwargs):
                             gm_message_id=last_gm_msg.metadata["message_id"]
                         )
                     )
+                    # Add done callback to handle completion/errors
+                    def handle_task_done(t):
+                        try:
+                            t.result()
+                        except Exception as e:
+                            cl_logger.error(f"Background task failed: {e}")
+                    task.add_done_callback(handle_task_done)
                     state.background_tasks.append(task)
             break
         hops += 1
