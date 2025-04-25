@@ -205,6 +205,11 @@ async def supervisor(state: ChatState, **kwargs):
                     results.extend(tool_result)
                     state.tool_results_this_turn.extend(tool_result)
                     state.messages.extend(tool_result)
+                # Defensive: If the agent called was the writer agent (i.e., a persona/narrative agent), break the loop
+                from src.agents.writer_agent import writer_agent
+                if agent_to_call == writer_agent or getattr(agent_to_call, "__class__", None) == writer_agent.__class__:
+                    cl_logger.info("Supervisor: Writer agent called, ending turn to prevent repeated narrative responses.")
+                    break
         hops += 1
 
     if hops >= max_hops:
