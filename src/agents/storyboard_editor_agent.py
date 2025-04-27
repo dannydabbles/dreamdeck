@@ -114,7 +114,8 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
         message_id (str): The message ID for the chat.
     """
     if not storyboard or not config.features.image_generation:
-        return  # Early exit if no content
+        cl_logger.warning("Image generation skipped - no content or disabled")
+        return  # Add explicit return for visibility
 
     try:
         # Generate image prompts

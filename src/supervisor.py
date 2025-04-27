@@ -227,7 +227,7 @@ async def supervisor(state: ChatState, **kwargs):
                 last_gm_msg = next(
                     (msg for msg in reversed(state.messages) 
                      if isinstance(msg, AIMessage) 
-                     and msg.metadata.get("persona") == "Game Master"),  # Check metadata instead of name
+                     and msg.metadata.get("persona") == state.current_persona),  # Check metadata for current persona
                     None
                 )
                 if last_gm_msg and last_gm_msg.metadata.get("message_id"):
@@ -244,9 +244,13 @@ async def supervisor(state: ChatState, **kwargs):
                     # Add done callback to handle completion/errors
                     def handle_task_done(t):
                         try:
-                            t.result()
+                            t.result()  # This will re-raise any exceptions from the task
                         except Exception as e:
                             cl_logger.error(f"Background task failed: {e}")
+                            # Send error message to UI
+                            asyncio.create_task(
+                                cl.Message(content=f"⚠️ Image generation failed: {str(e)}").send()
+                            )
                     task.add_done_callback(handle_task_done)
                     state.background_tasks.append(task)
             break
