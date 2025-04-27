@@ -35,13 +35,14 @@ async def _generate_storyboard(
 ) -> list[BaseMessage]:
     """Generate a storyboard prompt from recent chat, then generate images."""
     try:
-        # Get the specific GM message content
+        cl_logger.info(f"Starting storyboard for message ID: {gm_message_id}")
         gm_message = next(
             msg for msg in state.messages 
             if isinstance(msg, AIMessage) 
             and msg.metadata.get("message_id") == gm_message_id
         )
-        
+        cl_logger.info(f"Found GM message: {gm_message.content[:50]}...")
+
         # Format prompt using the GM's message content
         template = Template(config.loaded_prompts["storyboard_generation_prompt"])
         formatted_prompt = template.render(
@@ -77,6 +78,7 @@ async def _generate_storyboard(
         # Generate the storyboard
         storyboard_response = await llm.ainvoke([("system", formatted_prompt)])
         storyboard = storyboard_response.content.strip()
+        cl_logger.info(f"Generated storyboard: {storyboard[:200]}...")
 
         # Process images after generating storyboard
         await process_storyboard_images(storyboard, message_id=gm_message_id)
@@ -88,15 +90,12 @@ async def _generate_storyboard(
                 metadata={"message_id": gm_message_id},
             )
         ]
+    except StopIteration:
+        cl_logger.error(f"No GM message found with ID: {gm_message_id}")
+        return []
     except Exception as e:
-        cl_logger.error(f"Storyboard generation failed: {e}")
-        return [
-            AIMessage(
-                content="Error generating storyboard.",
-                name="error",
-                metadata={"message_id": None},
-            )
-        ]
+        cl_logger.error("Storyboard failed", exc_info=True)
+        return []
 
 
 @task
