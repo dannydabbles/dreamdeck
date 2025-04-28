@@ -244,7 +244,7 @@ if LOGGING["console"]:
     handlers.append(logging.StreamHandler())
 
 logging.basicConfig(
-    level=LOGGING["level"],
+    level=logging.DEBUG,  # Changed from INFO to DEBUG for more verbose output
     format=LOGGING["format"],
     handlers=handlers,
 )

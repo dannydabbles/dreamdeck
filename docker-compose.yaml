@@ -63,3 +63,5 @@ services:
       - ./helper:/app/helper
       - ./Makefile:/app/Makefile
     network_mode: bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

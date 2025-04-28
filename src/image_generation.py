@@ -35,6 +35,22 @@ from .config import (
     WIDTH,
 )
 
+import logging
+cl_logger = logging.getLogger("chainlit")
+
+# --- API Connectivity Check on Startup ---
+import chainlit as cl
+
+@cl.on_chat_start
+async def check_sd_api():
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/options")
+            cl_logger.info(f"Stable Diffusion API connected: {resp.status_code}")
+    except Exception as e:
+        cl_logger.error(f"Stable Diffusion connection failed: {str(e)}")
+        await cl.Message(content="⚠️ Image generation unavailable: API connection failed").send()
+
 
 # Define an asynchronous range generator
 async def async_range(end):

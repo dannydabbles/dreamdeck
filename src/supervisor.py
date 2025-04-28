@@ -222,14 +222,17 @@ async def supervisor(state: ChatState, **kwargs):
         # After processing all routes in this turn, if a persona agent was called, end the turn.
         if persona_called:
             # Generate storyboard if current persona is Storyteller GM or Game Master
-            if state.current_persona.lower() in ["storyteller gm", "game master"]:
+            cl_logger.info(f"Checking persona for storyboard: {state.current_persona}")
+            if state.current_persona.lower().replace(" ", "") in ["storytellergm", "gamemaster"]:
                 # Find the most recent Game Master message using metadata
                 last_gm_msg = next(
                     (msg for msg in reversed(state.messages) 
                      if isinstance(msg, AIMessage) 
-                     and msg.metadata.get("persona", "").lower() in ["storyteller gm", "game master"]),  # Flexible matching
+                     and msg.metadata.get("persona", "").lower().replace(" ", "") in ["storytellergm", "gamemaster"]),  # Flexible matching
                     None
                 )
+                if last_gm_msg:
+                    cl_logger.info(f"Found GM message with ID: {last_gm_msg.metadata.get('message_id')}")
                 if last_gm_msg and last_gm_msg.metadata.get("message_id"):
                     # Run storyboard generation in background with error handling
                     current_context = contextvars.copy_context()
