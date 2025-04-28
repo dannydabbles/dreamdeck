@@ -317,6 +317,12 @@ STABLE_DIFFUSION_API_URL = config.image_generation_payload.get(
     "url", os.environ.get("STABLE_DIFFUSION_API_URL")
 )
 
+# Add validation and logging for Stable Diffusion API URL
+if not STABLE_DIFFUSION_API_URL:
+    cl_logger.error("STABLE_DIFFUSION_API_URL is not configured!")
+else:
+    cl_logger.info(f"Stable Diffusion API URL: {STABLE_DIFFUSION_API_URL}")
+
 CFG_SCALE = config.image_generation_payload.get("cfg_scale", 3.5)
 DENOISING_STRENGTH = config.image_generation_payload.get("denoising_strength", 0.6)
 STEPS = config.image_generation_payload.get("steps", 30)

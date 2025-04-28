@@ -68,17 +68,19 @@ async def generate_image_async(
     image_generation_prompt: str, seed: int
 ) -> Optional[bytes]:
     if not IMAGE_GENERATION_ENABLED:
-        cl_element.logger.warning("Image generation is disabled in the configuration.")
+        cl_logger.warning("Image generation disabled by config")
         return None
 
     try:
+        cl_logger.info(f"Attempting connection to {STABLE_DIFFUSION_API_URL}")
         async with httpx.AsyncClient(timeout=IMAGE_GENERATION_TIMEOUT) as client:
             # First check API availability
             try:
                 health_check = await client.get(f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/options")
                 health_check.raise_for_status()
+                cl_logger.info(f"API connection successful ({health_check.status_code})")
             except Exception as health_error:
-                cl_element.logger.error(f"Stable Diffusion API unavailable: {str(health_error)}")
+                cl_logger.error(f"Stable Diffusion API unavailable: {str(health_error)}")
                 return None
 
             # Proceed with image generation if health check passed
@@ -106,12 +108,12 @@ async def generate_image_async(
             return image_bytes
 
     except httpx.RequestError as e:
-        cl_element.logger.error(
+        cl_logger.error(
             f"Image generation failed after retries: {e}", exc_info=True
         )
         raise
     except (KeyError, IndexError, ValueError) as e:
-        cl_element.logger.error(f"Error processing image data: {e}", exc_info=True)
+        cl_logger.error(f"Error processing image data: {e}", exc_info=True)
         return None
 
 

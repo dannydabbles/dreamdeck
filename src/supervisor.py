@@ -120,9 +120,11 @@ async def supervisor(state: ChatState, **kwargs):
 
         # --- MULTI-INTENT PATCH: handle list of routes ---
         routes = route if isinstance(route, list) else [route]
+        cl_logger.debug(f"Processing routes: {routes}")
         from src.agents.writer_agent import writer_agent
 
         for single_route in routes:
+            cl_logger.debug(f"Processing route: {single_route}")
             if isinstance(single_route, str) and single_route.lower().startswith("persona:"):
                 if persona_called:
                     cl_logger.warning("Supervisor: Multiple persona agents in one turn are not allowed. Skipping additional persona agent.")
@@ -145,6 +147,7 @@ async def supervisor(state: ChatState, **kwargs):
                         f"Supervisor: Persona '{persona_name}' not found in writer_agent registry, falling back to default writer."
                     )
                     agent_to_call = writer_agent
+                cl_logger.info(f"Persona agent to call: {agent_to_call}")
                 if agent_to_call is None:
                     cl_logger.error(
                         f"Supervisor: Could not find agent for persona '{persona_name}'"
@@ -221,9 +224,11 @@ async def supervisor(state: ChatState, **kwargs):
                     state.messages.extend(tool_result)
         # After processing all routes in this turn, if a persona agent was called, end the turn.
         if persona_called:
-            # Generate storyboard if current persona is Storyteller GM or Game Master
-            cl_logger.info(f"Checking persona for storyboard: {state.current_persona}")
-            if state.current_persona.lower().replace(" ", "") in ["storytellergm", "gamemaster"]:
+            cl_logger.info(f"Persona called: {state.current_persona}. Checking for storyboard...")
+            current_persona_clean = state.current_persona.lower().replace(" ", "")
+            cl_logger.info(f"Cleaned persona: '{current_persona_clean}'")
+            if current_persona_clean in ["storytellergm", "gamemaster"]:
+                cl_logger.info("Identified as GM persona, searching for last GM message...")
                 # Find the most recent Game Master message using metadata
                 last_gm_msg = next(
                     (msg for msg in reversed(state.messages) 
@@ -232,14 +237,20 @@ async def supervisor(state: ChatState, **kwargs):
                     None
                 )
                 if last_gm_msg and last_gm_msg.metadata.get("message_id"):
-                    cl_logger.info(f"Generating storyboard for message ID: {last_gm_msg.metadata['message_id']}")
+                    cl_logger.info(f"Found GM message with ID: {last_gm_msg.metadata['message_id']}")
                     from src.config import STABLE_DIFFUSION_API_URL
+                    cl_logger.info(f"Using Stable Diffusion URL: {STABLE_DIFFUSION_API_URL}")
                     await storyboard_editor_agent(
                         state,
                         gm_message_id=last_gm_msg.metadata["message_id"],
                         sd_api_url=STABLE_DIFFUSION_API_URL
                     )
-            break
+                else:
+                    cl_logger.warning("No suitable GM message found for storyboard generation")
+            else:
+                cl_logger.info(f"Current persona '{current_persona_clean}' is not a GM persona")
+            break  # Exit after processing persona
+
         hops += 1
 
     if hops >= max_hops:
