@@ -110,66 +110,26 @@ async def generate_storyboard(
 
 
 async def process_storyboard_images(storyboard: str, message_id: str, sd_api_url: str = None) -> None:
-    """Process storyboard into images and send to chat.
-
-    Args:
-        storyboard (str): The storyboard content.
-        message_id (str): The message ID for the chat.
-        sd_api_url (str): The Stable Diffusion API URL to use.
-    """
-    cl_logger.info(f"Starting image generation with API: {sd_api_url}")
     if not storyboard or not config.features.image_generation:
-        cl_logger.warning("Image generation skipped - no content or disabled")
-        return  # Add explicit return for visibility
+        return
 
     try:
-        # Generate image prompts
         image_prompts = await generate_image_generation_prompts(storyboard)
-        cl_logger.info(f"Generated {len(image_prompts)} image prompts")
-
         for prompt in image_prompts:
-            cl_logger.debug(f"Processing prompt: {prompt[:60]}...")
-            try:
-                # Health check with explicit URL
-                import httpx
-                if sd_api_url:
-                    async with httpx.AsyncClient() as client:
-                        health_resp = await client.get(f"{sd_api_url}/sdapi/v1/options")
-                        cl_logger.info(f"API health check status: {health_resp.status_code}")
-                # Generate image
-                seed = random.randint(0, 2**32)
-                # Pass sd_api_url to generate_image_async if needed (not in original signature)
-                # If generate_image_async supports sd_api_url, pass it; else, fallback to global config
-                from src.image_generation import generate_image_async as _gen_img_async
-                import inspect
-                if "sd_api_url" in inspect.signature(_gen_img_async).parameters:
-                    image_bytes = await _gen_img_async(prompt, seed, sd_api_url=sd_api_url)
-                else:
-                    image_bytes = await _gen_img_async(prompt, seed)
-
-                if image_bytes:
-                    # Create and send image message
-                    image_element = CLImage(
-                        content=image_bytes,
-                        display="inline",
-                        size="large",
-                        alt="Generated Image",
-                        name="generated_image",
-                    )
-
-                    await CLMessage(
-                        content=f"**Image Generation Prompt:**\n{prompt}\n\n**Seed:**\n{seed}",
-                        elements=[image_element],
-                        parent_id=message_id,
-                    ).send()
-
-            except Exception as e:
-                cl_logger.error(
-                    f"Failed to generate image for prompt: {prompt}. Error: {str(e)}"
+            image_bytes = await generate_image_async(prompt, random.randint(0, 2**32))
+            if image_bytes:
+                image_element = CLImage(
+                    content=image_bytes,
+                    display="inline",
+                    size="large",
                 )
-
+                await CLMessage(
+                    content=f"🎨 {prompt}",
+                    elements=[image_element],
+                    parent_id=message_id
+                ).send()
     except Exception as e:
-        cl_logger.error(f"Failed to process storyboard images: {str(e)}")
+        cl_logger.error(f"Storyboard error: {str(e)}")
 
 
 # Refactored: storyboard_editor_agent is now a stateless, LLM-backed function (task)

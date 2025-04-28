@@ -231,34 +231,14 @@ async def supervisor(state: ChatState, **kwargs):
                      and msg.metadata.get("persona", "").lower().replace(" ", "") in ["storytellergm", "gamemaster"]),  # Flexible matching
                     None
                 )
-                if last_gm_msg:
-                    cl_logger.info(f"Found GM message with ID: {last_gm_msg.metadata.get('message_id')}")
                 if last_gm_msg and last_gm_msg.metadata.get("message_id"):
-                    cl_logger.info(f"Creating storyboard task for message ID: {last_gm_msg.metadata['message_id']}")
-                    current_context = contextvars.copy_context()
-                    import src.config as config_mod
-                    task = asyncio.create_task(
-                        current_context.run(
-                            _with_safe_config,
-                            storyboard_editor_agent,
-                            state,
-                            gm_message_id=last_gm_msg.metadata["message_id"],
-                            sd_api_url=config_mod.STABLE_DIFFUSION_API_URL  # Pass explicitly
-                        )
+                    cl_logger.info(f"Generating storyboard for message ID: {last_gm_msg.metadata['message_id']}")
+                    from src.config import STABLE_DIFFUSION_API_URL
+                    await storyboard_editor_agent(
+                        state,
+                        gm_message_id=last_gm_msg.metadata["message_id"],
+                        sd_api_url=STABLE_DIFFUSION_API_URL
                     )
-                    cl_logger.info(f"Background task created with SD API URL: {config_mod.STABLE_DIFFUSION_API_URL}")
-                    # Add done callback to handle completion/errors
-                    def handle_task_done(t):
-                        try:
-                            t.result()  # This will re-raise any exceptions from the task
-                        except Exception as e:
-                            cl_logger.error(f"Background task failed: {e}")
-                            # Send error message to UI
-                            asyncio.create_task(
-                                cl.Message(content=f"⚠️ Image generation failed: {str(e)}").send()
-                            )
-                    task.add_done_callback(handle_task_done)
-                    state.background_tasks.append(task)
             break
         hops += 1
 

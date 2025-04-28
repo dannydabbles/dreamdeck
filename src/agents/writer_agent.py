@@ -267,7 +267,8 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             name=f"{persona_icon} {display_name}",  # Restore icon + name
             metadata={
                 "message_id": gm_message.id,
-                "persona": state.current_persona  # Use current persona instead of hardcoded value
+                "persona": state.current_persona,
+                "type": "gm_message"
             },
         )
 
