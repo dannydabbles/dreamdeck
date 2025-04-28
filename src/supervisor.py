@@ -153,9 +153,13 @@ async def supervisor(state: ChatState, **kwargs):
                         f"Supervisor: Could not find agent for persona '{persona_name}'"
                     )
                     continue
+                cl_logger.info(f"Calling persona agent: {agent_to_call}")
                 persona_result = await agent_to_call(state)
                 if persona_result:
                     results.extend(persona_result)
+                    # Immediately add to state messages for storyboard detection
+                    state.messages.extend(persona_result)
+                    state.tool_results_this_turn.extend(persona_result)
                 # Do NOT break here; allow tools after persona agent
             else:
                 # Route to the correct tool agent, always using the helper if available
