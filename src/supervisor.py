@@ -234,16 +234,19 @@ async def supervisor(state: ChatState, **kwargs):
                 if last_gm_msg:
                     cl_logger.info(f"Found GM message with ID: {last_gm_msg.metadata.get('message_id')}")
                 if last_gm_msg and last_gm_msg.metadata.get("message_id"):
-                    # Run storyboard generation in background with error handling
+                    cl_logger.info(f"Creating storyboard task for message ID: {last_gm_msg.metadata['message_id']}")
                     current_context = contextvars.copy_context()
+                    import src.config as config_mod
                     task = asyncio.create_task(
                         current_context.run(
                             _with_safe_config,
                             storyboard_editor_agent,
                             state,
-                            gm_message_id=last_gm_msg.metadata["message_id"]
+                            gm_message_id=last_gm_msg.metadata["message_id"],
+                            sd_api_url=config_mod.STABLE_DIFFUSION_API_URL  # Pass explicitly
                         )
                     )
+                    cl_logger.info(f"Background task created with SD API URL: {config_mod.STABLE_DIFFUSION_API_URL}")
                     # Add done callback to handle completion/errors
                     def handle_task_done(t):
                         try:

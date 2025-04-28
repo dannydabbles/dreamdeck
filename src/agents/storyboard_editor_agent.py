@@ -31,11 +31,15 @@ cl_logger = logging.getLogger("chainlit")
 
 @cl.step(name="Storyboard Editor Agent", type="tool")
 async def _generate_storyboard(
-    state: ChatState, gm_message_id: str, **kwargs
+    state: ChatState, gm_message_id: str, sd_api_url: str = None, **kwargs
 ) -> list[BaseMessage]:
     """Generate a storyboard prompt from recent chat, then generate images."""
     try:
         cl_logger.info(f"Starting storyboard for message ID: {gm_message_id}")
+        if sd_api_url:
+            cl_logger.info(f"Using Stable Diffusion URL: {sd_api_url}")
+        else:
+            cl_logger.warning("No Stable Diffusion API URL provided to storyboard agent.")
         gm_message = next(
             msg for msg in state.messages 
             if isinstance(msg, AIMessage) 
@@ -81,7 +85,7 @@ async def _generate_storyboard(
         cl_logger.info(f"Generated storyboard: {storyboard[:200]}...")
 
         # Process images after generating storyboard
-        await process_storyboard_images(storyboard, message_id=gm_message_id)
+        await process_storyboard_images(storyboard, gm_message_id, sd_api_url)
         
         return [
             AIMessage(
@@ -105,13 +109,15 @@ async def generate_storyboard(
     return await _generate_storyboard(state, gm_message_id, **kwargs)
 
 
-async def process_storyboard_images(storyboard: str, message_id: str) -> None:
+async def process_storyboard_images(storyboard: str, message_id: str, sd_api_url: str = None) -> None:
     """Process storyboard into images and send to chat.
 
     Args:
         storyboard (str): The storyboard content.
         message_id (str): The message ID for the chat.
+        sd_api_url (str): The Stable Diffusion API URL to use.
     """
+    cl_logger.info(f"Starting image generation with API: {sd_api_url}")
     if not storyboard or not config.features.image_generation:
         cl_logger.warning("Image generation skipped - no content or disabled")
         return  # Add explicit return for visibility
@@ -119,13 +125,27 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
     try:
         # Generate image prompts
         image_prompts = await generate_image_generation_prompts(storyboard)
+        cl_logger.info(f"Generated {len(image_prompts)} image prompts")
 
-        # Process each prompt in order
         for prompt in image_prompts:
+            cl_logger.debug(f"Processing prompt: {prompt[:60]}...")
             try:
+                # Health check with explicit URL
+                import httpx
+                if sd_api_url:
+                    async with httpx.AsyncClient() as client:
+                        health_resp = await client.get(f"{sd_api_url}/sdapi/v1/options")
+                        cl_logger.info(f"API health check status: {health_resp.status_code}")
                 # Generate image
                 seed = random.randint(0, 2**32)
-                image_bytes = await generate_image_async(prompt, seed)
+                # Pass sd_api_url to generate_image_async if needed (not in original signature)
+                # If generate_image_async supports sd_api_url, pass it; else, fallback to global config
+                from src.image_generation import generate_image_async as _gen_img_async
+                import inspect
+                if "sd_api_url" in inspect.signature(_gen_img_async).parameters:
+                    image_bytes = await _gen_img_async(prompt, seed, sd_api_url=sd_api_url)
+                else:
+                    image_bytes = await _gen_img_async(prompt, seed)
 
                 if image_bytes:
                     # Create and send image message

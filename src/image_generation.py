@@ -176,31 +176,46 @@ async def generate_image_generation_prompts(storyboard: str) -> List[str]:
     return image_gen_prompts
 
 
-async def process_storyboard_images(storyboard: str, message_id: str) -> None:
-    """Process storyboard into images and send to chat."""
+async def process_storyboard_images(storyboard: str, message_id: str, sd_api_url: str = None) -> None:
+    """Process storyboard into images and send to chat.
+
+    Args:
+        storyboard (str): The storyboard content.
+        message_id (str): The message ID for the chat.
+        sd_api_url (str): The Stable Diffusion API URL to use.
+    """
+    cl_logger.info(f"Starting image generation with API: {sd_api_url}")
     if not storyboard or not IMAGE_GENERATION_ENABLED:
+        cl_logger.warning("Image generation skipped - no content or disabled")
         return
 
     try:
-        # Generate image prompts
         image_prompts = await generate_image_generation_prompts(storyboard)
+        cl_logger.info(f"Generated {len(image_prompts)} image prompts")
 
-        # Process each prompt in order
         for prompt in image_prompts:
+            cl_logger.debug(f"Processing prompt: {prompt[:60]}...")
             try:
-                # First check if API is available
-                async with httpx.AsyncClient() as client:
-                    health_check = await client.get(f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/options")
-                    if health_check.status_code != 200:
-                        await cl.Message(
-                            content="⚠️ Image generation service unavailable",
-                            parent_id=message_id
-                        ).send()
-                        return
+                # Health check with explicit URL
+                if sd_api_url:
+                    async with httpx.AsyncClient() as client:
+                        health_resp = await client.get(f"{sd_api_url}/sdapi/v1/options")
+                        cl_logger.info(f"API health check status: {health_resp.status_code}")
+                        if health_resp.status_code != 200:
+                            await cl.Message(
+                                content="⚠️ Image generation service unavailable",
+                                parent_id=message_id
+                            ).send()
+                            return
 
                 # Generate image
                 seed = random.randint(0, 2**32)
-                image_bytes = await generate_image_async(prompt, seed)
+                # Pass sd_api_url to generate_image_async if supported
+                import inspect
+                if "sd_api_url" in inspect.signature(generate_image_async).parameters and sd_api_url:
+                    image_bytes = await generate_image_async(prompt, seed, sd_api_url=sd_api_url)
+                else:
+                    image_bytes = await generate_image_async(prompt, seed)
 
                 if image_bytes:
                     # Create and send image message
