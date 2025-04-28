@@ -67,48 +67,36 @@ async def async_range(end):
 async def generate_image_async(
     image_generation_prompt: str, seed: int
 ) -> Optional[bytes]:
-    """Generates image via remote API call.
-
-    Args:
-        image_generation_prompt (str): Detailed visual description
-        seed (int): Randomness seed for reproducibility
-
-    Returns:
-        bytes: PNG image data if successful, None on failure
-
-    API Details:
-        Endpoint: POST /sdapi/v1/txt2img
-        Timeout: Controlled by IMAGE_GENERATION_TIMEOUT constant
-        Parameters:
-            - cfg_scale: Controls creativity vs fidelity tradeoff
-            - denoising_strength: Influences upscaling intensity
-
-    Error Handling:
-        - Network errors retried 3 times with exponential backoff
-        - Validation errors return None immediately
-    """
     if not IMAGE_GENERATION_ENABLED:
         cl_element.logger.warning("Image generation is disabled in the configuration.")
         return None
 
     try:
-        # Flux payload
-        payload = {
-            "prompt": image_generation_prompt,
-            "negative_prompt": NEGATIVE_PROMPT,
-            "steps": STEPS,
-            "sampler_name": SAMPLER_NAME,
-            "scheduler": SCHEDULER,
-            "cfg_scale": CFG_SCALE,
-            "width": WIDTH,
-            "height": HEIGHT,
-            "hr_upscaler": HR_UPSCALER,
-            "denoising_strength": DENOISING_STRENGTH,
-            "hr_second_pass_steps": HR_SECOND_PASS_STEPS,
-            "seed": seed,
-        }
-
         async with httpx.AsyncClient(timeout=IMAGE_GENERATION_TIMEOUT) as client:
+            # First check API availability
+            try:
+                health_check = await client.get(f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/options")
+                health_check.raise_for_status()
+            except Exception as health_error:
+                cl_element.logger.error(f"Stable Diffusion API unavailable: {str(health_error)}")
+                return None
+
+            # Proceed with image generation if health check passed
+            payload = {
+                "prompt": image_generation_prompt,
+                "negative_prompt": NEGATIVE_PROMPT,
+                "steps": STEPS,
+                "sampler_name": SAMPLER_NAME,
+                "scheduler": SCHEDULER,
+                "cfg_scale": CFG_SCALE,
+                "width": WIDTH,
+                "height": HEIGHT,
+                "hr_upscaler": HR_UPSCALER,
+                "denoising_strength": DENOISING_STRENGTH,
+                "hr_second_pass_steps": HR_SECOND_PASS_STEPS,
+                "seed": seed,
+            }
+
             response = await client.post(
                 f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/txt2img", json=payload
             )
@@ -189,12 +177,7 @@ async def generate_image_generation_prompts(storyboard: str) -> List[str]:
 
 
 async def process_storyboard_images(storyboard: str, message_id: str) -> None:
-    """Process storyboard into images and send to chat.
-
-    Args:
-        storyboard (str): The storyboard content.
-        message_id (str): The message ID for the chat.
-    """
+    """Process storyboard into images and send to chat."""
     if not storyboard or not IMAGE_GENERATION_ENABLED:
         return
 
@@ -205,6 +188,16 @@ async def process_storyboard_images(storyboard: str, message_id: str) -> None:
         # Process each prompt in order
         for prompt in image_prompts:
             try:
+                # First check if API is available
+                async with httpx.AsyncClient() as client:
+                    health_check = await client.get(f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/options")
+                    if health_check.status_code != 200:
+                        await cl.Message(
+                            content="⚠️ Image generation service unavailable",
+                            parent_id=message_id
+                        ).send()
+                        return
+
                 # Generate image
                 seed = random.randint(0, 2**32)
                 image_bytes = await generate_image_async(prompt, seed)
