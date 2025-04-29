@@ -113,3 +113,7 @@ Join our community to share your stories, get help, and collaborate:
 ---
 
 Dreamdeck is your portal to endless storytelling. Dive into the world of immersive narratives and bring your stories to life with the power of AI. Happy adventuring!
+### Knowledge Directory Requirements
+- Must exist at project root (`./knowledge`)
+- Required even when using Docker - mount to `/app/knowledge`
+- Create empty directory if not using knowledge features

@@ -676,7 +676,7 @@ async def on_message(message: cl.Message):
                 import os
 
                 # Always ensure at least one AIMessage is appended, even if supervisor returns nothing
-                if not ai_messages or len(ai_messages) == 0:
+                if not ai_messages:
                     from langchain_core.messages import AIMessage
 
                     fallback_msg = AIMessage(

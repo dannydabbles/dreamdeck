@@ -127,7 +127,7 @@ async def _classify_persona(state: ChatState) -> dict:
             persona = "default"
             reason = "LLM did not return a persona"
 
-        if persona not in PERSONA_LIST:
+        if persona.lower() not in [p.lower() for p in PERSONA_LIST]:
             cl_logger.warning(
                 f"Classifier suggested unknown persona '{persona}', defaulting to 'default'"
             )
