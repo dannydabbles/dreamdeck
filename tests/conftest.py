@@ -56,7 +56,7 @@ def patch_task_and_registry(monkeypatch):
 
     orig_get_agent = registry.get_agent
 
-    def test_get_agent(name):
+    def test_get_agent(name, *args, **kwargs):
         agent = orig_get_agent(name)
         # If agent is a langgraph task, try to get the undecorated function
         if hasattr(agent, "_dice_roll"):

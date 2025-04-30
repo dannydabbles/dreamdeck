@@ -18,9 +18,8 @@ async def test_therapist_persona_workflow():
         name="🧠 Therapist"
     )
     
-    with patch("src.agents.writer_agent.ChatOpenAI") as mock_llm:
-        mock_llm.return_value.ainvoke.return_value = mock_response
-        
+    with patch("src.agents.writer_agent._generate_story") as mock_generate_story:
+        mock_generate_story.return_value = [mock_response]
         from src.agents.writer_agent import call_writer_agent
         response = await call_writer_agent(state)
         
@@ -70,9 +69,8 @@ async def test_multi_tool_workflow():
         name="🗒️ Secretary"
     )
     
-    with patch("src.agents.writer_agent.ChatOpenAI") as mock_llm:
-        mock_llm.return_value.ainvoke.return_value = mock_response
-    
+    with patch("src.agents.writer_agent._generate_story") as mock_generate_story:
+        mock_generate_story.return_value = [mock_response]
         from src.agents.writer_agent import call_writer_agent
         response = await call_writer_agent(state)
         

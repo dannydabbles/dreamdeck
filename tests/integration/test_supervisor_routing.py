@@ -46,9 +46,8 @@ async def test_persona_switch_workflow():
         name="🗒️ Secretary"
     )
     
-    with patch("src.agents.writer_agent.ChatOpenAI") as mock_llm:
-        mock_llm.return_value.ainvoke.return_value = mock_response
-    
+    with patch("src.agents.writer_agent._generate_story") as mock_generate_story:
+        mock_generate_story.return_value = [mock_response]
         from src.supervisor import supervisor
         response = await supervisor(state)
         

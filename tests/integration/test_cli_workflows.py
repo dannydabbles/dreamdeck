@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
-from src.cli import main
+import src.cli
 
 def test_cli_run_agent():
     """Test CLI agent execution"""
@@ -9,7 +9,7 @@ def test_cli_run_agent():
     with patch("src.cli.run_async") as mock_run:
         mock_run.return_value = [MagicMock(content="Test response", name="Agent")]
         
-        result = runner.invoke(main, [
+        result = runner.invoke(src.cli.main, [
             "run-agent", "writer", 
             "--input", "Test story", 
             "--persona", "Storyteller GM"
@@ -27,7 +27,7 @@ def test_cli_workflow_execution():
             MagicMock(content="Battle ensues!", name="Storyteller GM")
         ]
         
-        result = runner.invoke(main, [
+        result = runner.invoke(src.cli.main, [
             "run-workflow",
             "--input", "Attack the dragon",
             "--persona", "Dungeon Master"
