@@ -504,6 +504,20 @@ async def command_persona(query: str = ""):
     if not persona_name:
         await cl.Message(content="Usage: `/persona [persona_name]`").send()
         return
+    
+    valid_personas = list(config.agents.writer_agent.personas.keys()) + ["Default"]
+    if persona_name.lower() not in [p.lower() for p in valid_personas]:
+        await cl.Message(
+            content=f"â ï¸ Unknown persona '{persona_name}'. Valid options: {', '.join(valid_personas)}"
+        ).send()
+        return
+    
+    valid_personas = list(config.agents.writer_agent.personas.keys()) + ["Default"]
+    if persona_name.lower() not in [p.lower() for p in valid_personas]:
+        await cl.Message(
+            content=f"â ï¸ Unknown persona '{persona_name}'. Valid options: {', '.join(valid_personas)}"
+        ).send()
+        return
 
     # Update session and state
     cl.user_session.set("current_persona", persona_name)
