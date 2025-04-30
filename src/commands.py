@@ -523,7 +523,7 @@ async def command_persona(query: str = ""):
     cl.user_session.set("current_persona", persona_name)
     state: ChatState = cl.user_session.get("state")
     if state:
-        state.current_persona = persona_name
+        state = state.model_copy(update={"current_persona": persona_name})
         cl.user_session.set("state", state)
 
     from src.storage import append_log
