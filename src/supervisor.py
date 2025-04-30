@@ -134,7 +134,7 @@ async def supervisor(state: ChatState, **kwargs):
                 cl_logger.info(
                     f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision"
                 )
-                state.current_persona = persona_name
+                state = state.model_copy(update={"current_persona": persona_name})
                 cl.user_session.set("current_persona", persona_name)
                 agent_to_call = None
                 if (

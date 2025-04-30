@@ -358,6 +358,9 @@ async def on_chat_resume(thread: ThreadDict):
 
     # Reconstruct messages from thread history
     for step in sorted(thread.get("steps", []), key=lambda m: m.get("createdAt", "")):
+        # Validate message output
+        if not isinstance(step.get("output"), str):
+            continue
         step_id = step.get("id")
         parent_id = step.get("parentId")
         meta = {"message_id": step_id}
@@ -374,6 +377,9 @@ async def on_chat_resume(thread: ThreadDict):
             pass
 
         if step["type"] == "user_message":
+            # Add validation for name
+            if not isinstance(step.get("name"), str):
+                continue
             cl_msg = cl.Message(
                 content=step["output"],
                 author=current_user_identifier,
@@ -394,6 +400,9 @@ async def on_chat_resume(thread: ThreadDict):
                     f"Missing ID for user step in on_chat_resume: {step.get('output', '')[:50]}..."
                 )
         elif step["type"] == "assistant_message":
+            # Add validation for name
+            if not isinstance(step.get("name"), str):
+                continue
             cl_msg = cl.Message(
                 content=step["output"],
                 author=current_user_identifier,

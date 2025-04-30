@@ -58,8 +58,8 @@ services:
     volumes:
       - ./src:/app/src
       - ./config.yaml:/app/config.yaml
-      - ./knowledge:/app/knowledge  # Mount the knowledge directory
-      - ./chroma_db:/app/chroma_db  # Add this line
+      - ./knowledge:/app/knowledge:rw  # Mount the knowledge directory with write permissions
+      - ./chroma_db:/app/chroma_db:rw  # Add this line with write permissions
       - ./helper:/app/helper
       - ./Makefile:/app/Makefile
     network_mode: bridge

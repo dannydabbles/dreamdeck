@@ -215,3 +215,4 @@ chainlit:
 
 chat:
   start_message: "Hello! What can I do for you?"
+  default_persona: "Friend"

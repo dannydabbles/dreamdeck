@@ -38,7 +38,7 @@ class PersonaAgent:
 
     async def __call__(self, state: ChatState, **kwargs) -> list[BaseMessage]:
         # Set the current persona in state for this agent
-        state.current_persona = self.persona_name
+        state = state.model_copy(update={"current_persona": self.persona_name})
         return await generate_story(state, **kwargs)
 
 

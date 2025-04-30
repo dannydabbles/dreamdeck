@@ -202,6 +202,7 @@ async def process_storyboard_images(storyboard: str, message_id: str, sd_api_url
                 if sd_api_url:
                     async with httpx.AsyncClient() as client:
                         health_resp = await client.get(f"{sd_api_url}/sdapi/v1/options")
+                        health_resp.raise_for_status()  # Now triggers retry
                         cl_logger.info(f"API health check status: {health_resp.status_code}")
                         if health_resp.status_code != 200:
                             await cl.Message(

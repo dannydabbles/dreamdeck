@@ -153,7 +153,8 @@ Default users (matching password callback):
 ## TODOs and Quick Wins
 
 - **Gameplay:**
-  - [ ] `/save` and `/load` commands for story snapshots.  # `/save` exists, `/load` does not
+  - [x] `/save` - Exists and works
+  - [ ] `/load` - Planned for future release
   - [ ] Support multiple dice expressions in `/roll`.
   - [ ] Undo last message feature.
   - [ ] Export chat to markdown or JSON.
