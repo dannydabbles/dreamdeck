@@ -9,6 +9,8 @@ def test_cli_run_agent():
     with patch("src.cli.run_async") as mock_run:
         mock_run.return_value = [MagicMock(content="Test response", name="Agent")]
         
+        # Patch .name attribute to simulate Click command object
+        src.cli.main.name = "main"
         result = runner.invoke(src.cli.main, [
             "run-agent", "writer", 
             "--input", "Test story", 
@@ -27,6 +29,8 @@ def test_cli_workflow_execution():
             MagicMock(content="Battle ensues!", name="Storyteller GM")
         ]
         
+        # Patch .name attribute to simulate Click command object
+        src.cli.main.name = "main"
         result = runner.invoke(src.cli.main, [
             "run-workflow",
             "--input", "Attack the dragon",
