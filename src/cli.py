@@ -18,22 +18,17 @@ from src.supervisor import supervisor
 
 
 def run_async(coro):
-    """
-    Run an async coroutine in a way that works in both normal and test (event loop) environments.
-    Uses a helper to avoid conflicts with test monkeypatching.
-    """
-    import os
-
+    """Handle async execution in both notebook and script environments"""
     try:
-        loop = asyncio.get_running_loop()
+        import nest_asyncio
+        nest_asyncio.apply()
+        loop = asyncio.get_event_loop()
         if loop.is_running():
-            # In pytest-asyncio or Jupyter, run the coroutine in the current loop
+            return loop.create_task(coro).result()
+        else:
             return loop.run_until_complete(coro)
     except RuntimeError:
-        # No running loop, safe to use asyncio.run
         return asyncio.run(coro)
-    # Defensive fallback: use asyncio.run
-    return asyncio.run(coro)
 
 
 def main():

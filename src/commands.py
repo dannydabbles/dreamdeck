@@ -506,16 +506,10 @@ async def command_persona(query: str = ""):
         return
     
     valid_personas = list(config.agents.writer_agent.personas.keys()) + ["Default"]
-    if persona_name.lower() not in [p.lower() for p in valid_personas]:
-        await cl.Message(
-            content=f"â ï¸ Unknown persona '{persona_name}'. Valid options: {', '.join(valid_personas)}"
-        ).send()
-        return
-    
     valid_personas = list(config.agents.writer_agent.personas.keys()) + ["Default"]
     if persona_name.lower() not in [p.lower() for p in valid_personas]:
         await cl.Message(
-            content=f"â ï¸ Unknown persona '{persona_name}'. Valid options: {', '.join(valid_personas)}"
+            content=f"⚠️ Unknown persona '{persona_name}'. Valid options: {', '.join(valid_personas)}"
         ).send()
         return
 
