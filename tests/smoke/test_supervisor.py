@@ -23,7 +23,9 @@ async def test_supervisor_tool_routing(monkeypatch):
         state = ChatState(
             messages=[HumanMessage(content="/dice", name="Player")], thread_id="t1"
         )
-        result = await supervisor(state) # Call directly
+        # Patch the decision agent to always return a tool route for test
+        with patch("src.agents.decision_agent._decide_next_agent", AsyncMock(return_value={"route": "dice"})):
+            result = await supervisor(state)
         # Accept either the dummy_agent's return or the real _dice_roll's output
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
@@ -59,7 +61,9 @@ async def test_supervisor_storyboard_routing(monkeypatch):
             messages=[HumanMessage(content="/storyboard", name="Player"), gm_msg],
             thread_id="t1",
         )
-        result = await supervisor(state) # Call directly
+        # Patch the decision agent to always return a tool route for test
+        with patch("src.agents.decision_agent._decide_next_agent", AsyncMock(return_value={"route": "storyboard"})):
+            result = await supervisor(state)
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
 

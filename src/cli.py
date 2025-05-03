@@ -24,7 +24,8 @@ def run_async(coro):
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            return loop.create_task(coro).result()
+            # Run the coroutine until complete, even if already in a running loop (pytest-asyncio)
+            return loop.run_until_complete(coro)
         else:
             return loop.run_until_complete(coro)
     except RuntimeError:
