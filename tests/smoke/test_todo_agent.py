@@ -30,10 +30,16 @@ async def test_manage_todo_creates_file(tmp_path):
          patch("src.agents.todo_agent.config", new_callable=MagicMock) as mock_config, \
          patch("src.agents.todo_agent.os.makedirs") as mock_makedirs, \
          patch("src.agents.todo_agent.open", mock_open()) as mocked_file, \
-         patch("src.agents.todo_agent.os.path.exists", return_value=False) as mock_exists: # Mock os.path.exists
+         patch("src.agents.todo_agent.os.path.exists", return_value=False) as mock_exists:
 
-        # Configure the mocked config object
+        # Patch config.llm.model and config.openai.get("base_url") to valid strings
+        mock_config.llm.model = "gpt-4o"
+        mock_config.openai.get.return_value = "http://localhost:5000/v1"
         mock_config.defaults.todo_manager_persona = manager_persona_for_test
+        mock_config.loaded_prompts.get.return_value = "{{ user_input }}"
+        mock_config.todo_dir_path = str(tmp_path)
+        mock_config.todo_file_name = "todo.md"
+
         # Mock the specific strftime call result directly
         mock_datetime.datetime.now.return_value.strftime.return_value = fixed_date_str
 
