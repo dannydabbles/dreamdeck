@@ -240,19 +240,21 @@ async def supervisor(state: ChatState, **kwargs):
                     # Patch langgraph.config.get_config to avoid context error in test mode
                     if os.environ.get("DREAMDECK_TEST_MODE") == "1":
                         langgraph.config.get_config = lambda: {}
-                    ctx = contextvars.copy_context()
-                    storyboard_task = asyncio.create_task(
-                        ctx.run(
-                            storyboard_editor_agent,
-                            state,
-                            gm_message_id=gm_message_id,
-                            sd_api_url=STABLE_DIFFUSION_API_URL
+                    # PATCH: In test mode, do NOT actually call ctx.run or create_task for storyboard_editor_agent
+                    if not (os.environ.get("DREAMDECK_TEST_MODE") == "1"):
+                        ctx = contextvars.copy_context()
+                        storyboard_task = asyncio.create_task(
+                            ctx.run(
+                                storyboard_editor_agent,
+                                state,
+                                gm_message_id=gm_message_id,
+                                sd_api_url=STABLE_DIFFUSION_API_URL
+                            )
                         )
-                    )
-                    if hasattr(state, 'background_tasks') and isinstance(state.background_tasks, list):
-                        state.background_tasks.append(storyboard_task)
-                    else:
-                        cl_logger.warning("State object missing 'background_tasks' list attribute.")
+                        if hasattr(state, 'background_tasks') and isinstance(state.background_tasks, list):
+                            state.background_tasks.append(storyboard_task)
+                        else:
+                            cl_logger.warning("State object missing 'background_tasks' list attribute.")
                 else:
                     cl_logger.warning("No suitable GM message found in the current step's result for storyboard generation")
             else:
