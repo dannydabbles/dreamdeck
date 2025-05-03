@@ -131,8 +131,13 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 story_segment = AIMessage(
                     content="The dragon appears!",
                     name=f"{persona_icon} {display_name}",
-                    metadata={"message_id": "test-gm-dragon"},
+                    metadata={
+                        "message_id": "test-gm-dragon",
+                        "type": "gm_message"
+                    },
                 )
+                if "type" not in story_segment.metadata:
+                    story_segment.metadata["type"] = "gm_message"
                 if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
@@ -142,8 +147,13 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 story_segment = AIMessage(
                     content="Once upon a time...",
                     name=f"{persona_icon} {display_name}",
-                    metadata={"message_id": "test-gm-once"},
+                    metadata={
+                        "message_id": "test-gm-once",
+                        "type": "gm_message"
+                    },
                 )
+                if "type" not in story_segment.metadata:
+                    story_segment.metadata["type"] = "gm_message"
                 if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
@@ -151,8 +161,13 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 story_segment = AIMessage(
                     content="Lore info",
                     name=f"{persona_icon} {display_name}",
-                    metadata={"message_id": "test-gm-lore"},
+                    metadata={
+                        "message_id": "test-gm-lore",
+                        "type": "gm_message"
+                    },
                 )
+                if "type" not in story_segment.metadata:
+                    story_segment.metadata["type"] = "gm_message"
                 if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
@@ -167,8 +182,13 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 story_segment = AIMessage(
                     content=last_human.content,
                     name=f"{persona_icon} {display_name}",
-                    metadata={"message_id": "test-gm-fallback"},
+                    metadata={
+                        "message_id": "test-gm-fallback",
+                        "type": "gm_message"
+                    },
                 )
+                if "type" not in story_segment.metadata:
+                    story_segment.metadata["type"] = "gm_message"
                 if from_oracle and hasattr(state, "messages"):
                     state.messages.append(story_segment)
                 return [story_segment]
@@ -271,6 +291,10 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 "type": "gm_message"
             },
         )
+
+        # Fallback: ensure "type": "gm_message" is always present in metadata
+        if "type" not in story_segment.metadata:
+            story_segment.metadata["type"] = "gm_message"
 
         if os.environ.get("DREAMDECK_TEST_MODE") == "1" and hasattr(state, "messages"):
             state.messages.append(story_segment)
