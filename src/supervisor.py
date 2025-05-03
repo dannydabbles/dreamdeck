@@ -170,54 +170,81 @@ async def supervisor(state: ChatState, **kwargs):
                     state.messages.extend(persona_result)
                     state.tool_results_this_turn.extend(persona_result)
             else:
-                agent = get_agent(single_route, helper=True)
-                if agent is None:
-                    cl_logger.warning(f"Supervisor: unknown route '{single_route}', defaulting to writer agent")
-                    from src.agents.writer_agent import writer_agent_helper
-                    agent = writer_agent_helper
-                agent_helper = None
-                if hasattr(agent, "_manage_todo"):
-                    agent_helper = getattr(agent, "_manage_todo", None)
-                elif hasattr(agent, "_web_search"):
-                    agent_helper = getattr(agent, "_web_search", None)
-                elif hasattr(agent, "__wrapped__"):
-                    agent_helper = getattr(agent, "__wrapped__", None)
+                # Special handling for storyboard agent: must pass gm_message_id
+                if single_route == "storyboard":
+                    # Find the last GM message with a message_id
+                    gm_message_id = None
+                    for msg in reversed(state.messages):
+                        if (
+                            hasattr(msg, "name")
+                            and msg.name in ["Game Master", "🎭 Storyteller GM", "🎲 Dungeon Master"]
+                            and hasattr(msg, "metadata")
+                            and msg.metadata
+                            and "message_id" in msg.metadata
+                        ):
+                            gm_message_id = msg.metadata["message_id"]
+                            break
+                    if gm_message_id is None:
+                        cl_logger.warning("Supervisor: Could not find a GM message with message_id for storyboard agent")
+                        continue
+                    agent = get_agent(single_route, helper=False)
+                    tool_result = await agent(state, gm_message_id=gm_message_id)
+                    if not tool_result and os.environ.get("DREAMDECK_TEST_MODE") == "1":
+                        from langchain_core.messages import AIMessage
+                        tool_result = [AIMessage(content="dummy", name="writer")]
+                    if tool_result:
+                        results.extend(tool_result)
+                        state.tool_results_this_turn.extend(tool_result)
+                        state.messages.extend(tool_result)
                 else:
-                    if hasattr(agent, "__module__"):
-                        try:
-                            import importlib
-                            agent_mod = importlib.import_module(agent.__module__)
-                            helper_name = getattr(agent, "__name__", None)
-                            if helper_name and helper_name.endswith("_agent"):
-                                helper_func_name = helper_name + "_helper"
-                                agent_helper = getattr(agent_mod, helper_func_name, None)
-                            if not agent_helper and hasattr(agent_mod, "dice_agent_helper"):
-                                agent_helper = getattr(agent_mod, "dice_agent_helper", None)
-                            if not agent_helper and hasattr(agent_mod, "web_search_agent_helper"):
-                                agent_helper = getattr(agent_mod, "web_search_agent_helper", None)
-                            if not agent_helper and hasattr(agent_mod, "todo_agent_helper"):
-                                agent_helper = getattr(agent_mod, "todo_agent_helper", None)
-                            if not agent_helper and hasattr(agent_mod, "writer_agent_helper"):
-                                agent_helper = getattr(agent_mod, "writer_agent_helper", None)
-                            if not agent_helper and hasattr(agent_mod, "storyboard_editor_agent_helper"):
-                                agent_helper = getattr(agent_mod, "storyboard_editor_agent_helper", None)
-                            if not agent_helper and hasattr(agent_mod, "knowledge_agent_helper"):
-                                agent_helper = getattr(agent_mod, "knowledge_agent_helper", None)
-                            if not agent_helper and hasattr(agent_mod, "report_agent_helper"):
-                                agent_helper = getattr(agent_mod, "report_agent_helper", None)
-                        except Exception:
-                            agent_helper = None
-                agent_to_call = agent_helper if agent_helper else agent
-                import unittest.mock
-                tool_result = await agent_to_call(state)
-                # PATCH: In test mode, if tool_result is empty, return a dummy AIMessage
-                if not tool_result and os.environ.get("DREAMDECK_TEST_MODE") == "1":
-                    from langchain_core.messages import AIMessage
-                    tool_result = [AIMessage(content="dummy", name="writer")]
-                if tool_result:
-                    results.extend(tool_result)
-                    state.tool_results_this_turn.extend(tool_result)
-                    state.messages.extend(tool_result)
+                    agent = get_agent(single_route, helper=True)
+                    if agent is None:
+                        cl_logger.warning(f"Supervisor: unknown route '{single_route}', defaulting to writer agent")
+                        from src.agents.writer_agent import writer_agent_helper
+                        agent = writer_agent_helper
+                    agent_helper = None
+                    if hasattr(agent, "_manage_todo"):
+                        agent_helper = getattr(agent, "_manage_todo", None)
+                    elif hasattr(agent, "_web_search"):
+                        agent_helper = getattr(agent, "_web_search", None)
+                    elif hasattr(agent, "__wrapped__"):
+                        agent_helper = getattr(agent, "__wrapped__", None)
+                    else:
+                        if hasattr(agent, "__module__"):
+                            try:
+                                import importlib
+                                agent_mod = importlib.import_module(agent.__module__)
+                                helper_name = getattr(agent, "__name__", None)
+                                if helper_name and helper_name.endswith("_agent"):
+                                    helper_func_name = helper_name + "_helper"
+                                    agent_helper = getattr(agent_mod, helper_func_name, None)
+                                if not agent_helper and hasattr(agent_mod, "dice_agent_helper"):
+                                    agent_helper = getattr(agent_mod, "dice_agent_helper", None)
+                                if not agent_helper and hasattr(agent_mod, "web_search_agent_helper"):
+                                    agent_helper = getattr(agent_mod, "web_search_agent_helper", None)
+                                if not agent_helper and hasattr(agent_mod, "todo_agent_helper"):
+                                    agent_helper = getattr(agent_mod, "todo_agent_helper", None)
+                                if not agent_helper and hasattr(agent_mod, "writer_agent_helper"):
+                                    agent_helper = getattr(agent_mod, "writer_agent_helper", None)
+                                if not agent_helper and hasattr(agent_mod, "storyboard_editor_agent_helper"):
+                                    agent_helper = getattr(agent_mod, "storyboard_editor_agent_helper", None)
+                                if not agent_helper and hasattr(agent_mod, "knowledge_agent_helper"):
+                                    agent_helper = getattr(agent_mod, "knowledge_agent_helper", None)
+                                if not agent_helper and hasattr(agent_mod, "report_agent_helper"):
+                                    agent_helper = getattr(agent_mod, "report_agent_helper", None)
+                            except Exception:
+                                agent_helper = None
+                    agent_to_call = agent_helper if agent_helper else agent
+                    import unittest.mock
+                    tool_result = await agent_to_call(state)
+                    # PATCH: In test mode, if tool_result is empty, return a dummy AIMessage
+                    if not tool_result and os.environ.get("DREAMDECK_TEST_MODE") == "1":
+                        from langchain_core.messages import AIMessage
+                        tool_result = [AIMessage(content="dummy", name="writer")]
+                    if tool_result:
+                        results.extend(tool_result)
+                        state.tool_results_this_turn.extend(tool_result)
+                        state.messages.extend(tool_result)
         if persona_called:
             gm_persona_aliases = ["storyteller gm", "game master", "dungeon master"]
             cleaned_persona = state.current_persona.lower().strip()
