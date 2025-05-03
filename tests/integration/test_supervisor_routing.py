@@ -4,6 +4,25 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from langchain_core.messages import HumanMessage, AIMessage
 from src.models import ChatState
 
+import chainlit as cl
+from chainlit.context import ChainlitContext, context_var
+
+import contextlib
+
+@pytest.fixture(autouse=True)
+def patch_chainlit_context(monkeypatch):
+    # Patch Chainlit context for supervisor tests
+    mock_session = MagicMock()
+    mock_session.thread_id = "test-thread-id"
+    mock_context = MagicMock(spec=ChainlitContext)
+    mock_context.session = mock_session
+    mock_context.emitter = AsyncMock()
+    token = context_var.set(mock_context)
+    try:
+        yield
+    finally:
+        context_var.reset(token)
+
 @pytest.mark.asyncio
 async def test_supervisor_multi_hop_workflow():
     """Test supervisor routing through multiple tools"""
