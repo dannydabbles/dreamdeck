@@ -82,6 +82,9 @@ def get_dynamic_model():
             return ChatOpenAI(model="gpt-4o")
 
 
+# Expose _decide_next_agent for patching in tests
+from src.agents.decision_agent import _decide_next_agent
+
 async def supervisor(state: ChatState, **kwargs):
     """
     Entrypoint for the Dreamdeck supervisor.
@@ -91,7 +94,6 @@ async def supervisor(state: ChatState, **kwargs):
     This version supports multi-hop routing: it will keep calling the decision agent and routing to tools/personas
     until a persona agent is called last (i.e., the decision agent returns a persona route).
     """
-    from src.agents.decision_agent import _decide_next_agent
     from src.agents.registry import get_agent
 
     max_hops = 5  # Prevent infinite loops
@@ -284,6 +286,9 @@ async def supervisor(state: ChatState, **kwargs):
 
 # Patch: add .ainvoke for test compatibility (LangGraph expects this in tests)
 supervisor.ainvoke = supervisor
+
+# Expose _decide_next_agent for patching in tests
+supervisor._decide_next_agent = _decide_next_agent
 
 
 def _noop_task(x):
