@@ -41,64 +41,49 @@ def patch_chainlit_context(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_supervisor_tool_routing(monkeypatch):
-    # Patch get_agent to return the undecorated function to avoid langgraph context issues
-    from src.agents.dice_agent import _dice_roll, dice_agent
+    # Mock get_agent to return a simple AsyncMock with the expected tool output
+    mock_tool_agent = AsyncMock(return_value=[AIMessage(content="Dice result", name="dice_roll")])
 
-    dummy_agent = AsyncMock(side_effect=_dice_roll)
-    # Patch the dice_agent symbol itself to the undecorated function
-    with patch("src.agents.dice_agent.dice_agent", new=_dice_roll), patch(
-        "src.agents.registry.get_agent", return_value=dummy_agent
+    with patch(
+        "src.agents.registry.get_agent", return_value=mock_tool_agent
     ), patch("src.supervisor.task", lambda x: x):
         from src.supervisor import supervisor
 
         state = ChatState(
             messages=[HumanMessage(content="/dice", name="Player")], thread_id="t1"
         )
-        # Patch the decision agent to always return a tool route for test
-        with patch("src.agents.decision_agent._decide_next_agent", AsyncMock(return_value={"route": "dice"})):
-            # Patch the writer agent to always return a dummy AIMessage so supervisor always returns a result
-            with patch("src.agents.writer_agent._generate_story", AsyncMock(return_value=[AIMessage(content="dummy", name="writer")])):
-                result = await supervisor(state)
-        # Accept either the dummy_agent's return or the real _dice_roll's output
+        # Patch the decision agent to return the tool route once, then END
+        mock_decision = AsyncMock(side_effect=[{"route": "dice"}, {"route": "END"}])
+        with patch("src.supervisor._decide_next_agent", mock_decision):
+            result = await supervisor(state)
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
 
 
 @pytest.mark.asyncio
 async def test_supervisor_storyboard_routing(monkeypatch):
-    # Patch get_agent to return the undecorated function to avoid langgraph context issues
-    from src.agents.storyboard_editor_agent import (
-        _generate_storyboard,
-        storyboard_editor_agent,
-    )
+    # Mock get_agent to return a simple AsyncMock with the expected tool output
+    mock_tool_agent = AsyncMock(return_value=[AIMessage(content="Storyboard result", name="storyboard")])
 
-    dummy_agent = AsyncMock(
-        side_effect=lambda state, gm_message_id=None: _generate_storyboard(
-            state, gm_message_id or "gm1"
-        )
-    )
-    # Patch the storyboard_editor_agent symbol itself to the undecorated function
     with patch(
-        "src.agents.storyboard_editor_agent.storyboard_editor_agent",
-        new=_generate_storyboard,
-    ), patch("src.agents.registry.get_agent", return_value=dummy_agent), patch(
+        "src.agents.registry.get_agent", return_value=mock_tool_agent
+    ), patch(
         "src.supervisor.task", lambda x: x
     ):
         from src.supervisor import supervisor
 
-        # Add a GM message with message_id
+        # Add a GM message with message_id and type
         gm_msg = AIMessage(
-            content="scene", name="Game Master", metadata={"message_id": "gm1"}
+            content="scene", name="Game Master", metadata={"message_id": "gm1", "type": "gm_message"}
         )
         state = ChatState(
             messages=[HumanMessage(content="/storyboard", name="Player"), gm_msg],
             thread_id="t1",
         )
-        # Patch the decision agent to always return a tool route for test
-        with patch("src.agents.decision_agent._decide_next_agent", AsyncMock(return_value={"route": "storyboard"})):
-            # Patch the writer agent to always return a dummy AIMessage so supervisor always returns a result
-            with patch("src.agents.writer_agent._generate_story", AsyncMock(return_value=[AIMessage(content="dummy", name="writer")])):
-                result = await supervisor(state)
+        # Patch the decision agent to return the tool route once, then END
+        mock_decision = AsyncMock(side_effect=[{"route": "storyboard"}, {"route": "END"}])
+        with patch("src.supervisor._decide_next_agent", mock_decision):
+            result = await supervisor(state)
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
 
