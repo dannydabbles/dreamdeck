@@ -40,8 +40,8 @@ async def test_manage_todo_creates_file(tmp_path):
         mock_datetime.datetime.utcnow.return_value = fixed_now
         mock_datetime.datetime.strftime = dt_module.datetime.strftime
         mock_datetime.datetime.now.return_value = fixed_now
-        # Ensure ZoneInfo is available on the mock if needed, or mock the whole now() call
-        mock_datetime.datetime.now.return_value.strftime.return_value = fixed_now.strftime("%Y-%m-%d")
+        # Patch .strftime directly on the datetime object, not on the method
+        mock_datetime.datetime.now.return_value.strftime = lambda fmt: fixed_now.strftime(fmt)
 
 
         # Patch cl.user_session.get to avoid "Chainlit context not found"
