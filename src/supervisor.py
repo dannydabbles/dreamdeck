@@ -237,7 +237,7 @@ async def supervisor(state: ChatState, **kwargs):
             if cleaned_persona in gm_persona_aliases:
                 cl_logger.info(f"Identified as GM persona: {state.current_persona}")
                 # Debug: log last 3 message metadatas for troubleshooting
-                cl_logger.debug(f"Last 3 messages: {[msg.metadata for msg in state.messages[-3:]]}")
+                cl_logger.debug(f"Last 3 messages: {[getattr(msg, 'metadata', None) for msg in state.messages[-3:]]}")
                 # Find the GM message *just generated* in the updated state.messages
                 gm_message_to_storyboard = None
                 # --- CHANGE START ---
@@ -272,7 +272,8 @@ async def supervisor(state: ChatState, **kwargs):
                     cl_logger.warning("No suitable GM message found in the current step's result for storyboard generation")
             else:
                 cl_logger.info(f"Current persona '{state.current_persona}' is not a GM persona")
-            # Do NOT break here; allow multi-step turns and post-persona processing
+            # Break the loop after a persona agent has been called and processed for the turn
+            break
 
         hops += 1
 
