@@ -62,11 +62,16 @@ async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
 
         # Pass the *full* original user input (including slash command) to the prompt for clarity
 
-        # Load current todo list from file (if exists)
+        # --- Change Start ---
+        # Determine the persona directory based on the configured manager, not the current state persona
+        manager_persona = config.defaults.todo_manager_persona
+        cl_logger.info(f"Using configured TODO manager persona for file path: {manager_persona}")
+        persona_safe = re.sub(r"[^\w\-_. ]", "_", manager_persona)
+        # --- Change End ---
+
+        # Load current todo list from file (if exists) using the manager's path
         pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
         current_date = datetime.datetime.now(pacific).strftime("%Y-%m-%d")
-        persona = getattr(state, "current_persona", "Default")
-        persona_safe = re.sub(r"[^\w\-_. ]", "_", persona)
         dir_path = os.path.join(TODO_DIR_PATH, persona_safe, current_date)
         file_path = os.path.join(dir_path, TODO_FILE_NAME)
 

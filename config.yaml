@@ -81,6 +81,7 @@ refusal_list:
 
 defaults:
   db_file: "chainlit.db"
+  todo_manager_persona: "Secretary" # Add this line (choose "Secretary" or "Default")
 
 dice:
   sides: 20  # Default number of sides for /roll
