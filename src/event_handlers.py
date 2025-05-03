@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import logging
+import contextvars # <-- Add this import
 import os
 import random
 from typing import List, Optional
@@ -263,7 +264,8 @@ async def on_chat_start():
         )
 
         # Launch knowledge loading in the background
-        asyncio.create_task(load_knowledge_documents())
+        ctx = contextvars.copy_context() # <-- Get context
+        asyncio.create_task(ctx.run(load_knowledge_documents)) # <-- Run in context
 
         # Initialize thread in Chainlit with a start message
         # Use Chainlit Action objects for UI buttons (v1.0+)
@@ -438,7 +440,8 @@ async def on_chat_resume(thread: ThreadDict):
     cl_user_session.set("ai_message_id", None)
 
     # Load knowledge documents
-    await load_knowledge_documents()
+    ctx = contextvars.copy_context() # <-- Get context
+    await ctx.run(load_knowledge_documents) # <-- Run in context
 
 
 # Register Chainlit action callbacks for UI buttons using the modern API

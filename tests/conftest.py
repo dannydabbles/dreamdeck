@@ -58,17 +58,15 @@ def patch_task_and_registry(monkeypatch):
 
     def test_get_agent(name, *args, **kwargs):
         agent = orig_get_agent(name)
-        # If agent is a langgraph task, try to get the undecorated function
-        if hasattr(agent, "_dice_roll"):
+        # If agent is decorated (e.g., @task), try to get the original function
+        if hasattr(agent, "__wrapped__"):
+            return agent.__wrapped__
+        # Fallback for specific known patterns if __wrapped__ isn't present
+        elif hasattr(agent, "_dice_roll"):
             return agent._dice_roll
-        if hasattr(agent, "_generate_storyboard"):
+        elif hasattr(agent, "_generate_storyboard"):
             return agent._generate_storyboard
-        if hasattr(agent, "_manage_todo"):
-            return agent._manage_todo
-        if hasattr(agent, "_knowledge"):
-            return agent._knowledge
-        if hasattr(agent, "_generate_story"):
-            return agent._generate_story
+        # Add other specific fallbacks if needed
         # If agent is a dummy or already a mock, just return it
         return agent
 
