@@ -40,10 +40,25 @@ async def command_roll(query: str = ""):
 
     Creates a user message, appends it to state, calls the dice agent, and stores the AI response.
     """
-    state: ChatState = cl.user_session.get("state")
-    vector_store: VectorStore = cl.user_session.get("vector_memory")
-    if not state or not vector_store:
-        await cl.Message(content="Error: Session state not found.").send()
+    try:
+        state: ChatState = cl.user_session.get("state")
+        vector_store: VectorStore = cl.user_session.get("vector_memory")
+        thread_id = cl.context.session.thread_id if cl.context else "Unknown"
+
+        if not state:
+            cl_logger.error(f"Command /roll: ChatState not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Session state not found. Cannot process command.").send()
+            return
+        if not vector_store:
+            cl_logger.error(f"Command /roll: VectorStore not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Vector memory not found. Cannot process command.").send()
+            return
+
+        cl_logger.info(f"Executing /roll command for thread {state.thread_id} with query: {query}")
+
+    except Exception as e:
+        cl_logger.error(f"Command /roll: Error accessing session data: {e}", exc_info=True)
+        await cl.Message(content="Error: Failed to access session data.").send()
         return
 
     # Create and send user message
@@ -110,10 +125,25 @@ async def command_search(query: str = ""):
 
     Creates a user message, appends it to state, calls the web search agent, and stores the AI response.
     """
-    state: ChatState = cl.user_session.get("state")
-    vector_store: VectorStore = cl.user_session.get("vector_memory")
-    if not state or not vector_store:
-        await cl.Message(content="Error: Session state not found.").send()
+    try:
+        state: ChatState = cl.user_session.get("state")
+        vector_store: VectorStore = cl.user_session.get("vector_memory")
+        thread_id = cl.context.session.thread_id if cl.context else "Unknown"
+
+        if not state:
+            cl_logger.error(f"Command /search: ChatState not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Session state not found. Cannot process command.").send()
+            return
+        if not vector_store:
+            cl_logger.error(f"Command /search: VectorStore not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Vector memory not found. Cannot process command.").send()
+            return
+
+        cl_logger.info(f"Executing /search command for thread {state.thread_id} with query: {query}")
+
+    except Exception as e:
+        cl_logger.error(f"Command /search: Error accessing session data: {e}", exc_info=True)
+        await cl.Message(content="Error: Failed to access session data.").send()
         return
 
     # Create and send user message
@@ -173,10 +203,25 @@ async def command_todo(query: str = ""):
 
     Creates a user message, appends it to state, calls the todo agent, and stores the AI response.
     """
-    state: ChatState = cl.user_session.get("state")
-    vector_store: VectorStore = cl.user_session.get("vector_memory")
-    if not state or not vector_store:
-        await cl.Message(content="Error: Session state not found.").send()
+    try:
+        state: ChatState = cl.user_session.get("state")
+        vector_store: VectorStore = cl.user_session.get("vector_memory")
+        thread_id = cl.context.session.thread_id if cl.context else "Unknown"
+
+        if not state:
+            cl_logger.error(f"Command /todo: ChatState not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Session state not found. Cannot process command.").send()
+            return
+        if not vector_store:
+            cl_logger.error(f"Command /todo: VectorStore not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Vector memory not found. Cannot process command.").send()
+            return
+
+        cl_logger.info(f"Executing /todo command for thread {state.thread_id} with query: {query}")
+
+    except Exception as e:
+        cl_logger.error(f"Command /todo: Error accessing session data: {e}", exc_info=True)
+        await cl.Message(content="Error: Failed to access session data.").send()
         return
 
     # Create and send user message
@@ -239,10 +284,25 @@ async def command_write(query: str = ""):
 
     Creates a user message, appends it to state, calls the writer agent, and stores the AI response.
     """
-    state: ChatState = cl.user_session.get("state")
-    vector_store: VectorStore = cl.user_session.get("vector_memory")
-    if not state or not vector_store:
-        await cl.Message(content="Error: Session state not found.").send()
+    try:
+        state: ChatState = cl.user_session.get("state")
+        vector_store: VectorStore = cl.user_session.get("vector_memory")
+        thread_id = cl.context.session.thread_id if cl.context else "Unknown"
+
+        if not state:
+            cl_logger.error(f"Command /write: ChatState not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Session state not found. Cannot process command.").send()
+            return
+        if not vector_store:
+            cl_logger.error(f"Command /write: VectorStore not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Vector memory not found. Cannot process command.").send()
+            return
+
+        cl_logger.info(f"Executing /write command for thread {state.thread_id} with query: {query}")
+
+    except Exception as e:
+        cl_logger.error(f"Command /write: Error accessing session data: {e}", exc_info=True)
+        await cl.Message(content="Error: Failed to access session data.").send()
         return
 
     # Create and send user message
@@ -304,9 +364,20 @@ async def command_storyboard(query: str = ""):
 
     Finds the last Game Master message, then calls the storyboard editor agent to generate images.
     """
-    state: ChatState = cl.user_session.get("state")
-    if not state:
-        await cl.Message(content="Error: Session state not found.").send()
+    try:
+        state: ChatState = cl.user_session.get("state")
+        thread_id = cl.context.session.thread_id if cl.context else "Unknown"
+
+        if not state:
+            cl_logger.error(f"Command /storyboard: ChatState not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Session state not found. Cannot process command.").send()
+            return
+
+        cl_logger.info(f"Executing /storyboard command for thread {state.thread_id}")
+
+    except Exception as e:
+        cl_logger.error(f"Command /storyboard: Error accessing session data: {e}", exc_info=True)
+        await cl.Message(content="Error: Failed to access session data.").send()
         return
 
     if not IMAGE_GENERATION_ENABLED:
@@ -333,7 +404,7 @@ async def command_storyboard(query: str = ""):
         from src.storage import append_log
 
         append_log(state.current_persona, "Tool call: /storyboard")
-        cl_logger.info(f"/storyboard command completed.")
+        cl_logger.info(f"/storyboard command completed for thread {state.thread_id}.")
     else:
         await cl.Message(
             content="Could not find a previous Game Master message with a valid ID to generate a storyboard for."
@@ -364,18 +435,42 @@ async def command_help():
 
 async def command_reset():
     """Slash command: /reset - Reset the current story"""
-    cl_logger.info("Resetting chat state and vector store")
+    try:
+        vector_store: VectorStore = cl.user_session.get("vector_memory")
+        thread_id = cl.context.session.thread_id if cl.context else "Unknown"
+
+        if not vector_store:
+            # Log error but allow reset to continue partially (clearing state)
+            cl_logger.error(f"Command /reset: VectorStore not found in session for thread {thread_id}. Vector store cannot be cleared.")
+            # await cl.Message(content="Error: Vector memory not found. Cannot clear vector store.").send() # Optional user message
+
+        cl_logger.info(f"Executing /reset command for thread {thread_id}")
+
+    except Exception as e:
+        cl_logger.error(f"Command /reset: Error accessing session data: {e}", exc_info=True)
+        await cl.Message(content="Error: Failed to access session data during reset.").send()
+        return
+
+    cl_logger.info(f"Resetting chat state and vector store for thread {thread_id}")
     # Clear state
     state = ChatState(messages=[], thread_id=cl.context.session.thread_id)
     cl.user_session.set("state", state)
 
-    # Clear vector store collection
-    vector_store: VectorStore = cl.user_session.get("vector_memory")
+    # Clear vector store collection (only if found)
     if vector_store:
         try:
+            # Get the collection name from the vector store instance if possible, otherwise use thread_id
+            collection_name = getattr(vector_store.collection, 'name', thread_id)
+            cl_logger.info(f"Attempting to delete non-knowledge data from Chroma collection: {collection_name}")
+            # Assuming delete works by filtering metadata, adjust if Chroma API differs
             await vector_store.collection.delete(where={"type": {"$ne": "knowledge"}})
-        except Exception:
-            pass
+            cl_logger.info(f"Cleared non-knowledge data from vector store collection: {collection_name}")
+        except AttributeError:
+             cl_logger.warning(f"Vector store object does not have a 'collection' attribute or 'delete' method. Skipping vector store clear.")
+        except Exception as e:
+            cl_logger.error(f"Failed to clear vector store for thread {thread_id}: {e}", exc_info=True)
+            # Optionally inform the user
+            # await cl.Message(content="Warning: Failed to clear vector memory.").send()
 
     # Send fresh start message
     start_msg = cl.Message(content=START_MESSAGE, author="Game Master")
@@ -388,13 +483,25 @@ async def command_reset():
         )
     )
     cl.user_session.set("state", state)
+    cl_logger.info(f"/reset command processed for thread {thread_id}.")
 
 
 async def command_save():
     """Slash command: /save - Export the current story as markdown"""
-    state: ChatState = cl.user_session.get("state")
-    if not state:
-        await cl.Message(content="No story to save.").send()
+    try:
+        state: ChatState = cl.user_session.get("state")
+        thread_id = cl.context.session.thread_id if cl.context else "Unknown"
+
+        if not state:
+            cl_logger.error(f"Command /save: ChatState not found in session for thread {thread_id}.")
+            await cl.Message(content="No story to save.").send()
+            return
+
+        cl_logger.info(f"Executing /save command for thread {state.thread_id}")
+
+    except Exception as e:
+        cl_logger.error(f"Command /save: Error accessing session data: {e}", exc_info=True)
+        await cl.Message(content="Error: Failed to access session data for saving.").send()
         return
 
     def escape_md(text):
@@ -419,17 +526,32 @@ async def command_save():
             )
         ],
     ).send()
+    cl_logger.info(f"/save command processed for thread {state.thread_id}.")
 
 
 async def command_report():
     """Slash command: /report - Generate a daily summary report"""
-    state: ChatState = cl.user_session.get("state")
-    vector_store: VectorStore = cl.user_session.get("vector_memory")
-    if not state or not vector_store:
-        await cl.Message(content="Error: Session state not found.").send()
+    try:
+        state: ChatState = cl.user_session.get("state")
+        vector_store: VectorStore = cl.user_session.get("vector_memory")
+        thread_id = cl.context.session.thread_id if cl.context else "Unknown"
+
+        if not state:
+            cl_logger.error(f"Command /report: ChatState not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Session state not found. Cannot process command.").send()
+            return
+        if not vector_store:
+            cl_logger.error(f"Command /report: VectorStore not found in session for thread {thread_id}.")
+            await cl.Message(content="Error: Vector memory not found. Cannot process command.").send()
+            return
+
+        cl_logger.info(f"Executing /report command for thread {state.thread_id}")
+
+    except Exception as e:
+        cl_logger.error(f"Command /report: Error accessing session data: {e}", exc_info=True)
+        await cl.Message(content="Error: Failed to access session data.").send()
         return
 
-    cl_logger.info("Executing /report command")
     responses = await report_agent(state)
 
     from src.storage import append_log
@@ -447,11 +569,19 @@ async def command_report():
             )
     cl_user_session = cl.user_session
     cl_user_session.set("state", state)
-    cl_logger.info("/report command processed.")
+    cl_logger.info(f"/report command processed for thread {state.thread_id}.")
 
 
 async def command_persona(query: str = ""):
     """Slash command: /persona [name] - Force switch persona immediately"""
+    try:
+        state: ChatState = cl.user_session.get("state") # Still useful for logging thread_id
+        thread_id = state.thread_id if state else (cl.context.session.thread_id if cl.context else "Unknown")
+        cl_logger.info(f"Executing /persona command for thread {thread_id} with query: {query}")
+    except Exception as e:
+        cl_logger.error(f"Command /persona: Error accessing session data: {e}", exc_info=True)
+        # Don't return here, as the command might still work partially
+
     from src.config import config  # Fix: import config here to avoid F821
     persona_name = query.strip()
     if not persona_name:
@@ -478,7 +608,7 @@ async def command_persona(query: str = ""):
         persona_name, f"Persona forcibly switched to {persona_name} via slash command."
     )
 
-    cl_logger.info(f"Persona forcibly switched to: {persona_name} via slash command")
+    cl_logger.info(f"Persona forcibly switched to: {persona_name} via slash command for thread {thread_id}")
     await cl.Message(
         content=f"✅ Persona forcibly switched to **{persona_name}**."
     ).send()
