@@ -110,7 +110,10 @@ async def generate_storyboard(
 
 
 async def process_storyboard_images(storyboard: str, message_id: str, sd_api_url: str = None) -> None:
-    if not storyboard or not config.features.image_generation:
+    if not storyboard:
+        return
+    if not config.features.image_generation:
+        cl_logger.warning("Image generation disabled in config")
         return
 
     try:
