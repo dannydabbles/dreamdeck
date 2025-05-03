@@ -236,6 +236,10 @@ async def supervisor(state: ChatState, **kwargs):
                     gm_message_id = gm_message_to_storyboard.metadata["message_id"]
                     cl_logger.info(f"Generating storyboard for message ID: {gm_message_id}")
                     from src.config import STABLE_DIFFUSION_API_URL
+                    import langgraph.config
+                    # Patch langgraph.config.get_config to avoid context error in test mode
+                    if os.environ.get("DREAMDECK_TEST_MODE") == "1":
+                        langgraph.config.get_config = lambda: {}
                     ctx = contextvars.copy_context()
                     storyboard_task = asyncio.create_task(
                         ctx.run(
