@@ -10,6 +10,8 @@ import contextvars  # <-- Add this import
 
 import chainlit as cl
 
+from langchain_core.messages import AIMessage  # <-- Ensure AIMessage is always imported
+
 import langgraph.config
 
 def _safe_get_config():
