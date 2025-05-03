@@ -6,6 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import HumanMessage
 
+# --- Change Start 1: Import config ---
+from src.config import config as app_config # Import the actual config or a mockable reference
+# --- Change End 1 ---
+
 from src.agents.todo_agent import _manage_todo
 from src.models import ChatState
 
@@ -13,7 +17,9 @@ from src.models import ChatState
 @pytest.mark.asyncio
 async def test_manage_todo_creates_file(tmp_path):
     fixed_now = dt_module.datetime.now()
+    manager_persona_for_test = "Secretary" # Define the manager persona for this test
 
+    # --- Change Start 2: Add patch for config ---
     with patch("src.agents.todo_agent.datetime") as mock_datetime, patch(
         "src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)
     ), patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), patch(
@@ -22,12 +28,21 @@ async def test_manage_todo_creates_file(tmp_path):
         "src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock
     ) as mock_ainvoke, patch(
         "src.agents.todo_agent.cl", new_callable=MagicMock
-    ) as mock_cl_module:
+    ) as mock_cl_module, patch( # Add this patch context manager
+        "src.agents.todo_agent.config", new_callable=MagicMock
+    ) as mock_config: # Mock the config object used by the agent
+    # --- Change End 2 ---
+
+        # Configure the mocked config object
+        mock_config.defaults.todo_manager_persona = manager_persona_for_test
 
         # Patch datetime.utcnow() to fixed_now
         mock_datetime.datetime.utcnow.return_value = fixed_now
         mock_datetime.datetime.strftime = dt_module.datetime.strftime
         mock_datetime.datetime.now.return_value = fixed_now
+        # Ensure ZoneInfo is available on the mock if needed, or mock the whole now() call
+        mock_datetime.datetime.now.return_value.strftime.return_value = fixed_now.strftime("%Y-%m-%d")
+
 
         # Patch cl.user_session.get to avoid "Chainlit context not found"
         mock_cl_module.user_session.get.return_value = {}
@@ -46,14 +61,18 @@ async def test_manage_todo_creates_file(tmp_path):
             thread_id="test",
             messages=[HumanMessage(content="/todo buy milk", name="Player")],
         )
-        state.current_persona = "Default"
+        # Note: state.current_persona is no longer directly used for the file path
+        state.current_persona = "Friend" # Set a different persona to ensure it's ignored
 
         result = await _manage_todo(state)
         assert result
         assert "buy milk" in result[0].content
 
         current_date = fixed_now.strftime("%Y-%m-%d")
-        todo_file = tmp_path / "Default" / current_date / "todo.md"
+        # --- Change Start 3: Update assertion path ---
+        # Assert the file exists under the MANAGER persona's directory
+        todo_file = tmp_path / manager_persona_for_test / current_date / "todo.md"
+        # --- Change End 3 ---
         assert todo_file.exists()
         content = todo_file.read_text()
         assert "buy milk" in content
