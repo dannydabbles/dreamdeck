@@ -8,9 +8,6 @@ from langchain_core.runnables.config import RunnableConfig
 from src.models import ChatState
 
 
-@pytest.mark.skip(
-    reason="Known LangGraph get_config context issue, see Dreamdeck #skip"
-)
 @pytest.mark.asyncio
 async def test_supervisor_tool_routing(monkeypatch):
     # Patch get_agent to return the undecorated function to avoid langgraph context issues
@@ -26,17 +23,12 @@ async def test_supervisor_tool_routing(monkeypatch):
         state = ChatState(
             messages=[HumanMessage(content="/dice", name="Player")], thread_id="t1"
         )
-        # Provide a RunnableConfig to ensure LangGraph context is set
-        config = RunnableConfig(configurable={"thread_id": "t1"})
-        result = await supervisor.ainvoke(state, config=config)
+        result = await supervisor(state) # Call directly
         # Accept either the dummy_agent's return or the real _dice_roll's output
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
 
 
-@pytest.mark.skip(
-    reason="Known LangGraph get_config context issue, see Dreamdeck #skip"
-)
 @pytest.mark.asyncio
 async def test_supervisor_storyboard_routing(monkeypatch):
     # Patch get_agent to return the undecorated function to avoid langgraph context issues
@@ -67,8 +59,7 @@ async def test_supervisor_storyboard_routing(monkeypatch):
             messages=[HumanMessage(content="/storyboard", name="Player"), gm_msg],
             thread_id="t1",
         )
-        config = RunnableConfig(configurable={"thread_id": "t1"})
-        result = await supervisor.ainvoke(state, config=config)
+        result = await supervisor(state) # Call directly
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
 
