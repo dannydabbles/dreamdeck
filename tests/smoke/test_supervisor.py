@@ -31,7 +31,8 @@ def patch_chainlit_context(monkeypatch):
     token = context_var.set(mock_context)
 
     # Patch cl.user_session where it's used (decision_agent and potentially others)
-    with patch("src.agents.decision_agent.cl.user_session", mock_cl_user_session):
+    with patch("src.agents.decision_agent.cl.user_session", mock_cl_user_session), \
+         patch("src.agents.decision_agent.cl.user_session.get", side_effect=mock_user_session_get):
         try:
             yield
         finally:
