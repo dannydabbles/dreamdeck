@@ -263,11 +263,16 @@ async def supervisor(state: ChatState, **kwargs):
                     cl_logger.info(f"Generating storyboard for message ID: {gm_message_id}")
                     from src.config import STABLE_DIFFUSION_API_URL
                     # Ensure storyboard agent is awaited and track the task
-                    storyboard_task = asyncio.create_task(storyboard_editor_agent(
-                        state,
-                        gm_message_id=gm_message_id,
-                        sd_api_url=STABLE_DIFFUSION_API_URL
-                    ))
+                    # Use contextvars.copy_context() to propagate context into the background task
+                    ctx = contextvars.copy_context()
+                    storyboard_task = asyncio.create_task(
+                        ctx.run(
+                            storyboard_editor_agent,
+                            state,
+                            gm_message_id=gm_message_id,
+                            sd_api_url=STABLE_DIFFUSION_API_URL
+                        )
+                    )
                     # Check if background_tasks exists before appending
                     if hasattr(state, 'background_tasks') and isinstance(state.background_tasks, list):
                         state.background_tasks.append(storyboard_task)
