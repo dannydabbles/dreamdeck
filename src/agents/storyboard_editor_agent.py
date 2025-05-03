@@ -39,10 +39,13 @@ async def _generate_storyboard(
         if sd_api_url:
             cl_logger.info(f"Using Stable Diffusion URL: {sd_api_url}")
         else:
-            cl_logger.warning("No Stable Diffusion API URL provided to storyboard agent.")
+            cl_logger.warning(
+                "No Stable Diffusion API URL provided to storyboard agent."
+            )
         gm_message = next(
-            msg for msg in state.messages 
-            if isinstance(msg, AIMessage) 
+            msg
+            for msg in state.messages
+            if isinstance(msg, AIMessage)
             and msg.metadata.get("message_id") == gm_message_id
         )
         cl_logger.info(f"Found GM message: {gm_message.content[:50]}...")
@@ -86,7 +89,7 @@ async def _generate_storyboard(
 
         # Process images after generating storyboard
         await process_storyboard_images(storyboard, gm_message_id, sd_api_url)
-        
+
         return [
             AIMessage(
                 content=f"🎨 Generated storyboard for: {gm_message.content[:50]}...",
@@ -109,7 +112,9 @@ async def generate_storyboard(
     return await _generate_storyboard(state, gm_message_id, **kwargs)
 
 
-async def process_storyboard_images(storyboard: str, message_id: str, sd_api_url: str = None) -> None:
+async def process_storyboard_images(
+    storyboard: str, message_id: str, sd_api_url: str = None
+) -> None:
     if not storyboard:
         return
     if not config.features.image_generation:
@@ -129,7 +134,7 @@ async def process_storyboard_images(storyboard: str, message_id: str, sd_api_url
                 await CLMessage(
                     content=f"🎨 {prompt}",
                     elements=[image_element],
-                    parent_id=message_id
+                    parent_id=message_id,
                 ).send()
     except Exception as e:
         cl_logger.error(f"Storyboard error: {str(e)}")

@@ -73,7 +73,10 @@ class AgentsConfig(BaseModel):
 class DefaultsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     db_file: str = "chainlit.db"
-    todo_manager_persona: str = Field(default="Default", description="The persona responsible for managing the main TODO list file.") # Add this line
+    todo_manager_persona: str = Field(
+        default="Default",
+        description="The persona responsible for managing the main TODO list file.",
+    )  # Add this line
 
 
 class LlmConfig(BaseModel):

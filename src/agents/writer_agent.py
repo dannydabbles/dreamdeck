@@ -131,10 +131,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 story_segment = AIMessage(
                     content="The dragon appears!",
                     name=f"{persona_icon} {display_name}",
-                    metadata={
-                        "message_id": "test-gm-dragon",
-                        "type": "gm_message"
-                    },
+                    metadata={"message_id": "test-gm-dragon", "type": "gm_message"},
                 )
                 if "type" not in story_segment.metadata:
                     story_segment.metadata["type"] = "gm_message"
@@ -147,10 +144,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 story_segment = AIMessage(
                     content="Once upon a time...",
                     name=f"{persona_icon} {display_name}",
-                    metadata={
-                        "message_id": "test-gm-once",
-                        "type": "gm_message"
-                    },
+                    metadata={"message_id": "test-gm-once", "type": "gm_message"},
                 )
                 if "type" not in story_segment.metadata:
                     story_segment.metadata["type"] = "gm_message"
@@ -161,10 +155,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 story_segment = AIMessage(
                     content="Lore info",
                     name=f"{persona_icon} {display_name}",
-                    metadata={
-                        "message_id": "test-gm-lore",
-                        "type": "gm_message"
-                    },
+                    metadata={"message_id": "test-gm-lore", "type": "gm_message"},
                 )
                 if "type" not in story_segment.metadata:
                     story_segment.metadata["type"] = "gm_message"
@@ -182,10 +173,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
                 story_segment = AIMessage(
                     content=last_human.content,
                     name=f"{persona_icon} {display_name}",
-                    metadata={
-                        "message_id": "test-gm-fallback",
-                        "type": "gm_message"
-                    },
+                    metadata={"message_id": "test-gm-fallback", "type": "gm_message"},
                 )
                 if "type" not in story_segment.metadata:
                     story_segment.metadata["type"] = "gm_message"
@@ -288,7 +276,7 @@ async def _generate_story(state: ChatState, **kwargs) -> list[BaseMessage]:
             metadata={
                 "message_id": gm_message.id,
                 "persona": state.current_persona,
-                "type": "gm_message"
+                "type": "gm_message",
             },
         )
 

@@ -21,6 +21,7 @@ def run_async(coro):
     """Handle async execution in both notebook and script environments"""
     try:
         import nest_asyncio
+
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         if loop.is_running():

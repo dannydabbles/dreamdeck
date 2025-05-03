@@ -1,6 +1,7 @@
 import datetime as dt_module
 import os
 import shutil
+
 # Import mock_open from unittest.mock
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
@@ -21,16 +22,23 @@ async def test_manage_todo_creates_file(tmp_path):
 
     # --- Change Start: Refine patching with os.makedirs and open ---
     # Note: Patching 'open' requires the full path 'src.agents.todo_agent.open'
-    with patch("src.agents.todo_agent.datetime") as mock_datetime, \
-         patch("src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)), \
-         patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), \
-         patch("src.agents.todo_agent.CLMessage", new_callable=MagicMock) as mock_cl_msg_cls, \
-         patch("src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke, \
-         patch("src.agents.todo_agent.cl", new_callable=MagicMock) as mock_cl_module, \
-         patch("src.agents.todo_agent.config", new_callable=MagicMock) as mock_config, \
-         patch("src.agents.todo_agent.os.makedirs") as mock_makedirs, \
-         patch("src.agents.todo_agent.open", mock_open()) as mocked_file, \
-         patch("src.agents.todo_agent.os.path.exists", return_value=False) as mock_exists:
+    with patch("src.agents.todo_agent.datetime") as mock_datetime, patch(
+        "src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)
+    ), patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), patch(
+        "src.agents.todo_agent.CLMessage", new_callable=MagicMock
+    ) as mock_cl_msg_cls, patch(
+        "src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock
+    ) as mock_ainvoke, patch(
+        "src.agents.todo_agent.cl", new_callable=MagicMock
+    ) as mock_cl_module, patch(
+        "src.agents.todo_agent.config", new_callable=MagicMock
+    ) as mock_config, patch(
+        "src.agents.todo_agent.os.makedirs"
+    ) as mock_makedirs, patch(
+        "src.agents.todo_agent.open", mock_open()
+    ) as mocked_file, patch(
+        "src.agents.todo_agent.os.path.exists", return_value=False
+    ) as mock_exists:
 
         # Patch config.llm.model and config.openai.get("base_url") to valid strings
         mock_config.llm.model = "gpt-4o"
@@ -68,7 +76,9 @@ async def test_manage_todo_creates_file(tmp_path):
         result = await _manage_todo(state)
         assert result
         # Check the content returned in the AIMessage (which should be the updated markdown)
-        expected_md_content = "**Finished**\n\n**In Progress**\n\n**Remaining**\n- buy milk"
+        expected_md_content = (
+            "**Finished**\n\n**In Progress**\n\n**Remaining**\n- buy milk"
+        )
         assert expected_md_content in result[0].content
 
         # Assertions

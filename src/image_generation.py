@@ -36,10 +36,12 @@ from .config import (
 )
 
 import logging
+
 cl_logger = logging.getLogger("chainlit")
 
 # --- API Connectivity Check on Startup ---
 import chainlit as cl
+
 
 @cl.on_chat_start
 async def check_sd_api():
@@ -49,7 +51,9 @@ async def check_sd_api():
             cl_logger.info(f"Stable Diffusion API connected: {resp.status_code}")
     except Exception as e:
         cl_logger.error(f"Stable Diffusion connection failed: {str(e)}")
-        await cl.Message(content="⚠️ Image generation unavailable: API connection failed").send()
+        await cl.Message(
+            content="⚠️ Image generation unavailable: API connection failed"
+        ).send()
 
 
 # Define an asynchronous range generator
@@ -76,11 +80,17 @@ async def generate_image_async(
         async with httpx.AsyncClient(timeout=IMAGE_GENERATION_TIMEOUT) as client:
             # First check API availability
             try:
-                health_check = await client.get(f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/options")
+                health_check = await client.get(
+                    f"{STABLE_DIFFUSION_API_URL}/sdapi/v1/options"
+                )
                 health_check.raise_for_status()
-                cl_logger.info(f"API connection successful ({health_check.status_code})")
+                cl_logger.info(
+                    f"API connection successful ({health_check.status_code})"
+                )
             except Exception as health_error:
-                cl_logger.error(f"Stable Diffusion API unavailable: {str(health_error)}")
+                cl_logger.error(
+                    f"Stable Diffusion API unavailable: {str(health_error)}"
+                )
                 return None
 
             # Proceed with image generation if health check passed
@@ -108,9 +118,7 @@ async def generate_image_async(
             return image_bytes
 
     except httpx.RequestError as e:
-        cl_logger.error(
-            f"Image generation failed after retries: {e}", exc_info=True
-        )
+        cl_logger.error(f"Image generation failed after retries: {e}", exc_info=True)
         raise
     except (KeyError, IndexError, ValueError) as e:
         cl_logger.error(f"Error processing image data: {e}", exc_info=True)
@@ -178,7 +186,9 @@ async def generate_image_generation_prompts(storyboard: str) -> List[str]:
     return image_gen_prompts
 
 
-async def process_storyboard_images(storyboard: str, message_id: str, sd_api_url: str = None) -> None:
+async def process_storyboard_images(
+    storyboard: str, message_id: str, sd_api_url: str = None
+) -> None:
     """Process storyboard into images and send to chat.
 
     Args:
@@ -203,11 +213,13 @@ async def process_storyboard_images(storyboard: str, message_id: str, sd_api_url
                     async with httpx.AsyncClient() as client:
                         health_resp = await client.get(f"{sd_api_url}/sdapi/v1/options")
                         health_resp.raise_for_status()  # Now triggers retry
-                        cl_logger.info(f"API health check status: {health_resp.status_code}")
+                        cl_logger.info(
+                            f"API health check status: {health_resp.status_code}"
+                        )
                         if health_resp.status_code != 200:
                             await cl.Message(
                                 content="⚠️ Image generation service unavailable",
-                                parent_id=message_id
+                                parent_id=message_id,
                             ).send()
                             return
 
@@ -215,8 +227,14 @@ async def process_storyboard_images(storyboard: str, message_id: str, sd_api_url
                 seed = random.randint(0, 2**32)
                 # Pass sd_api_url to generate_image_async if supported
                 import inspect
-                if "sd_api_url" in inspect.signature(generate_image_async).parameters and sd_api_url:
-                    image_bytes = await generate_image_async(prompt, seed, sd_api_url=sd_api_url)
+
+                if (
+                    "sd_api_url" in inspect.signature(generate_image_async).parameters
+                    and sd_api_url
+                ):
+                    image_bytes = await generate_image_async(
+                        prompt, seed, sd_api_url=sd_api_url
+                    )
                 else:
                     image_bytes = await generate_image_async(prompt, seed)
 

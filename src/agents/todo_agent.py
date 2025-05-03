@@ -64,7 +64,9 @@ async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
 
         # Determine the persona directory based on the configured manager, not the current state persona
         manager_persona = config.defaults.todo_manager_persona
-        cl_logger.info(f"Using configured TODO manager persona for file path: {manager_persona}")
+        cl_logger.info(
+            f"Using configured TODO manager persona for file path: {manager_persona}"
+        )
         persona_safe = re.sub(r"[^\w\-_. ]", "_", manager_persona)
 
         # Load current todo list from file (if exists) using the manager's path
@@ -95,9 +97,7 @@ async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
         prompt_template_str = config.loaded_prompts.get(prompt_key, "").strip()
         if not prompt_template_str:
             cl_logger.error("Todo prompt template is empty!")
-            prompt = (
-                f"User input: {user_input_for_prompt}\nExisting TODO:\n{existing_content}"
-            )
+            prompt = f"User input: {user_input_for_prompt}\nExisting TODO:\n{existing_content}"
         else:
             # PATCH: If prompt_template_str is not a string, convert to string (fixes "Can't compile non template nodes")
             if not isinstance(prompt_template_str, str):

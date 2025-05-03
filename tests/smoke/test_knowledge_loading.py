@@ -34,7 +34,7 @@ async def test_load_knowledge_documents(tmp_path, monkeypatch):
 
         load_doc_mock.side_effect = lambda path: [
             Document(page_content="Loaded content", metadata={"source": "test.txt"}),
-            Document(page_content="PDF content", metadata={"source": "test.pdf"})
+            Document(page_content="PDF content", metadata={"source": "test.pdf"}),
         ]
         splitter_mock.return_value.split_documents.return_value = [
             Document(page_content="Chunk 1", metadata={}),

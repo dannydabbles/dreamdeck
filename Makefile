@@ -65,6 +65,10 @@ log:
 	@echo "Viewing logs in real-time..."
 	@docker-compose logs -f
 
+aider-gemini-gpt4.1:
+	@echo "Running aider with gemini and gpt4.1..."
+	@aider --multiline --architect --model openrouter/google/gemini-2.5-pro-exp-03-25 --editor-model gpt-4.1-2025-04-14 --weak-model gpt-4o-mini-2024-07-18 --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test
+
 aider-r1-local:
 	@echo "Running aider with r1 and local models..."
 	@aider --multiline --architect --model openrouter/deepseek/deepseek-r1 --editor-model openai/coder --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test
@@ -72,6 +76,10 @@ aider-r1-local:
 aider-r1-gpt4.1:
 	@echo "Running aider with r1 and gpt4.1..."
 	@aider --multiline --architect --model openrouter/deepseek/deepseek-r1 --editor-model gpt-4.1-2025-04-14 --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test
+
+aider-r1-gpt4.1-mini:
+	@echo "Running aider with r1 and gpt4.1 Mini..."
+	@aider --multiline --architect --model openrouter/deepseek/deepseek-r1 --editor-model gpt-4o-mini-2024-07-18 --timeout 500 --model-settings-file .aider.model.settings.yml --test-cmd "make test" --auto-test
 
 aider-gpt4.1:
 	@echo "Running aider with gpt4.1..."

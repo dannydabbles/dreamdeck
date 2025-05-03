@@ -9,6 +9,7 @@ from chainlit.context import ChainlitContext, context_var  # <-- Add imports
 
 from src.models import ChatState
 
+
 # Add Chainlit context fixture similar to integration tests
 @pytest.fixture(autouse=True)
 def patch_chainlit_context(monkeypatch):
@@ -18,11 +19,13 @@ def patch_chainlit_context(monkeypatch):
 
     # Mock cl.user_session directly
     mock_cl_user_session = MagicMock()
+
     def mock_user_session_get(key, default=None):
         if key == "chat_settings":
             return {}  # Provide an empty dict for chat_settings
         # Add other specific mocks if needed by other agents called in these tests
         return default
+
     mock_cl_user_session.get = mock_user_session_get
 
     mock_context = MagicMock(spec=ChainlitContext)
@@ -31,8 +34,12 @@ def patch_chainlit_context(monkeypatch):
     token = context_var.set(mock_context)
 
     # Patch cl.user_session where it's used (decision_agent and potentially others)
-    with patch("src.agents.decision_agent.cl.user_session", mock_cl_user_session), \
-         patch("src.agents.decision_agent.cl.user_session.get", side_effect=mock_user_session_get):
+    with patch(
+        "src.agents.decision_agent.cl.user_session", mock_cl_user_session
+    ), patch(
+        "src.agents.decision_agent.cl.user_session.get",
+        side_effect=mock_user_session_get,
+    ):
         try:
             yield
         finally:
@@ -42,11 +49,13 @@ def patch_chainlit_context(monkeypatch):
 @pytest.mark.asyncio
 async def test_supervisor_tool_routing(monkeypatch):
     # Patch the dice_agent symbol itself to a simple AsyncMock in supervisor's namespace
-    mock_dice_agent_call = AsyncMock(return_value=[AIMessage(content="Dice result", name="dice_roll")])
+    mock_dice_agent_call = AsyncMock(
+        return_value=[AIMessage(content="Dice result", name="dice_roll")]
+    )
 
-    with patch(
-        "src.supervisor.dice_agent", mock_dice_agent_call
-    ), patch("src.supervisor.task", lambda x: x):
+    with patch("src.supervisor.dice_agent", mock_dice_agent_call), patch(
+        "src.supervisor.task", lambda x: x
+    ):
         from src.supervisor import supervisor
 
         state = ChatState(
@@ -66,7 +75,9 @@ async def test_supervisor_tool_routing(monkeypatch):
 @pytest.mark.asyncio
 async def test_supervisor_storyboard_routing(monkeypatch):
     # Patch the storyboard_editor_agent symbol itself to a simple AsyncMock in supervisor's namespace
-    mock_storyboard_agent_call = AsyncMock(return_value=[AIMessage(content="Storyboard result", name="storyboard")])
+    mock_storyboard_agent_call = AsyncMock(
+        return_value=[AIMessage(content="Storyboard result", name="storyboard")]
+    )
 
     with patch(
         "src.supervisor.storyboard_editor_agent", mock_storyboard_agent_call
@@ -75,14 +86,18 @@ async def test_supervisor_storyboard_routing(monkeypatch):
 
         # Add a GM message with message_id and type
         gm_msg = AIMessage(
-            content="scene", name="Game Master", metadata={"message_id": "gm1", "type": "gm_message"}
+            content="scene",
+            name="Game Master",
+            metadata={"message_id": "gm1", "type": "gm_message"},
         )
         state = ChatState(
             messages=[HumanMessage(content="/storyboard", name="Player"), gm_msg],
             thread_id="t1",
         )
         # Patch the decision agent to return the tool route once, then END
-        mock_decision = AsyncMock(side_effect=[{"route": "storyboard"}, {"route": "END"}])
+        mock_decision = AsyncMock(
+            side_effect=[{"route": "storyboard"}, {"route": "END"}]
+        )
         with patch("src.supervisor._decide_next_agent", mock_decision):
             print(f"State before supervisor call: {state.messages}")  # Debug print
             result = await supervisor(state)

@@ -14,15 +14,18 @@ from langchain_core.messages import AIMessage  # <-- Ensure AIMessage is always 
 
 import langgraph.config
 
+
 def _safe_get_config():
     # Always return an empty config in test mode to avoid "Called get_config outside of a runnable context"
     import os
+
     if os.environ.get("DREAMDECK_TEST_MODE") == "1":
         return {}
     try:
         return langgraph.config.get_config()
     except RuntimeError:
         return {}
+
 
 from src.agents.decision_agent import decision_agent
 from src.agents.dice_agent import dice_agent
@@ -91,6 +94,7 @@ def get_dynamic_model():
 # Expose _decide_next_agent for patching in tests
 from src.agents.decision_agent import _decide_next_agent
 
+
 async def supervisor(state: ChatState, **kwargs):
     """
     Entrypoint for the Dreamdeck supervisor.
@@ -105,6 +109,7 @@ async def supervisor(state: ChatState, **kwargs):
     # Patch: In test mode, monkeypatch langgraph.config.get_config to always return {}
     import os
     import langgraph.config
+
     if os.environ.get("DREAMDECK_TEST_MODE") == "1":
         langgraph.config.get_config = lambda: {}
 
@@ -136,13 +141,19 @@ async def supervisor(state: ChatState, **kwargs):
 
         for single_route in routes:
             cl_logger.debug(f"Processing route: {single_route}")
-            if isinstance(single_route, str) and single_route.lower().startswith("persona:"):
+            if isinstance(single_route, str) and single_route.lower().startswith(
+                "persona:"
+            ):
                 if persona_called:
-                    cl_logger.warning("Supervisor: Multiple persona agents in one turn are not allowed. Skipping additional persona agent.")
+                    cl_logger.warning(
+                        "Supervisor: Multiple persona agents in one turn are not allowed. Skipping additional persona agent."
+                    )
                     continue
                 persona_called = True
                 persona_name = single_route.split(":", 1)[1].strip() or "Default"
-                cl_logger.info(f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision")
+                cl_logger.info(
+                    f"Supervisor: switching current_persona to '{persona_name}' based on oracle decision"
+                )
                 state = state.model_copy(update={"current_persona": persona_name})
                 cl.user_session.set("current_persona", persona_name)
                 agent_to_call = None
@@ -152,18 +163,24 @@ async def supervisor(state: ChatState, **kwargs):
                 ):
                     agent_to_call = writer_agent.persona_agent_registry[persona_name]
                 else:
-                    cl_logger.warning(f"Supervisor: Persona '{persona_name}' not found in writer_agent registry, falling back to default writer.")
+                    cl_logger.warning(
+                        f"Supervisor: Persona '{persona_name}' not found in writer_agent registry, falling back to default writer."
+                    )
                     agent_to_call = writer_agent
                 cl_logger.info(f"Persona agent to call: {agent_to_call}")
                 if agent_to_call is None:
-                    cl_logger.error(f"Supervisor: Could not find agent for persona '{persona_name}'")
+                    cl_logger.error(
+                        f"Supervisor: Could not find agent for persona '{persona_name}'"
+                    )
                     continue
                 cl_logger.info(f"Calling persona agent: {agent_to_call}")
                 import unittest.mock
+
                 persona_result = await agent_to_call(state)
                 # PATCH: In test mode, if persona_result is empty, return a dummy AIMessage
                 if not persona_result and os.environ.get("DREAMDECK_TEST_MODE") == "1":
                     from langchain_core.messages import AIMessage
+
                     persona_result = [AIMessage(content="dummy", name="writer")]
                 if persona_result:
                     results.extend(persona_result)
@@ -177,7 +194,8 @@ async def supervisor(state: ChatState, **kwargs):
                     for msg in reversed(state.messages):
                         if (
                             hasattr(msg, "name")
-                            and msg.name in ["Game Master", "🎭 Storyteller GM", "🎲 Dungeon Master"]
+                            and msg.name
+                            in ["Game Master", "🎭 Storyteller GM", "🎲 Dungeon Master"]
                             and hasattr(msg, "metadata")
                             and msg.metadata
                             and "message_id" in msg.metadata
@@ -185,12 +203,15 @@ async def supervisor(state: ChatState, **kwargs):
                             gm_message_id = msg.metadata["message_id"]
                             break
                     if gm_message_id is None:
-                        cl_logger.warning("Supervisor: Could not find a GM message with message_id for storyboard agent")
+                        cl_logger.warning(
+                            "Supervisor: Could not find a GM message with message_id for storyboard agent"
+                        )
                         continue
                     agent = get_agent(single_route, helper=False)
                     tool_result = await agent(state, gm_message_id=gm_message_id)
                     if not tool_result and os.environ.get("DREAMDECK_TEST_MODE") == "1":
                         from langchain_core.messages import AIMessage
+
                         tool_result = [AIMessage(content="dummy", name="writer")]
                     if tool_result:
                         results.extend(tool_result)
@@ -199,8 +220,11 @@ async def supervisor(state: ChatState, **kwargs):
                 else:
                     agent = get_agent(single_route, helper=True)
                     if agent is None:
-                        cl_logger.warning(f"Supervisor: unknown route '{single_route}', defaulting to writer agent")
+                        cl_logger.warning(
+                            f"Supervisor: unknown route '{single_route}', defaulting to writer agent"
+                        )
                         from src.agents.writer_agent import writer_agent_helper
+
                         agent = writer_agent_helper
                     agent_helper = None
                     if hasattr(agent, "_manage_todo"):
@@ -213,33 +237,68 @@ async def supervisor(state: ChatState, **kwargs):
                         if hasattr(agent, "__module__"):
                             try:
                                 import importlib
+
                                 agent_mod = importlib.import_module(agent.__module__)
                                 helper_name = getattr(agent, "__name__", None)
                                 if helper_name and helper_name.endswith("_agent"):
                                     helper_func_name = helper_name + "_helper"
-                                    agent_helper = getattr(agent_mod, helper_func_name, None)
-                                if not agent_helper and hasattr(agent_mod, "dice_agent_helper"):
-                                    agent_helper = getattr(agent_mod, "dice_agent_helper", None)
-                                if not agent_helper and hasattr(agent_mod, "web_search_agent_helper"):
-                                    agent_helper = getattr(agent_mod, "web_search_agent_helper", None)
-                                if not agent_helper and hasattr(agent_mod, "todo_agent_helper"):
-                                    agent_helper = getattr(agent_mod, "todo_agent_helper", None)
-                                if not agent_helper and hasattr(agent_mod, "writer_agent_helper"):
-                                    agent_helper = getattr(agent_mod, "writer_agent_helper", None)
-                                if not agent_helper and hasattr(agent_mod, "storyboard_editor_agent_helper"):
-                                    agent_helper = getattr(agent_mod, "storyboard_editor_agent_helper", None)
-                                if not agent_helper and hasattr(agent_mod, "knowledge_agent_helper"):
-                                    agent_helper = getattr(agent_mod, "knowledge_agent_helper", None)
-                                if not agent_helper and hasattr(agent_mod, "report_agent_helper"):
-                                    agent_helper = getattr(agent_mod, "report_agent_helper", None)
+                                    agent_helper = getattr(
+                                        agent_mod, helper_func_name, None
+                                    )
+                                if not agent_helper and hasattr(
+                                    agent_mod, "dice_agent_helper"
+                                ):
+                                    agent_helper = getattr(
+                                        agent_mod, "dice_agent_helper", None
+                                    )
+                                if not agent_helper and hasattr(
+                                    agent_mod, "web_search_agent_helper"
+                                ):
+                                    agent_helper = getattr(
+                                        agent_mod, "web_search_agent_helper", None
+                                    )
+                                if not agent_helper and hasattr(
+                                    agent_mod, "todo_agent_helper"
+                                ):
+                                    agent_helper = getattr(
+                                        agent_mod, "todo_agent_helper", None
+                                    )
+                                if not agent_helper and hasattr(
+                                    agent_mod, "writer_agent_helper"
+                                ):
+                                    agent_helper = getattr(
+                                        agent_mod, "writer_agent_helper", None
+                                    )
+                                if not agent_helper and hasattr(
+                                    agent_mod, "storyboard_editor_agent_helper"
+                                ):
+                                    agent_helper = getattr(
+                                        agent_mod,
+                                        "storyboard_editor_agent_helper",
+                                        None,
+                                    )
+                                if not agent_helper and hasattr(
+                                    agent_mod, "knowledge_agent_helper"
+                                ):
+                                    agent_helper = getattr(
+                                        agent_mod, "knowledge_agent_helper", None
+                                    )
+                                if not agent_helper and hasattr(
+                                    agent_mod, "report_agent_helper"
+                                ):
+                                    agent_helper = getattr(
+                                        agent_mod, "report_agent_helper", None
+                                    )
                             except Exception:
                                 agent_helper = None
                     agent_to_call = agent_helper if agent_helper else agent
                     import unittest.mock
+
                     tool_result = await agent_to_call(state)
                     # PATCH: In test mode, if tool_result is empty, return a dummy AIMessage
                     if not tool_result and os.environ.get("DREAMDECK_TEST_MODE") == "1":
                         from langchain_core.messages import AIMessage
+
                         tool_result = [AIMessage(content="dummy", name="writer")]
                     if tool_result:
                         results.extend(tool_result)
@@ -248,22 +307,36 @@ async def supervisor(state: ChatState, **kwargs):
         if persona_called:
             gm_persona_aliases = ["storyteller gm", "game master", "dungeon master"]
             cleaned_persona = state.current_persona.lower().strip()
-            cl_logger.debug(f"GM Persona Check: {cleaned_persona} in {gm_persona_aliases}?")
+            cl_logger.debug(
+                f"GM Persona Check: {cleaned_persona} in {gm_persona_aliases}?"
+            )
             if cleaned_persona in gm_persona_aliases:
                 cl_logger.info(f"Identified as GM persona: {state.current_persona}")
-                cl_logger.debug(f"Last 3 messages: {[getattr(msg, 'metadata', None) for msg in state.messages[-3:]]}")
+                cl_logger.debug(
+                    f"Last 3 messages: {[getattr(msg, 'metadata', None) for msg in state.messages[-3:]]}"
+                )
                 gm_message_to_storyboard = None
                 for msg in reversed(state.messages):
                     # Always import AIMessage at the top, but ensure it's in scope here for mocks
                     from langchain_core.messages import AIMessage
-                    if isinstance(msg, AIMessage) and msg.metadata and msg.metadata.get("type") == "gm_message":
+
+                    if (
+                        isinstance(msg, AIMessage)
+                        and msg.metadata
+                        and msg.metadata.get("type") == "gm_message"
+                    ):
                         gm_message_to_storyboard = msg
                         break
-                if gm_message_to_storyboard and gm_message_to_storyboard.metadata.get("message_id"):
+                if gm_message_to_storyboard and gm_message_to_storyboard.metadata.get(
+                    "message_id"
+                ):
                     gm_message_id = gm_message_to_storyboard.metadata["message_id"]
-                    cl_logger.info(f"Generating storyboard for message ID: {gm_message_id}")
+                    cl_logger.info(
+                        f"Generating storyboard for message ID: {gm_message_id}"
+                    )
                     from src.config import STABLE_DIFFUSION_API_URL
                     import langgraph.config
+
                     # Patch langgraph.config.get_config to avoid context error in test mode
                     if os.environ.get("DREAMDECK_TEST_MODE") == "1":
                         langgraph.config.get_config = lambda: {}
@@ -271,15 +344,23 @@ async def supervisor(state: ChatState, **kwargs):
                         # (so MagicMock is called and test can assert call_count == 1)
                         try:
                             import unittest.mock
+
                             if isinstance(asyncio.create_task, unittest.mock.MagicMock):
                                 # Simulate a call to create_task with a dummy coroutine
                                 # Also call the storyboard_editor_agent mock directly so .assert_called() passes
                                 # Instead of awaiting, just call the mock directly so .assert_called() passes
                                 from src.supervisor import storyboard_editor_agent
-                                storyboard_editor_agent(state, gm_message_id=gm_message_id, sd_api_url=STABLE_DIFFUSION_API_URL)
+
+                                storyboard_editor_agent(
+                                    state,
+                                    gm_message_id=gm_message_id,
+                                    sd_api_url=STABLE_DIFFUSION_API_URL,
+                                )
+
                                 # Simulate a dummy coroutine for create_task
                                 async def dummy_coro():
                                     pass
+
                                 asyncio.create_task(dummy_coro())
                         except Exception:
                             pass
@@ -290,28 +371,40 @@ async def supervisor(state: ChatState, **kwargs):
                                 storyboard_editor_agent,
                                 state,
                                 gm_message_id=gm_message_id,
-                                sd_api_url=STABLE_DIFFUSION_API_URL
+                                sd_api_url=STABLE_DIFFUSION_API_URL,
                             )
                         )
-                        if hasattr(state, 'background_tasks') and isinstance(state.background_tasks, list):
+                        if hasattr(state, "background_tasks") and isinstance(
+                            state.background_tasks, list
+                        ):
                             state.background_tasks.append(storyboard_task)
                         else:
-                            cl_logger.warning("State object missing 'background_tasks' list attribute.")
+                            cl_logger.warning(
+                                "State object missing 'background_tasks' list attribute."
+                            )
                 else:
-                    cl_logger.warning("No suitable GM message found in the current step's result for storyboard generation")
+                    cl_logger.warning(
+                        "No suitable GM message found in the current step's result for storyboard generation"
+                    )
             else:
-                cl_logger.info(f"Current persona '{state.current_persona}' is not a GM persona")
+                cl_logger.info(
+                    f"Current persona '{state.current_persona}' is not a GM persona"
+                )
             break
 
         hops += 1
 
     if hops >= max_hops:
-        cl_logger.warning("Supervisor: max hops reached, ending turn with current results.")
+        cl_logger.warning(
+            "Supervisor: max hops reached, ending turn with current results."
+        )
 
     # PATCH: In test mode, if results is empty, return a dummy AIMessage to prevent test failures
     import os
+
     if not results and os.environ.get("DREAMDECK_TEST_MODE") == "1":
         from langchain_core.messages import AIMessage
+
         return [AIMessage(content="dummy", name="writer")]
 
     return results
@@ -334,9 +427,11 @@ supervisor.task = _noop_task
 def task(x):
     return x
 
+
 async def _with_safe_config(fn, *args, **kwargs):
     """Run a function with a safe LangGraph config context."""
     import langgraph.config
+
     original_get_config = langgraph.config.get_config
     langgraph.config.get_config = _safe_get_config
     try:
