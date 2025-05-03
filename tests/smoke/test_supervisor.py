@@ -41,11 +41,11 @@ def patch_chainlit_context(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_supervisor_tool_routing(monkeypatch):
-    # Mock get_agent to return a simple AsyncMock with the expected tool output
-    mock_tool_agent = AsyncMock(return_value=[AIMessage(content="Dice result", name="dice_roll")])
+    # Patch the dice_agent symbol itself to a simple AsyncMock in supervisor's namespace
+    mock_dice_agent_call = AsyncMock(return_value=[AIMessage(content="Dice result", name="dice_roll")])
 
     with patch(
-        "src.agents.registry.get_agent", return_value=mock_tool_agent
+        "src.supervisor.dice_agent", mock_dice_agent_call
     ), patch("src.supervisor.task", lambda x: x):
         from src.supervisor import supervisor
 
@@ -55,21 +55,22 @@ async def test_supervisor_tool_routing(monkeypatch):
         # Patch the decision agent to return the tool route once, then END
         mock_decision = AsyncMock(side_effect=[{"route": "dice"}, {"route": "END"}])
         with patch("src.supervisor._decide_next_agent", mock_decision):
+            print(f"State before supervisor call: {state.messages}")  # Debug print
             result = await supervisor(state)
+            print(f"Supervisor returned: {result}")  # Debug print
+            print(f"State after supervisor call: {state.messages}")  # Debug print
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
 
 
 @pytest.mark.asyncio
 async def test_supervisor_storyboard_routing(monkeypatch):
-    # Mock get_agent to return a simple AsyncMock with the expected tool output
-    mock_tool_agent = AsyncMock(return_value=[AIMessage(content="Storyboard result", name="storyboard")])
+    # Patch the storyboard_editor_agent symbol itself to a simple AsyncMock in supervisor's namespace
+    mock_storyboard_agent_call = AsyncMock(return_value=[AIMessage(content="Storyboard result", name="storyboard")])
 
     with patch(
-        "src.agents.registry.get_agent", return_value=mock_tool_agent
-    ), patch(
-        "src.supervisor.task", lambda x: x
-    ):
+        "src.supervisor.storyboard_editor_agent", mock_storyboard_agent_call
+    ), patch("src.supervisor.task", lambda x: x):
         from src.supervisor import supervisor
 
         # Add a GM message with message_id and type
@@ -83,7 +84,10 @@ async def test_supervisor_storyboard_routing(monkeypatch):
         # Patch the decision agent to return the tool route once, then END
         mock_decision = AsyncMock(side_effect=[{"route": "storyboard"}, {"route": "END"}])
         with patch("src.supervisor._decide_next_agent", mock_decision):
+            print(f"State before supervisor call: {state.messages}")  # Debug print
             result = await supervisor(state)
+            print(f"Supervisor returned: {result}")  # Debug print
+            print(f"State after supervisor call: {state.messages}")  # Debug print
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
 
