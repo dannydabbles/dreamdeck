@@ -99,6 +99,9 @@ async def _manage_todo(state: ChatState, **kwargs) -> list[AIMessage]:
                 f"User input: {user_input_for_prompt}\nExisting TODO:\n{existing_content}"
             )
         else:
+            # PATCH: If prompt_template_str is not a string, convert to string (fixes "Can't compile non template nodes")
+            if not isinstance(prompt_template_str, str):
+                prompt_template_str = str(prompt_template_str)
             template = Template(prompt_template_str)
             prompt = template.render(
                 existing_todo_file=existing_content,
