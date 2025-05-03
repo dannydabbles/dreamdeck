@@ -25,7 +25,9 @@ async def test_supervisor_tool_routing(monkeypatch):
         )
         # Patch the decision agent to always return a tool route for test
         with patch("src.agents.decision_agent._decide_next_agent", AsyncMock(return_value={"route": "dice"})):
-            result = await supervisor(state)
+            # Patch the writer agent to always return a dummy AIMessage so supervisor always returns a result
+            with patch("src.agents.writer_agent._generate_story", AsyncMock(return_value=[AIMessage(content="dummy", name="writer")])):
+                result = await supervisor(state)
         # Accept either the dummy_agent's return or the real _dice_roll's output
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
@@ -63,7 +65,9 @@ async def test_supervisor_storyboard_routing(monkeypatch):
         )
         # Patch the decision agent to always return a tool route for test
         with patch("src.agents.decision_agent._decide_next_agent", AsyncMock(return_value={"route": "storyboard"})):
-            result = await supervisor(state)
+            # Patch the writer agent to always return a dummy AIMessage so supervisor always returns a result
+            with patch("src.agents.writer_agent._generate_story", AsyncMock(return_value=[AIMessage(content="dummy", name="writer")])):
+                result = await supervisor(state)
         assert isinstance(result, list)
         assert result and isinstance(result[0], AIMessage)
 
