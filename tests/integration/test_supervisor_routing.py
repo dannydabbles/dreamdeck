@@ -95,15 +95,15 @@ async def test_supervisor_calls_storyboard_after_gm_persona():
 
     # Mock the decision agent to route to the GM persona
     mock_decision = AsyncMock(return_value={"route": "persona:Storyteller GM"})
-    # Mock the writer agent (representing the GM persona) to return the GM message
-    mock_writer = AsyncMock(return_value=[gm_response])
+    # Mock the underlying generate_story function called by the PersonaAgent
+    mock_generate_story = AsyncMock(return_value=[gm_response])
     # Mock the storyboard agent to check if it's called correctly
     mock_storyboard = AsyncMock(return_value=[]) # Storyboard agent returns empty list or status message
     # Mock asyncio.create_task to prevent actual task execution
     mock_create_task = MagicMock()
 
     with patch("src.supervisor._decide_next_agent", mock_decision), \
-         patch("src.supervisor.writer_agent", mock_writer), \
+         patch("src.agents.writer_agent._generate_story", mock_generate_story), \
          patch("src.supervisor.storyboard_editor_agent", mock_storyboard), \
          patch("src.supervisor.asyncio.create_task", mock_create_task):
 
@@ -112,7 +112,7 @@ async def test_supervisor_calls_storyboard_after_gm_persona():
 
         # Assertions
         mock_decision.assert_awaited_once()
-        mock_writer.assert_awaited_once_with(state) # Writer gets the updated state
+        mock_generate_story.assert_awaited_once_with(state) # Check the generate_story mock
         # Check that create_task was called with the storyboard agent coroutine
         assert mock_create_task.call_count == 1
         call_args, call_kwargs = mock_create_task.call_args
@@ -151,14 +151,14 @@ async def test_supervisor_does_not_call_storyboard_after_non_gm_persona():
     )
 
     mock_decision = AsyncMock(return_value={"route": "persona:Friend"})
-    # Mock the writer agent configured for the 'Friend' persona
-    mock_friend_agent = AsyncMock(return_value=[friend_response])
+    # Mock the underlying generate_story function called by the PersonaAgent
+    mock_generate_story = AsyncMock(return_value=[friend_response])
     mock_storyboard = AsyncMock()
     mock_create_task = MagicMock()
 
-    # Assume 'Friend' persona maps to writer_agent in this simplified test setup
+    # Patch the actual function executed by the PersonaAgent
     with patch("src.supervisor._decide_next_agent", mock_decision), \
-         patch("src.supervisor.writer_agent", mock_friend_agent), \
+         patch("src.agents.writer_agent._generate_story", mock_generate_story), \
          patch("src.supervisor.storyboard_editor_agent", mock_storyboard), \
          patch("src.supervisor.asyncio.create_task", mock_create_task):
 
@@ -167,7 +167,7 @@ async def test_supervisor_does_not_call_storyboard_after_non_gm_persona():
 
         # Assertions
         mock_decision.assert_awaited_once()
-        mock_friend_agent.assert_awaited_once_with(state)
+        mock_generate_story.assert_awaited_once_with(state) # Check the generate_story mock
         mock_storyboard.assert_not_awaited() # Storyboard should NOT be called
         mock_create_task.assert_not_called() # Task should not be created
         assert friend_response in results
@@ -192,12 +192,13 @@ async def test_supervisor_does_not_call_storyboard_if_gm_message_lacks_id():
     )
 
     mock_decision = AsyncMock(return_value={"route": "persona:Storyteller GM"})
-    mock_writer = AsyncMock(return_value=[gm_response_no_id])
+    # Mock the underlying generate_story function called by the PersonaAgent
+    mock_generate_story = AsyncMock(return_value=[gm_response_no_id])
     mock_storyboard = AsyncMock()
     mock_create_task = MagicMock()
 
     with patch("src.supervisor._decide_next_agent", mock_decision), \
-         patch("src.supervisor.writer_agent", mock_writer), \
+         patch("src.agents.writer_agent._generate_story", mock_generate_story), \
          patch("src.supervisor.storyboard_editor_agent", mock_storyboard), \
          patch("src.supervisor.asyncio.create_task", mock_create_task):
 
@@ -206,7 +207,7 @@ async def test_supervisor_does_not_call_storyboard_if_gm_message_lacks_id():
 
         # Assertions
         mock_decision.assert_awaited_once()
-        mock_writer.assert_awaited_once_with(state)
+        mock_generate_story.assert_awaited_once_with(state) # Check the generate_story mock
         mock_storyboard.assert_not_awaited() # Storyboard should NOT be called
         mock_create_task.assert_not_called() # Task should not be created
         assert gm_response_no_id in results
