@@ -110,17 +110,7 @@ async def test_command_search(mock_session_data):
         "src.commands.web_search_agent",
         new_callable=AsyncMock,
         return_value=[ai_response_msg],
-    ) as mock_search_agent, patch(
-        "src.agents.writer_agent.call_writer_agent",
-        new_callable=AsyncMock,
-        return_value=[
-            AIMessage(
-                content="The dragon appears!",
-                name="🎭 Game Master",
-                metadata={"message_id": "test-gm-dragon"},
-            )
-        ],
-    ) as mock_call_writer_agent:
+    ) as mock_search_agent:
 
         mock_cl_message_instance = AsyncMock()
         mock_cl_message_instance.send.return_value = None
@@ -136,15 +126,14 @@ async def test_command_search(mock_session_data):
         assert mock_cl_message_instance.author == "Player"
         mock_cl_message_instance.send.assert_awaited_once_with()
         mock_search_agent.assert_awaited_once_with(state)
-        mock_call_writer_agent.assert_awaited_once_with(state, from_oracle=False)
 
-        # The state should now have 3 messages: user, tool, GM
-        assert len(state.messages) == 3
+        # The state should now have 2 messages: user, tool
+        assert len(state.messages) == 2
         assert isinstance(state.messages[0], HumanMessage)
         assert state.messages[0].content == f"/search {query}"
         assert state.messages[1] == ai_response_msg
-        assert state.messages[2].content == "The dragon appears!"
-        assert vector_store.put.await_count >= 2
+        # Expect only 2 puts: user message and tool message
+        assert vector_store.put.await_count == 2
         vector_store.put.assert_any_await(
             content=f"/search {query}",
             message_id="user-search-msg-id",
