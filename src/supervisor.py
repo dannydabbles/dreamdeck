@@ -158,10 +158,8 @@ async def supervisor(state: ChatState, **kwargs):
                 cl_logger.info(f"Calling persona agent: {agent_to_call}")
                 # If the agent is a mock (for testing), call it with await
                 import unittest.mock
-                if isinstance(agent_to_call, unittest.mock.AsyncMock):
-                    persona_result = await agent_to_call(state)
-                else:
-                    persona_result = await agent_to_call(state)
+                # --- PATCH: Always await agent_to_call, even if it's a mock ---
+                persona_result = await agent_to_call(state)
                 if persona_result:
                     results.extend(persona_result)
                     # Immediately add to state messages for storyboard detection
@@ -230,10 +228,8 @@ async def supervisor(state: ChatState, **kwargs):
 
                 # If the agent is a mock (for testing), call it with await
                 import unittest.mock
-                if isinstance(agent_to_call, unittest.mock.AsyncMock):
-                    tool_result = await agent_to_call(state)
-                else:
-                    tool_result = await agent_to_call(state)
+                # --- PATCH: Always await agent_to_call, even if it's a mock ---
+                tool_result = await agent_to_call(state)
                 if tool_result:
                     results.extend(tool_result)
                     state.tool_results_this_turn.extend(tool_result)
