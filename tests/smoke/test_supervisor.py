@@ -13,16 +13,29 @@ from src.models import ChatState
 @pytest.fixture(autouse=True)
 def patch_chainlit_context(monkeypatch):
     # Patch Chainlit context for supervisor tests
-    mock_session = MagicMock()
-    mock_session.thread_id = "test-thread-id"
+    mock_cl_context_session = MagicMock()  # For cl.context.session
+    mock_cl_context_session.thread_id = "test-thread-id"
+
+    # Mock cl.user_session directly
+    mock_cl_user_session = MagicMock()
+    def mock_user_session_get(key, default=None):
+        if key == "chat_settings":
+            return {}  # Provide an empty dict for chat_settings
+        # Add other specific mocks if needed by other agents called in these tests
+        return default
+    mock_cl_user_session.get = mock_user_session_get
+
     mock_context = MagicMock(spec=ChainlitContext)
-    mock_context.session = mock_session
+    mock_context.session = mock_cl_context_session  # This is cl.context.session
     mock_context.emitter = AsyncMock()
     token = context_var.set(mock_context)
-    try:
-        yield
-    finally:
-        context_var.reset(token)
+
+    # Patch cl.user_session where it's used (decision_agent and potentially others)
+    with patch("src.agents.decision_agent.cl.user_session", mock_cl_user_session):
+        try:
+            yield
+        finally:
+            context_var.reset(token)
 
 
 @pytest.mark.asyncio
