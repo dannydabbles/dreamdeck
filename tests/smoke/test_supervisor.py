@@ -1,11 +1,28 @@
 import sys
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch  # <-- Add MagicMock
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 
+from chainlit.context import ChainlitContext, context_var  # <-- Add imports
+
 from src.models import ChatState
+
+# Add Chainlit context fixture similar to integration tests
+@pytest.fixture(autouse=True)
+def patch_chainlit_context(monkeypatch):
+    # Patch Chainlit context for supervisor tests
+    mock_session = MagicMock()
+    mock_session.thread_id = "test-thread-id"
+    mock_context = MagicMock(spec=ChainlitContext)
+    mock_context.session = mock_session
+    mock_context.emitter = AsyncMock()
+    token = context_var.set(mock_context)
+    try:
+        yield
+    finally:
+        context_var.reset(token)
 
 
 @pytest.mark.asyncio
