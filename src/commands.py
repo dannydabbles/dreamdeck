@@ -101,22 +101,6 @@ async def command_roll(query: str = ""):
                 f"AIMessage from dice_agent missing message_id: {ai_msg.content}"
             )
 
-    # Immediately call writer agent to continue story
-    from src.agents.writer_agent import call_writer_agent
-
-    gm_responses = await call_writer_agent(state, from_oracle=False)
-    if gm_responses:
-        gm_msg = gm_responses[0]
-        # Only append if not an error message
-        if gm_msg.name != "error":
-            state.messages.append(gm_msg)
-            if gm_msg.metadata and "message_id" in gm_msg.metadata:
-                await vector_store.put(
-                    content=gm_msg.content,
-                    message_id=gm_msg.metadata["message_id"],
-                    metadata={"type": "ai", "author": gm_msg.name},
-                )
-
     cl.user_session.set("state", state)
     cl_logger.info(f"/roll command processed.")
 
@@ -179,22 +163,6 @@ async def command_search(query: str = ""):
             cl_logger.warning(
                 f"AIMessage from web_search_agent missing message_id: {ai_msg.content}"
             )
-
-    # Immediately call writer agent to continue story
-    from src.agents.writer_agent import call_writer_agent
-
-    gm_responses = await call_writer_agent(state, from_oracle=False)
-    if gm_responses:
-        gm_msg = gm_responses[0]
-        # Only append if not an error message
-        if gm_msg.name != "error":
-            state.messages.append(gm_msg)
-            if gm_msg.metadata and "message_id" in gm_msg.metadata:
-                await vector_store.put(
-                    content=gm_msg.content,
-                    message_id=gm_msg.metadata["message_id"],
-                    metadata={"type": "ai", "author": gm_msg.name},
-                )
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/search command processed.")
@@ -261,22 +229,6 @@ async def command_todo(query: str = ""):
             cl_logger.warning(
                 f"AIMessage from todo_agent missing message_id: {ai_msg.content}"
             )
-
-    # Immediately call writer agent to continue story
-    from src.agents.writer_agent import call_writer_agent
-
-    gm_responses = await call_writer_agent(state, from_oracle=False)
-    if gm_responses:
-        gm_msg = gm_responses[0]
-        # Only append if not an error message
-        if gm_msg.name != "error":
-            state.messages.append(gm_msg)
-            if gm_msg.metadata and "message_id" in gm_msg.metadata:
-                await vector_store.put(
-                    content=gm_msg.content,
-                    message_id=gm_msg.metadata["message_id"],
-                    metadata={"type": "ai", "author": gm_msg.name},
-                )
 
     cl.user_session.set("state", state)
     cl_logger.info(f"/todo command processed.")
