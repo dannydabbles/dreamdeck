@@ -452,12 +452,12 @@ async def command_report():
 
 async def command_persona(query: str = ""):
     """Slash command: /persona [name] - Force switch persona immediately"""
+    from src.config import config  # Fix: import config here to avoid F821
     persona_name = query.strip()
     if not persona_name:
         await cl.Message(content="Usage: `/persona [persona_name]`").send()
         return
-    
-    valid_personas = list(config.agents.writer_agent.personas.keys()) + ["Default"]
+
     valid_personas = list(config.agents.writer_agent.personas.keys()) + ["Default"]
     if persona_name.lower() not in [p.lower() for p in valid_personas]:
         await cl.Message(
