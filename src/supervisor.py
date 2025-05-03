@@ -262,8 +262,9 @@ async def supervisor(state: ChatState, **kwargs):
                     gm_message_id = gm_message_to_storyboard.metadata["message_id"]
                     cl_logger.info(f"Generating storyboard for message ID: {gm_message_id}")
                     from src.config import STABLE_DIFFUSION_API_URL
+                    from src.agents.storyboard_editor_agent import _generate_storyboard
                     # Ensure storyboard agent is awaited and track the task
-                    storyboard_task = asyncio.create_task(storyboard_editor_agent(
+                    storyboard_task = asyncio.create_task(_generate_storyboard(
                         state,
                         gm_message_id=gm_message_id,
                         sd_api_url=STABLE_DIFFUSION_API_URL
