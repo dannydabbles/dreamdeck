@@ -17,32 +17,27 @@ from src.models import ChatState
 @pytest.mark.asyncio
 async def test_manage_todo_creates_file(tmp_path):
     fixed_now = dt_module.datetime.now()
-    manager_persona_for_test = "Secretary" # Define the manager persona for this test
+    manager_persona_for_test = "Secretary"
 
-    # --- Change Start 2: Add patch for config ---
-    with patch("src.agents.todo_agent.datetime") as mock_datetime, patch(
-        "src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)
-    ), patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), patch(
-        "src.agents.todo_agent.CLMessage", new_callable=MagicMock
-    ) as mock_cl_msg_cls, patch(
-        "src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock
-    ) as mock_ainvoke, patch(
-        "src.agents.todo_agent.cl", new_callable=MagicMock
-    ) as mock_cl_module, patch( # Add this patch context manager
-        "src.agents.todo_agent.config", new_callable=MagicMock
-    ) as mock_config: # Mock the config object used by the agent
-    # --- Change End 2 ---
+    # --- Refined patching for datetime and zoneinfo ---
+    with patch("src.agents.todo_agent.datetime") as mock_datetime, \
+         patch("src.agents.todo_agent.zoneinfo") as mock_zoneinfo, \
+         patch("src.agents.todo_agent.TODO_DIR_PATH", str(tmp_path)), \
+         patch("src.agents.todo_agent.TODO_FILE_NAME", "todo.md"), \
+         patch("src.agents.todo_agent.CLMessage", new_callable=MagicMock) as mock_cl_msg_cls, \
+         patch("src.agents.todo_agent.ChatOpenAI.ainvoke", new_callable=AsyncMock) as mock_ainvoke, \
+         patch("src.agents.todo_agent.cl", new_callable=MagicMock) as mock_cl_module, \
+         patch("src.agents.todo_agent.config", new_callable=MagicMock) as mock_config:
 
         # Configure the mocked config object
         mock_config.defaults.todo_manager_persona = manager_persona_for_test
 
-        # Patch datetime.utcnow() to fixed_now
-        mock_datetime.datetime.utcnow.return_value = fixed_now
-        mock_datetime.datetime.strftime = dt_module.datetime.strftime
+        # Mock datetime.datetime.now() to return the fixed datetime object
         mock_datetime.datetime.now.return_value = fixed_now
-        # Patch .strftime directly on the datetime object, not on the method
-        mock_datetime.datetime.now.return_value.strftime = lambda fmt: fixed_now.strftime(fmt)
-
+        # Mock zoneinfo.ZoneInfo to return a dummy object, preventing real lookup
+        mock_zoneinfo.ZoneInfo.return_value = MagicMock()
+        # Ensure the strftime method on the fixed_now object works as expected
+        current_date = fixed_now.strftime("%Y-%m-%d")
 
         # Patch cl.user_session.get to avoid "Chainlit context not found"
         mock_cl_module.user_session.get.return_value = {}
@@ -52,7 +47,6 @@ async def test_manage_todo_creates_file(tmp_path):
         mock_cl_msg_instance.id = "todo-msg-id"
         mock_cl_msg_cls.return_value = mock_cl_msg_instance
 
-        # Mock LLM response to output a JSON list with the task
         mock_response = MagicMock()
         mock_response.content = '["buy milk"]'
         mock_ainvoke.return_value = mock_response
@@ -61,18 +55,15 @@ async def test_manage_todo_creates_file(tmp_path):
             thread_id="test",
             messages=[HumanMessage(content="/todo buy milk", name="Player")],
         )
-        # Note: state.current_persona is no longer directly used for the file path
-        state.current_persona = "Friend" # Set a different persona to ensure it's ignored
+        state.current_persona = "Friend"
 
+        # Run the agent
         result = await _manage_todo(state)
         assert result
         assert "buy milk" in result[0].content
 
-        current_date = fixed_now.strftime("%Y-%m-%d")
-        # --- Change Start 3: Update assertion path ---
         # Assert the file exists under the MANAGER persona's directory
         todo_file = tmp_path / manager_persona_for_test / current_date / "todo.md"
-        # --- Change End 3 ---
         assert todo_file.exists()
         content = todo_file.read_text()
         assert "buy milk" in content
