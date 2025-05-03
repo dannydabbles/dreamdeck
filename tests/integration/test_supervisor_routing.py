@@ -95,15 +95,15 @@ async def test_supervisor_calls_storyboard_after_gm_persona():
 
     # Mock the decision agent to route to the GM persona
     mock_decision = AsyncMock(return_value={"route": "persona:Storyteller GM"})
-    # Mock the underlying generate_story function called by the PersonaAgent
-    mock_generate_story = AsyncMock(return_value=[gm_response])
+    # Mock the PersonaAgent.__call__ method directly
+    mock_persona_call = AsyncMock(return_value=[gm_response]) # Mock PersonaAgent.__call__
     # Mock the storyboard agent to check if it's called correctly
     mock_storyboard = AsyncMock(return_value=[]) # Storyboard agent returns empty list or status message
     # Mock asyncio.create_task to prevent actual task execution
     mock_create_task = MagicMock()
 
     with patch("src.supervisor._decide_next_agent", mock_decision), \
-         patch("src.agents.writer_agent._generate_story", mock_generate_story), \
+         patch("src.agents.writer_agent.PersonaAgent.__call__", mock_persona_call), \
          patch("src.supervisor.storyboard_editor_agent", mock_storyboard), \
          patch("src.supervisor.asyncio.create_task", mock_create_task):
 
@@ -112,8 +112,7 @@ async def test_supervisor_calls_storyboard_after_gm_persona():
 
         # Assertions
         mock_decision.assert_awaited_once()
-        # Do not assert mock_generate_story.assert_awaited_once_with(state) here,
-        # because PersonaAgent.__call__ is not patched, so the mock is not awaited directly.
+        mock_persona_call.assert_awaited_once() # Check the PersonaAgent mock was called
         # Instead, check that the storyboard agent was called as expected.
         assert mock_create_task.call_count == 1
         call_args, call_kwargs = mock_create_task.call_args
@@ -201,13 +200,13 @@ async def test_supervisor_does_not_call_storyboard_if_gm_message_lacks_id():
     )
 
     mock_decision = AsyncMock(return_value={"route": "persona:Storyteller GM"})
-    # Mock the underlying generate_story function called by the PersonaAgent
-    mock_generate_story = AsyncMock(return_value=[gm_response_no_id])
+    # Mock the PersonaAgent.__call__ method directly
+    mock_persona_call = AsyncMock(return_value=[gm_response_no_id]) # Mock PersonaAgent.__call__
     mock_storyboard = AsyncMock()
     mock_create_task = MagicMock()
 
     with patch("src.supervisor._decide_next_agent", mock_decision), \
-         patch("src.agents.writer_agent._generate_story", mock_generate_story), \
+         patch("src.agents.writer_agent.PersonaAgent.__call__", mock_persona_call), \
          patch("src.supervisor.storyboard_editor_agent", mock_storyboard), \
          patch("src.supervisor.asyncio.create_task", mock_create_task):
 
@@ -216,8 +215,7 @@ async def test_supervisor_does_not_call_storyboard_if_gm_message_lacks_id():
 
         # Assertions
         mock_decision.assert_awaited_once()
-        # Do not assert mock_generate_story.assert_awaited_once_with(state) here,
-        # because PersonaAgent.__call__ is not patched, so the mock is not awaited directly.
+        mock_persona_call.assert_awaited_once() # Check the PersonaAgent mock was called
         # Instead, check that storyboard agent was not awaited (even if create_task was called).
         # Accept that storyboard agent may have been called, but not awaited.
         # So, do not assert_not_called; just check results.
