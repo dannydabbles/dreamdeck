@@ -236,13 +236,19 @@ async def supervisor(state: ChatState, **kwargs):
                 cl_logger.info(f"Identified as GM persona: {state.current_persona}")
                 # Debug: log last 3 message metadatas for troubleshooting
                 cl_logger.debug(f"Last 3 messages: {[msg.metadata for msg in state.messages[-3:]]}")
-                # Find the GM message *just generated* in the persona_result
+                # Find the GM message *just generated* in the updated state.messages
                 gm_message_to_storyboard = None
-                if persona_result:  # Check if the persona agent returned anything
-                    for msg in persona_result:
-                        if isinstance(msg, AIMessage) and msg.metadata and msg.metadata.get("type") == "gm_message":
-                            gm_message_to_storyboard = msg
-                            break  # Found the first suitable message
+                # --- CHANGE START ---
+                # Search backwards through the updated state messages
+                for msg in reversed(state.messages):
+                    if isinstance(msg, AIMessage) and msg.metadata and msg.metadata.get("type") == "gm_message":
+                        # Check if this message was likely added in the current turn
+                        # (A simple check: was it one of the last few messages?)
+                        # More robust checks could involve timestamps or turn counters if needed.
+                        # For now, assume the last matching message is the one.
+                        gm_message_to_storyboard = msg
+                        break # Found the most recent suitable message
+                # --- CHANGE END ---
 
                 if gm_message_to_storyboard and gm_message_to_storyboard.metadata.get("message_id"):
                     gm_message_id = gm_message_to_storyboard.metadata["message_id"]
